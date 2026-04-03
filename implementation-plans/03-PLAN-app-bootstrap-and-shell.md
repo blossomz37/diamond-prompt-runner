@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 2:16 PM
-modified: 2026-04-03 2:16 PM
+modified: 2026-04-03 3:34 PM
 ---
 # Diamond Runner: Planning, Setup, and Engineering Roadmap
 
@@ -9,6 +9,17 @@ modified: 2026-04-03 2:16 PM
 Use a single-app-repo Tauri + Svelte architecture in this repo and build the product as vertical slices, not as disconnected screens. The first real milestone is a read-and-navigate shell: create and open real local projects, load the explorer from disk, open `.md`, `.tera`, and model YAML files in tabs, and show metadata in the inspector. Editing, rendering, and execution come in later slices.
 
 This is the next active implementation plan for the workspace.
+
+Next active milestone plan after Milestone 1:
+- `implementation-plans/07-PLAN-editing-slice.md`
+
+Sequence after Milestone 1:
+- small follow-up: unavailable-recents `Locate` flow
+- next real milestone: Editing Slice
+- then Rendering and Validation Slice
+- then Single-Block Execution Slice
+- later Pipelines, History, and Exports
+- later scoped online-research extension
 
 ## Implementation Plan
 

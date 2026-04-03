@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 12:57 PM
-modified: 2026-04-03 3:26 PM
+modified: 2026-04-03 3:34 PM
 ---
 
 # Rolling TODO List
@@ -19,15 +19,18 @@ Oldest to Newest
 - [x] Milestone 1 implementation: build read-only IDE shell with explorer, tabs, inspector, and bottom panel placeholder.
 - [x] Milestone 1 implementation: add `fixtures/sample-project/` and milestone smoke tests.
 - [x] Milestone 1 manual validation: completed all scenarios in `implementation-plans/06-REFERENCE-milestone-1-manual-test.md` and all passed.
-- [ ] Follow-up after milestone 1: add a `Locate` flow for unavailable recent projects that rebinds a moved project only when the selected folder validates and matches the stored `project_id`.
-- [ ] Port Tauri-side Tera template validation patterns into Diamond prompt editing.
-- [ ] Evaluate local desktop API-key storage pattern for OpenRouter settings.
-- [ ] Evaluate official OpenRouter TypeScript SDK fit during the execution slice without changing milestone-1 scope.
-- [ ] Review curated OpenRouter model defaults from sibling repos and decide what should seed Diamond presets.
-- [ ] Support scoped `:online` behavior for prompts that require live web research.
-- [ ] Add tests for scoped online-research prompt behavior.
-- [ ] Add Help-section notes for online-research prompt behavior, constraints, and setup.
-- [ ] Decide whether `:online` support belongs in MVP spec or as a post-MVP extension.
+- [ ] Follow-up after Milestone 1: add a `Locate` flow for unavailable recent projects that rebinds a moved project only when the selected folder validates and matches the stored `project_id`.
+- [ ] Editing Slice: add save support for editable project files after shell and navigation stability.
+- [ ] Editing Slice: support markdown and text document editing with visible dirty state and deterministic save or reload behavior.
+- [ ] Editing Slice: support `.tera` template editing while keeping model YAML read-only until validation is ready.
+- [ ] Rendering and Validation Slice: port Tauri-side Tera template validation patterns into Diamond prompt editing.
+- [ ] Execution Slice: evaluate local desktop API-key storage pattern for OpenRouter settings.
+- [ ] Execution Slice: evaluate official OpenRouter TypeScript SDK fit without changing milestone-1 architecture assumptions.
+- [ ] Execution Slice: review curated OpenRouter model defaults from sibling repos and decide what should seed Diamond presets.
+- [ ] Post-MVP online extension: support scoped `:online` behavior for prompts that require live web research.
+- [ ] Post-MVP online extension: add tests for scoped online-research prompt behavior.
+- [ ] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.
+- [ ] Post-MVP online extension: decide whether `:online` support belongs in the MVP spec or as a later extension.
 - [ ] Test GitHub app tools directly for repo workflows in this workspace.
 - [ ] Decide whether to create custom Diamond-specific skills for implementation, fixtures, and prompt-pack porting.
 - [ ] Keep README and AGENTS aligned with the approved tool and commit workflow recommendations.
