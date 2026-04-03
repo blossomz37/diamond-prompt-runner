@@ -22,3 +22,4 @@ src-tauri/target/
 
 # User-specific files
 00-diamond-user-obsidian/
+.env
