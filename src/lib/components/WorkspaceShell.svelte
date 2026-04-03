@@ -14,6 +14,9 @@
     onSelectAsset: (node: ProjectAssetNode) => void | Promise<void>;
     onSelectTab: (path: string) => void;
     onCloseTab: (path: string) => void;
+    onDraftChange: (path: string, content: string) => void;
+    onSaveTab: (path: string) => void | Promise<void>;
+    onReloadTab: (path: string) => void | Promise<void>;
   }
 
   let {
@@ -25,7 +28,10 @@
     errorMessage,
     onSelectAsset,
     onSelectTab,
-    onCloseTab
+    onCloseTab,
+    onDraftChange,
+    onSaveTab,
+    onReloadTab
   }: Props = $props();
 
   const activeTab = $derived(tabs.find((tab) => tab.path === activePath) ?? null);
@@ -65,7 +71,9 @@
         {:else}
           {#each tabs as tab (tab.path)}
             <div class:active={tab.path === activePath} class="tab">
-              <button type="button" onclick={() => onSelectTab(tab.path)}>{tab.title}</button>
+              <button type="button" onclick={() => onSelectTab(tab.path)}>
+                {tab.title}{tab.draftContent !== tab.savedContent ? ' *' : ''}
+              </button>
               <button
                 class="close"
                 type="button"
@@ -84,7 +92,12 @@
       {/if}
 
       <div class="viewer-wrap">
-        <AssetViewer tab={activeTab} />
+        <AssetViewer
+          tab={activeTab}
+          onDraftChange={onDraftChange}
+          onSave={onSaveTab}
+          onReload={onReloadTab}
+        />
       </div>
     </main>
 
@@ -243,6 +256,7 @@
   }
 
   .viewer-wrap {
+    display: grid;
     min-height: 0;
     overflow: hidden;
   }

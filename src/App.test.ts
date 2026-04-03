@@ -10,7 +10,8 @@ const tauri = vi.hoisted(() => ({
   openProject: vi.fn(),
   pickDirectory: vi.fn(),
   removeRecentProject: vi.fn(),
-  readProjectAsset: vi.fn()
+  readProjectAsset: vi.fn(),
+  writeProjectAsset: vi.fn()
 }));
 
 vi.mock('$lib/tauri', () => tauri);
@@ -60,6 +61,36 @@ const assetNodes: ProjectAssetNode[] = [
         children: []
       }
     ]
+  },
+  {
+    name: 'prompts',
+    path: 'prompts',
+    kind: 'directory',
+    isDirectory: true,
+    children: [
+      {
+        name: 'brief-review.tera',
+        path: 'prompts/brief-review.tera',
+        kind: 'tera',
+        isDirectory: false,
+        children: []
+      }
+    ]
+  },
+  {
+    name: 'models',
+    path: 'models',
+    kind: 'directory',
+    isDirectory: true,
+    children: [
+      {
+        name: 'default.yaml',
+        path: 'models/default.yaml',
+        kind: 'yaml',
+        isDirectory: false,
+        children: []
+      }
+    ]
   }
 ];
 
@@ -68,6 +99,7 @@ const assetContent: AssetContent = {
   kind: 'markdown',
   view: 'text',
   content: '# Context\n\nA small fixture document.',
+  isEditable: true,
   metadata: {
     kind: 'markdown',
     path: 'documents/context.md',
@@ -82,6 +114,27 @@ const assetContent: AssetContent = {
   parsedJson: null
 };
 
+const yamlAssetContent: AssetContent = {
+  path: 'models/default.yaml',
+  kind: 'yaml',
+  view: 'text',
+  content: 'model: openai/gpt-5.4\ntemperature: 0.7\nmax_completion_tokens: 12000\n',
+  isEditable: true,
+  metadata: {
+    kind: 'yaml',
+    path: 'models/default.yaml',
+    name: 'default.yaml',
+    sizeBytes: 72,
+    modifiedAt: '2026-04-03T20:12:00Z',
+    details: [
+      { label: 'Model', value: 'openai/gpt-5.4' },
+      { label: 'Temperature', value: '0.7' },
+      { label: 'Max Tokens', value: '12000' }
+    ]
+  },
+  parsedJson: null
+};
+
 describe('App', () => {
   beforeEach(() => {
     tauri.getRecentProjects.mockResolvedValue(recents);
@@ -90,7 +143,26 @@ describe('App', () => {
     tauri.openProject.mockResolvedValue(summary);
     tauri.removeRecentProject.mockResolvedValue(undefined);
     tauri.listProjectAssets.mockResolvedValue(assetNodes);
-    tauri.readProjectAsset.mockResolvedValue(assetContent);
+    tauri.readProjectAsset.mockImplementation(async (_rootPath: string, relativePath: string) => {
+      return relativePath === 'models/default.yaml' ? yamlAssetContent : assetContent;
+    });
+    tauri.writeProjectAsset.mockImplementation(async (_rootPath: string, relativePath: string, content: string) => {
+      if (relativePath === 'models/default.yaml') {
+        return {
+          ...yamlAssetContent,
+          content
+        };
+      }
+
+      return {
+        ...assetContent,
+        content,
+        metadata: {
+          ...assetContent.metadata,
+          sizeBytes: content.length
+        }
+      };
+    });
   });
 
   it('renders recents on load', async () => {
@@ -139,5 +211,52 @@ describe('App', () => {
 
     await waitFor(() => expect(screen.getByText('No recent projects yet.')).toBeInTheDocument());
     expect(tauri.removeRecentProject).toHaveBeenCalledWith('/tmp/missing-project');
+  });
+
+  it('edits and saves an editable asset', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('context.md'));
+
+    const editor = await screen.findByTestId('asset-editor');
+    await fireEvent.input(editor, { target: { value: '# Context\n\nUpdated document.' } });
+
+    expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(tauri.writeProjectAsset).toHaveBeenCalledWith(
+        '/tmp/story-lab',
+        'documents/context.md',
+        '# Context\n\nUpdated document.'
+      )
+    );
+
+    expect(screen.getByText('Saved')).toBeInTheDocument();
+  });
+
+  it('opens yaml presets in the editor instead of read-only mode', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('default.yaml'));
+
+    const editor = await screen.findByTestId('asset-editor');
+    expect(editor).toHaveValue(yamlAssetContent.content);
+    expect(screen.queryByText('Read-only View')).not.toBeInTheDocument();
   });
 });

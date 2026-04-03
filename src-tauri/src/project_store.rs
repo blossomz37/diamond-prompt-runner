@@ -99,6 +99,7 @@ pub struct AssetContent {
     pub kind: AssetKind,
     pub view: AssetView,
     pub content: String,
+    pub is_editable: bool,
     pub metadata: AssetMetadata,
     pub parsed_json: Option<Value>,
 }
@@ -280,6 +281,7 @@ pub fn read_project_asset(root_path: &Path, relative_path: &str) -> StoreResult<
 
     let kind = classify_asset(&safe_relative_string, false);
     let content = fs::read_to_string(&full_path).unwrap_or_else(|_| String::from("Binary or unreadable file."));
+    let is_editable = is_editable_kind(&kind);
     let metadata = build_metadata(
         &root_path,
         &manifest,
@@ -312,9 +314,37 @@ pub fn read_project_asset(root_path: &Path, relative_path: &str) -> StoreResult<
         kind,
         view,
         content: placeholder_content,
+        is_editable,
         metadata,
         parsed_json,
     })
+}
+
+pub fn write_project_asset(root_path: &Path, relative_path: &str, content: &str) -> StoreResult<AssetContent> {
+    let (root_path, _) = validate_project(root_path)?;
+    let safe_relative = sanitize_relative_path(relative_path)?;
+    let safe_relative_string = safe_relative.to_string_lossy().replace('\\', "/");
+    let full_path = root_path.join(&safe_relative);
+
+    if !full_path.exists() {
+        return Err(ProjectStoreError::message(format!(
+            "Asset `{relative_path}` does not exist."
+        )));
+    }
+
+    if full_path.is_dir() {
+        return Err(ProjectStoreError::message("Directories cannot be saved as files."));
+    }
+
+    let kind = classify_asset(&safe_relative_string, false);
+    if !is_editable_kind(&kind) {
+        return Err(ProjectStoreError::message(
+            "This asset type is read-only in the editing slice.",
+        ));
+    }
+
+    fs::write(&full_path, content)?;
+    read_project_asset(&root_path, &safe_relative_string)
 }
 
 fn build_tree_node(root_path: &Path, full_path: &Path, relative_path: String) -> StoreResult<ProjectAssetNode> {
@@ -591,6 +621,10 @@ fn classify_asset(relative_path: &str, is_directory: bool) -> AssetKind {
     }
 }
 
+fn is_editable_kind(kind: &AssetKind) -> bool {
+    matches!(kind, AssetKind::Markdown | AssetKind::Text | AssetKind::Tera | AssetKind::Yaml)
+}
+
 fn diff_path(root_path: &Path, path: &Path) -> StoreResult<String> {
     path.strip_prefix(root_path)
         .map(|relative| relative.to_string_lossy().replace('\\', "/"))
@@ -702,10 +736,41 @@ mod tests {
         let content = read_project_asset(&root, "prompts/review.tera").unwrap();
         assert_eq!(content.kind, AssetKind::Tera);
         assert_eq!(content.view, AssetView::Text);
+        assert!(content.is_editable);
         assert!(content
             .metadata
             .details
             .iter()
             .any(|detail| detail.value.contains("Review")));
+    }
+
+    #[test]
+    fn writes_supported_text_assets_and_rejects_read_only_assets() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "Editable", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        fs::write(root.join("documents").join("notes.md"), "# Notes\n").unwrap();
+        let updated = write_project_asset(&root, "documents/notes.md", "# Notes\n\nUpdated.\n").unwrap();
+        assert!(updated.is_editable);
+        assert_eq!(
+            fs::read_to_string(root.join("documents").join("notes.md")).unwrap(),
+            "# Notes\n\nUpdated.\n"
+        );
+
+        let yaml_updated = write_project_asset(
+            &root,
+            "models/default.yaml",
+            "model: openai/gpt-5.4-nano\ntemperature: 0.2\nmax_completion_tokens: 4000\n",
+        )
+        .unwrap();
+        assert!(yaml_updated.is_editable);
+        assert!(fs::read_to_string(root.join("models").join("default.yaml"))
+            .unwrap()
+            .contains("openai/gpt-5.4-nano"));
+
+        let read_only_error = write_project_asset(&root, "project.json", "{}").unwrap_err();
+        assert!(read_only_error.to_string().contains("read-only"));
     }
 }

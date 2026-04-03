@@ -57,10 +57,14 @@ export interface AssetContent {
   kind: AssetKind;
   view: 'text' | 'json' | 'placeholder';
   content: string;
+  isEditable: boolean;
   metadata: AssetMetadata;
   parsedJson: unknown | null;
 }
 
 export interface WorkspaceTab extends AssetContent {
   title: string;
+  savedContent: string;
+  draftContent: string;
+  isSaving: boolean;
 }

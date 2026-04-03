@@ -53,6 +53,16 @@ fn read_project_asset(root_path: String, relative_path: String) -> Result<AssetC
         .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn write_project_asset(
+    root_path: String,
+    relative_path: String,
+    content: String,
+) -> Result<AssetContent, String> {
+    project_store::write_project_asset(PathBuf::from(root_path).as_path(), &relative_path, &content)
+        .map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -63,7 +73,8 @@ pub fn run() {
             get_recent_projects,
             remove_recent_project,
             list_project_assets,
-            read_project_asset
+            read_project_asset,
+            write_project_asset
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

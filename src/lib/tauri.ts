@@ -39,3 +39,11 @@ export async function listProjectAssets(rootPath: string): Promise<ProjectAssetN
 export async function readProjectAsset(rootPath: string, relativePath: string): Promise<AssetContent> {
   return invoke<AssetContent>('read_project_asset', { rootPath, relativePath });
 }
+
+export async function writeProjectAsset(
+  rootPath: string,
+  relativePath: string,
+  content: string
+): Promise<AssetContent> {
+  return invoke<AssetContent>('write_project_asset', { rootPath, relativePath, content });
+}

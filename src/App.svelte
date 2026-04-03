@@ -9,7 +9,8 @@
     openProject,
     pickDirectory,
     removeRecentProject,
-    readProjectAsset
+    readProjectAsset,
+    writeProjectAsset
   } from '$lib/tauri';
   import type {
     ProjectAssetNode,
@@ -117,7 +118,10 @@
       const asset = await readProjectAsset(workspace.rootPath, node.path);
       const nextTab: WorkspaceTab = {
         ...asset,
-        title: node.name
+        title: node.name,
+        savedContent: asset.content,
+        draftContent: asset.content,
+        isSaving: false
       };
 
       tabs = [...tabs, nextTab];
@@ -131,6 +135,75 @@
 
   function handleSelectTab(path: string): void {
     activePath = path;
+  }
+
+  function updateTab(path: string, mutate: (tab: WorkspaceTab) => WorkspaceTab): void {
+    tabs = tabs.map((tab) => (tab.path === path ? mutate(tab) : tab));
+  }
+
+  function handleDraftChange(path: string, content: string): void {
+    updateTab(path, (tab) => ({
+      ...tab,
+      draftContent: content
+    }));
+  }
+
+  async function handleSaveTab(path: string): Promise<void> {
+    if (!workspace) {
+      return;
+    }
+
+    const tab = tabs.find((candidate) => candidate.path === path);
+    if (!tab || !tab.isEditable || tab.draftContent === tab.savedContent || tab.isSaving) {
+      return;
+    }
+
+    updateTab(path, (current) => ({ ...current, isSaving: true }));
+    errorMessage = null;
+
+    try {
+      const asset = await writeProjectAsset(workspace.rootPath, path, tab.draftContent);
+      updateTab(path, (current) => ({
+        ...current,
+        ...asset,
+        title: current.title,
+        savedContent: asset.content,
+        draftContent: asset.content,
+        isSaving: false
+      }));
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : `Failed to save ${path}.`;
+      updateTab(path, (current) => ({ ...current, isSaving: false }));
+    }
+  }
+
+  async function handleReloadTab(path: string): Promise<void> {
+    if (!workspace) {
+      return;
+    }
+
+    const tab = tabs.find((candidate) => candidate.path === path);
+    if (!tab || tab.isSaving) {
+      return;
+    }
+
+    updateTab(path, (current) => ({ ...current, isSaving: true }));
+    errorMessage = null;
+
+    try {
+      const asset = await readProjectAsset(workspace.rootPath, path);
+      updateTab(path, (current) => ({
+        ...current,
+        ...asset,
+        title: current.title,
+        savedContent: asset.content,
+        draftContent: asset.content,
+        isSaving: false
+      }));
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : `Failed to reload ${path}.`;
+      updateTab(path, (current) => ({ ...current, isSaving: false }));
+    }
   }
 
   function handleCloseTab(path: string): void {
@@ -176,5 +249,8 @@
     onSelectAsset={handleSelectAsset}
     onSelectTab={handleSelectTab}
     onCloseTab={handleCloseTab}
+    onDraftChange={handleDraftChange}
+    onSaveTab={handleSaveTab}
+    onReloadTab={handleReloadTab}
   />
 {/if}
