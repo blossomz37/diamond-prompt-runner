@@ -9,3 +9,5 @@ Desktop.ini
 # Linux
 .directory
 
+# Workspace-local agent memory
+memory.jsonl
