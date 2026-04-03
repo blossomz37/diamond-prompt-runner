@@ -1,0 +1,74 @@
+mod project_store;
+
+use std::path::PathBuf;
+
+use project_store::{AssetContent, ProjectAssetNode, ProjectSummary, RecentProjectEntry};
+use tauri::Manager;
+
+fn app_data_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn create_project(
+    app: tauri::AppHandle,
+    parent_path: String,
+    project_name: String,
+) -> Result<ProjectSummary, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::create_project(PathBuf::from(parent_path).as_path(), &project_name, &app_data_dir)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn open_project(app: tauri::AppHandle, root_path: String) -> Result<ProjectSummary, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::open_project(PathBuf::from(root_path).as_path(), &app_data_dir)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn get_recent_projects(app: tauri::AppHandle) -> Result<Vec<RecentProjectEntry>, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::get_recent_projects(&app_data_dir).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn remove_recent_project(app: tauri::AppHandle, root_path: String) -> Result<(), String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::remove_recent_project(&app_data_dir, PathBuf::from(root_path).as_path())
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn list_project_assets(root_path: String) -> Result<Vec<ProjectAssetNode>, String> {
+    project_store::list_project_assets(PathBuf::from(root_path).as_path()).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn read_project_asset(root_path: String, relative_path: String) -> Result<AssetContent, String> {
+    project_store::read_project_asset(PathBuf::from(root_path).as_path(), &relative_path)
+        .map_err(|error| error.to_string())
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![
+            create_project,
+            open_project,
+            get_recent_projects,
+            remove_recent_project,
+            list_project_assets,
+            read_project_asset
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+
+fn main() {
+    run();
+}

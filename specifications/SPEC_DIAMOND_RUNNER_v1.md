@@ -103,6 +103,18 @@ Prompt packs may accelerate setup, but they must not add engine assumptions that
 - import and export workflow and AI config JSON artifacts
 - export selected project artifacts as files or a bundle
 
+### Early Implementation Sequencing Note
+
+The first implementation milestone is narrower than the full MVP. It is a read-and-navigate shell:
+
+- create a new local project
+- open an existing local project
+- browse project assets in the explorer
+- open supported assets in read-only tabs
+- inspect metadata in a sidebar
+
+Editing, template validation, rendering, OpenRouter execution, and run history UX land in later slices.
+
 ### Explicitly Deferred
 
 - node graph editor
@@ -323,6 +335,11 @@ Diamond v2 uses OpenRouter as its only model provider.
 - the execution layer records retries, timeout failures, provider errors, and usage metrics
 - provider-specific advanced toggles are not a required part of the MVP UI
 - the UI may display short model labels such as `claude-3.7-sonnet` while preserving the full provider-backed model identifier in config and runtime state
+
+Implementation sequencing note:
+
+- the first shell milestone does not include provider calls, API-key storage, or SDK wiring
+- when the execution slice begins, the official OpenRouter TypeScript SDK should be evaluated first for any TypeScript-owned integration surface without forcing milestone-1 architecture changes
 
 ### Model preset rules
 

@@ -105,6 +105,7 @@ This is the next active implementation plan for the workspace.
 ### Phase 6: Single-Block Execution Slice
 
 - Add OpenRouter settings only after shell, files, and validation are working.
+- Evaluate the official OpenRouter TypeScript SDK at the start of this slice for any TypeScript-owned integration surface, while keeping milestone 1 free of provider calls and SDK wiring.
 - Initial execution capabilities:
   - per-project default preset
   - per-block preset override

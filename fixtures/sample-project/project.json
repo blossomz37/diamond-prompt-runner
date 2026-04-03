@@ -1,0 +1,32 @@
+{
+  "projectId": "sample-project-001",
+  "projectName": "Sample Project",
+  "createdAt": "2026-04-03T20:00:00Z",
+  "updatedAt": "2026-04-03T20:00:00Z",
+  "defaultModelPreset": "models/default.yaml",
+  "variables": {
+    "tone": "precise"
+  },
+  "promptBlocks": [
+    {
+      "blockId": "brief-review",
+      "name": "Brief Review",
+      "templateSource": "prompts/brief-review.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "run_artifact"
+    }
+  ],
+  "pipelines": [
+    {
+      "pipelineId": "review-pipeline",
+      "name": "Review Pipeline",
+      "orderedBlocks": ["brief-review"],
+      "executionMode": "sequential"
+    }
+  ],
+  "uiPreferences": {
+    "theme": "ide-pass",
+    "density": "dense"
+  }
+}

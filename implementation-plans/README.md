@@ -1,0 +1,1 @@
+This folder contains historical copies of implementation plans from chat sessions for reference and tracking progress toward project milestones. Refer to other documentation for active "Source of Truth" and authoritative guidance on project scope, requirements, and design decisions.

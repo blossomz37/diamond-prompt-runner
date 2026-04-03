@@ -11,6 +11,8 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 - Product spec: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
 - Approved prototype: `Diamond Runner v2 - IDE Pass`
 - App direction: Tauri + Svelte desktop app with an IDE-like shell
+- Current implementation milestone: create or open a local project, browse the project tree, open supported assets in read-only tabs, and inspect metadata
+- OpenRouter integration is deferred to the later execution slice; milestone 1 does not include provider calls, API-key storage, or SDK wiring
 
 ## Recommended Agent Setup
 

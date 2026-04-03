@@ -11,3 +11,14 @@ Desktop.ini
 
 # Workspace-local agent memory
 memory.jsonl
+
+# Frontend
+node_modules/
+dist/
+coverage/
+
+# Tauri / Rust
+src-tauri/target/
+
+# User-specific files
+00-diamond-user-obsidian/
