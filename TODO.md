@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 12:57 PM
-modified: 2026-04-03 2:30 PM
+modified: 2026-04-03 3:26 PM
 ---
 
 # Rolling TODO List
@@ -14,10 +14,11 @@ Oldest to Newest
 - [x] Prototype direction approved. IDE shell is the selected UI model.
 - [x] Create a user-facing readme.
 - [x] Create a gitignore. Ignore system files for macOS, Windows, and Linux.
-- [ ] Milestone 1 implementation: scaffold Tauri + Svelte + Vite app in-repo.
-- [ ] Milestone 1 implementation: build project create/open flows and project validation.
-- [ ] Milestone 1 implementation: build read-only IDE shell with explorer, tabs, inspector, and bottom panel placeholder.
-- [ ] Milestone 1 implementation: add `fixtures/sample-project/` and milestone smoke tests.
+- [x] Milestone 1 implementation: scaffold Tauri + Svelte + Vite app in-repo.
+- [x] Milestone 1 implementation: build project create/open flows and project validation.
+- [x] Milestone 1 implementation: build read-only IDE shell with explorer, tabs, inspector, and bottom panel placeholder.
+- [x] Milestone 1 implementation: add `fixtures/sample-project/` and milestone smoke tests.
+- [x] Milestone 1 manual validation: completed all scenarios in `implementation-plans/06-REFERENCE-milestone-1-manual-test.md` and all passed.
 - [ ] Follow-up after milestone 1: add a `Locate` flow for unavailable recent projects that rebinds a moved project only when the selected folder validates and matches the stored `project_id`.
 - [ ] Port Tauri-side Tera template validation patterns into Diamond prompt editing.
 - [ ] Evaluate local desktop API-key storage pattern for OpenRouter settings.
