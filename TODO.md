@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 12:57 PM
-modified: 2026-04-03 3:34 PM
+modified: 2026-04-03 5:05 PM
 ---
 
 # Rolling TODO List
@@ -20,10 +20,18 @@ Oldest to Newest
 - [x] Milestone 1 implementation: add `fixtures/sample-project/` and milestone smoke tests.
 - [x] Milestone 1 manual validation: completed all scenarios in `implementation-plans/06-REFERENCE-milestone-1-manual-test.md` and all passed.
 - [ ] Follow-up after Milestone 1: add a `Locate` flow for unavailable recent projects that rebinds a moved project only when the selected folder validates and matches the stored `project_id`.
-- [ ] Editing Slice: add save support for editable project files after shell and navigation stability.
-- [ ] Editing Slice: support markdown and text document editing with visible dirty state and deterministic save or reload behavior.
-- [ ] Editing Slice: support `.tera` template editing while keeping model YAML read-only until validation is ready.
-- [ ] Rendering and Validation Slice: port Tauri-side Tera template validation patterns into Diamond prompt editing.
+- [x] Editing Slice: add save support for editable project files after shell and navigation stability.
+- [x] Editing Slice: support markdown and text document editing with visible dirty state and deterministic save or reload behavior.
+- [x] Editing Slice: support `.tera` template editing and editable model YAML while keeping `project.json` read-only.
+- [x] Rendering and Validation Slice: port Tauri-side Tera template validation patterns into Diamond prompt editing.
+- [x] Rendering and Validation Slice: show template preview, warnings, and validation state in the bottom panel for `.tera` tabs.
+- [x] Rendering and Validation Slice: add backend tests for invalid Tera syntax, missing context variables, and invalid `doc("...")` reference paths.
+- [x] Rendering and Validation Slice: add frontend tests for tab switching, loading and reset states, and validation refresh from draft edits.
+- [x] Rendering and Validation Slice: fix YAML model preset read fault-tolerance and make bottom panel toggleable per spec.
+- [x] Fix: explorer directory nodes now expand/collapse on click; carets update state correctly.
+- [x] Fix: bottom validation panel is now contained within its grid row; summary and preview columns are both scrollable within bounds.
+- [x] Fix: bottom panel preview now expands to accommodate full preview text instead of clipping at a fixed row height.
+- [ ] Rendering and Validation Slice: add a slice sign-off checklist and manual validation notes.
 - [ ] Execution Slice: evaluate local desktop API-key storage pattern for OpenRouter settings.
 - [ ] Execution Slice: evaluate official OpenRouter TypeScript SDK fit without changing milestone-1 architecture assumptions.
 - [ ] Execution Slice: review curated OpenRouter model defaults from sibling repos and decide what should seed Diamond presets.

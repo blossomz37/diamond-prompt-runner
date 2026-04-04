@@ -1,12 +1,19 @@
 ---
 created: 2026-04-03 3:34 PM
-modified: 2026-04-03 3:34 PM
+modified: 2026-04-03 5:05 PM
 ---
 # Plan To Reach The Editing Slice
 
 ## Summary
 
 Milestone 1 is complete. The next real milestone is the Editing Slice.
+
+Status update:
+- the Editing Slice is implemented and manually validated against the sample project
+- `project.json` remains read-only
+- markdown, text, `.tera`, and model YAML assets are editable in the workspace
+- the next active milestone is the Rendering and Validation Slice
+- the active follow-on plan is `implementation-plans/08-PLAN-rendering-and-validation-slice.md`
 
 This slice adds local file editing on top of the existing read-and-navigate shell without pulling validation, preview, or provider execution into scope. The goal is to make the workspace useful for direct project authoring while keeping Diamond file-first and keeping milestone boundaries explicit.
 
@@ -25,7 +32,7 @@ Sequence around this milestone:
 - Add save support after shell and navigation stability from Milestone 1.
 - Make markdown and plain-text documents editable in the center pane.
 - Make file-backed `.tera` prompt templates editable in the center pane.
-- Keep model YAML read-only in this slice unless validation work is deliberately folded into the same milestone later.
+- Model YAML editing landed in this slice after manual validation feedback, while `project.json` stayed read-only.
 - Keep `project.json` read-only in this slice unless a later plan explicitly promotes manifest editing into scope.
 
 ### File and tab behavior
@@ -44,6 +51,7 @@ Sequence around this milestone:
   - markdown
   - plain text
   - `.tera`
+  - YAML model presets
 - Preserve existing read-only behavior for unsupported or deferred asset types.
 - Do not add template validation, preview rendering, run execution, API-key storage, or provider settings in this slice.
 
@@ -75,7 +83,7 @@ Cautions to carry forward:
 - Saving clears dirty state only when the persisted write succeeds.
 - Closing and reopening a saved tab shows the persisted disk content.
 - Reload or discard behavior is deterministic when the file on disk differs from the open tab contents.
-- Read-only assets remain read-only if validation is not yet landed.
+- `project.json` and unsupported asset types remain read-only.
 - No prompt validation, preview, or provider execution UI is exposed in this milestone.
 
 Validation-specific tests stay out of this slice except whatever is required to safely support saving and reload behavior.
@@ -83,7 +91,7 @@ Validation-specific tests stay out of this slice except whatever is required to 
 ## Assumptions And Defaults
 
 - `implementation-plans/03-PLAN-app-bootstrap-and-shell.md` remains the umbrella roadmap.
-- This file is the detailed active plan for the next major milestone.
+- This file records the completed Editing Slice.
 - The unavailable-recents `Locate` flow is a small follow-up after Milestone 1, not the next major milestone.
-- Model YAML editing remains deferred until validation is ready, unless a later planning pass deliberately merges those scopes.
+- Model YAML editing is now part of the completed Editing Slice.
 - `TODO.md` should stay concise and reminder-oriented rather than duplicating this full plan.

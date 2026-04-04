@@ -10,13 +10,18 @@ Use a single-app-repo Tauri + Svelte architecture in this repo and build the pro
 
 This is the next active implementation plan for the workspace.
 
-Next active milestone plan after Milestone 1:
-- `implementation-plans/07-PLAN-editing-slice.md`
+Current slice status:
+- Milestone 1 is complete
+- the Editing Slice is complete
+- the active milestone is the Rendering and Validation Slice
+
+Next active milestone plan after the Editing Slice:
+- `implementation-plans/08-PLAN-rendering-and-validation-slice.md`
 
 Sequence after Milestone 1:
 - small follow-up: unavailable-recents `Locate` flow
-- next real milestone: Editing Slice
-- then Rendering and Validation Slice
+- completed milestone: Editing Slice
+- active milestone: Rendering and Validation Slice
 - then Single-Block Execution Slice
 - later Pipelines, History, and Exports
 - later scoped online-research extension
@@ -93,7 +98,7 @@ Sequence after Milestone 1:
 - Editing scope for this phase:
   - markdown and text document editing
   - `.tera` template editing
-  - model YAML editing only if validation is ready; otherwise keep model YAML read-only until the validation slice lands
+  - model YAML editing
 - Preserve file-first behavior:
   - edits write back to disk
   - tab dirty state is visible
@@ -112,6 +117,7 @@ Sequence after Milestone 1:
   - local clock fields if needed
 - Do not port tracker-specific `scope` or chat transcript assumptions.
 - Add preview and warnings in the bottom panel or toggleable inspector area, consistent with the spec’s toggle-first behavior.
+- Keep this slice execution-free: preview validation can warn on unresolved references, but execution-time strict blocking remains part of the later execution slice.
 
 ### Phase 6: Single-Block Execution Slice
 
