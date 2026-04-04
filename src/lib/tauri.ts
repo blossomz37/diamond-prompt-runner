@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import type {
   AssetContent,
+  ExecutionCredentialStatus,
   ProjectAssetNode,
   ProjectSummary,
   PromptExecutionResult,
@@ -77,4 +78,16 @@ export async function executePromptBlock(
     relativePath,
     content
   });
+}
+
+export async function getExecutionCredentialStatus(): Promise<ExecutionCredentialStatus> {
+  return invoke<ExecutionCredentialStatus>('get_execution_credential_status');
+}
+
+export async function saveExecutionApiKey(apiKey: string): Promise<ExecutionCredentialStatus> {
+  return invoke<ExecutionCredentialStatus>('save_execution_api_key', { apiKey });
+}
+
+export async function clearExecutionApiKey(): Promise<ExecutionCredentialStatus> {
+  return invoke<ExecutionCredentialStatus>('clear_execution_api_key');
 }

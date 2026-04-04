@@ -18,6 +18,8 @@ const RECENTS_FILE_NAME: &str = "recent-projects.json";
 const DEFAULT_MODEL_PRESET_CONTENT: &str = "# Default fallback model used when no stronger override applies.\nmodel: openai/gpt-5.4\ntemperature: 0.7\nmax_completion_tokens: 12000\n";
 const OPENROUTER_CHAT_COMPLETIONS_URL: &str = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_API_KEY_ENV: &str = "OPENROUTER_API_KEY";
+const OPENROUTER_KEYCHAIN_SERVICE: &str = "com.blossomz37.diamondrunner";
+const OPENROUTER_KEYCHAIN_ACCOUNT: &str = "openrouter-api-key";
 
 #[derive(Debug, Error)]
 pub enum ProjectStoreError {
@@ -138,6 +140,21 @@ pub struct PromptExecutionResult {
     pub run_path: String,
     pub started_at: String,
     pub completed_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExecutionCredentialStatus {
+    pub source: CredentialSource,
+    pub has_stored_key: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum CredentialSource {
+    Keychain,
+    Environment,
+    Missing,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -460,15 +477,38 @@ pub fn execute_prompt_block(
     relative_path: &str,
     content: &str,
 ) -> StoreResult<PromptExecutionResult> {
-    let api_key = env::var(OPENROUTER_API_KEY_ENV).map_err(|_| {
-        ProjectStoreError::message(format!(
-            "Missing API key in environment variable: {OPENROUTER_API_KEY_ENV}"
-        ))
-    })?;
+    let api_key = load_execution_api_key()?;
 
     execute_prompt_block_with_transport(root_path, relative_path, content, &api_key, |api_key, payload| {
         post_openrouter_chat_completion(OPENROUTER_CHAT_COMPLETIONS_URL, api_key, &payload)
     })
+}
+
+pub fn get_execution_credential_status() -> StoreResult<ExecutionCredentialStatus> {
+    let has_stored_key = load_stored_openrouter_api_key()?.is_some();
+    Ok(build_execution_credential_status(
+        has_stored_key,
+        load_environment_api_key().is_some(),
+    ))
+}
+
+pub fn save_execution_api_key(api_key: &str) -> StoreResult<ExecutionCredentialStatus> {
+    let trimmed = api_key.trim();
+    if trimmed.is_empty() {
+        return Err(ProjectStoreError::message("API key cannot be empty."));
+    }
+
+    openrouter_keyring_entry()?
+        .set_password(trimmed)
+        .map_err(keyring_error)?;
+    get_execution_credential_status()
+}
+
+pub fn clear_execution_api_key() -> StoreResult<ExecutionCredentialStatus> {
+    match openrouter_keyring_entry()?.delete_credential() {
+        Ok(()) | Err(keyring::Error::NoEntry) => get_execution_credential_status(),
+        Err(error) => Err(keyring_error(error)),
+    }
 }
 
 fn execute_prompt_block_with_transport<F>(
@@ -1162,6 +1202,69 @@ fn persist_run_record(root_path: &Path, result: &PromptExecutionResult, raw_resp
     Ok(())
 }
 
+fn load_execution_api_key() -> StoreResult<String> {
+    let stored_key = load_stored_openrouter_api_key()?;
+    let environment_key = load_environment_api_key();
+
+    select_openrouter_api_key(stored_key, environment_key).ok_or_else(|| {
+        ProjectStoreError::message(format!(
+            "Missing OpenRouter API key. Save one in the app or set {OPENROUTER_API_KEY_ENV}."
+        ))
+    })
+}
+
+fn load_stored_openrouter_api_key() -> StoreResult<Option<String>> {
+    match openrouter_keyring_entry()?.get_password() {
+        Ok(password) if password.trim().is_empty() => Ok(None),
+        Ok(password) => Ok(Some(password)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(error) => Err(keyring_error(error)),
+    }
+}
+
+fn load_environment_api_key() -> Option<String> {
+    match env::var(OPENROUTER_API_KEY_ENV) {
+        Ok(value) if !value.trim().is_empty() => Some(value),
+        _ => None,
+    }
+}
+
+fn select_openrouter_api_key(
+    stored_key: Option<String>,
+    environment_key: Option<String>,
+) -> Option<String> {
+    stored_key
+        .filter(|value| !value.trim().is_empty())
+        .or_else(|| environment_key.filter(|value| !value.trim().is_empty()))
+}
+
+fn build_execution_credential_status(
+    has_stored_key: bool,
+    has_environment_key: bool,
+) -> ExecutionCredentialStatus {
+    let source = if has_stored_key {
+        CredentialSource::Keychain
+    } else if has_environment_key {
+        CredentialSource::Environment
+    } else {
+        CredentialSource::Missing
+    };
+
+    ExecutionCredentialStatus {
+        source,
+        has_stored_key,
+    }
+}
+
+fn openrouter_keyring_entry() -> StoreResult<keyring::Entry> {
+    keyring::Entry::new(OPENROUTER_KEYCHAIN_SERVICE, OPENROUTER_KEYCHAIN_ACCOUNT)
+        .map_err(keyring_error)
+}
+
+fn keyring_error(error: keyring::Error) -> ProjectStoreError {
+    ProjectStoreError::message(format!("Credential storage failed: {error}"))
+}
+
 fn default_model_id(root_path: &Path, manifest: &ProjectManifest) -> Option<String> {
     let model_path = root_path.join(&manifest.default_model_preset);
     let content = fs::read_to_string(model_path).ok()?;
@@ -1519,5 +1622,30 @@ mod tests {
 
         assert_eq!(result.model_preset, "models/review.yaml");
         assert_eq!(result.model_id, "openai/gpt-5.4-nano");
+    }
+
+    #[test]
+    fn prefers_stored_execution_api_key_over_environment() {
+        let selected = select_openrouter_api_key(
+            Some("stored-key".to_string()),
+            Some("env-key".to_string()),
+        );
+
+        assert_eq!(selected.as_deref(), Some("stored-key"));
+    }
+
+    #[test]
+    fn falls_back_to_environment_execution_api_key() {
+        let selected = select_openrouter_api_key(None, Some("env-key".to_string()));
+
+        assert_eq!(selected.as_deref(), Some("env-key"));
+    }
+
+    #[test]
+    fn reports_missing_execution_credentials_when_nothing_is_available() {
+        let status = build_execution_credential_status(false, false);
+
+        assert_eq!(status.source, CredentialSource::Missing);
+        assert!(!status.has_stored_key);
     }
 }

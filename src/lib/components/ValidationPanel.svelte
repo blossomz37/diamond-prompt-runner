@@ -1,5 +1,10 @@
 <script lang="ts">
-  import type { PromptExecutionResult, TemplateValidationResult, WorkspaceTab } from '$lib/types/project';
+  import type {
+    ExecutionCredentialStatus,
+    PromptExecutionResult,
+    TemplateValidationResult,
+    WorkspaceTab
+  } from '$lib/types/project';
 
   interface Props {
     tab: WorkspaceTab | null;
@@ -7,9 +12,27 @@
     loading: boolean;
     execution: PromptExecutionResult | null;
     executionLoading: boolean;
+    credentialState: ExecutionCredentialStatus;
+    credentialDraft: string;
+    credentialLoading: boolean;
+    onCredentialInput: (value: string) => void;
+    onSaveCredential: () => void | Promise<void>;
+    onClearCredential: () => void | Promise<void>;
   }
 
-  let { tab, validation, loading, execution, executionLoading }: Props = $props();
+  let {
+    tab,
+    validation,
+    loading,
+    execution,
+    executionLoading,
+    credentialState,
+    credentialDraft,
+    credentialLoading,
+    onCredentialInput,
+    onSaveCredential,
+    onClearCredential
+  }: Props = $props();
 
   function tone(status: TemplateValidationResult['status']): string {
     switch (status) {
@@ -24,6 +47,39 @@
 
   function executionTone(status: PromptExecutionResult['status']): string {
     return status === 'success' ? 'good' : 'bad';
+  }
+
+  function credentialTone(source: ExecutionCredentialStatus['source']): string {
+    switch (source) {
+      case 'keychain':
+        return 'good';
+      case 'environment':
+        return 'warn';
+      default:
+        return 'bad';
+    }
+  }
+
+  function credentialLabel(source: ExecutionCredentialStatus['source']): string {
+    switch (source) {
+      case 'keychain':
+        return 'keychain';
+      case 'environment':
+        return 'env fallback';
+      default:
+        return 'missing';
+    }
+  }
+
+  function credentialHelp(status: ExecutionCredentialStatus): string {
+    switch (status.source) {
+      case 'keychain':
+        return 'Stored in the native keychain for this app.';
+      case 'environment':
+        return 'No stored key is saved yet. Runs currently rely on OPENROUTER_API_KEY from the environment.';
+      default:
+        return 'No OpenRouter key is available yet. Save one here or set OPENROUTER_API_KEY.';
+    }
   }
 </script>
 
@@ -86,6 +142,46 @@
           {#if execution}
             <span class={`badge ${executionTone(execution.status)}`}>{execution.status}</span>
           {/if}
+        </div>
+
+        <div class="credential-card">
+          <div class="heading">
+            <div>
+              <p class="eyebrow">Credentials</p>
+              <h3>OpenRouter API Key</h3>
+            </div>
+            <span class={`badge ${credentialTone(credentialState.source)}`}>
+              {credentialLabel(credentialState.source)}
+            </span>
+          </div>
+
+          <p class="empty">{credentialHelp(credentialState)}</p>
+
+          <label class="secret-field">
+            <span>OpenRouter API key</span>
+            <input
+              type="password"
+              value={credentialDraft}
+              placeholder="sk-or-v1-..."
+              autocomplete="off"
+              spellcheck="false"
+              oninput={(event) => onCredentialInput((event.currentTarget as HTMLInputElement).value)}
+            />
+          </label>
+
+          <div class="credential-actions">
+            <button
+              type="button"
+              class="primary"
+              onclick={() => onSaveCredential()}
+              disabled={credentialLoading || credentialDraft.trim().length === 0}
+            >{credentialLoading ? 'Saving…' : 'Save key'}</button>
+            <button
+              type="button"
+              onclick={() => onClearCredential()}
+              disabled={credentialLoading || !credentialState.hasStoredKey}
+            >Clear stored key</button>
+          </div>
         </div>
 
         {#if executionLoading}
@@ -165,6 +261,15 @@
     gap: 0.75rem;
   }
 
+  .credential-card {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.8rem;
+    border-radius: 14px;
+    border: 1px solid rgba(157, 180, 255, 0.12);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
   .heading {
     display: flex;
     justify-content: space-between;
@@ -239,6 +344,54 @@
   .context-list {
     display: grid;
     gap: 0.6rem;
+  }
+
+  .secret-field {
+    display: grid;
+    gap: 0.4rem;
+    color: var(--text-soft);
+    font-size: 0.8rem;
+  }
+
+  .secret-field input {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--panel-border);
+    background: rgba(5, 8, 15, 0.9);
+    color: var(--text);
+    padding: 0.7rem 0.8rem;
+    font: inherit;
+  }
+
+  .secret-field input:focus {
+    outline: 1px solid rgba(139, 177, 255, 0.34);
+    border-color: rgba(139, 177, 255, 0.34);
+  }
+
+  .credential-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  button {
+    border-radius: 999px;
+    border: 1px solid var(--panel-border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+    padding: 0.45rem 0.9rem;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  button.primary {
+    background: linear-gradient(135deg, rgba(153, 227, 190, 0.22), rgba(49, 134, 96, 0.28));
+    border-color: rgba(153, 227, 190, 0.3);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   dt {

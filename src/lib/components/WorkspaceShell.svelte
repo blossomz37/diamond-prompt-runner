@@ -4,6 +4,7 @@
   import InspectorPanel from '$lib/components/InspectorPanel.svelte';
   import ValidationPanel from '$lib/components/ValidationPanel.svelte';
   import type {
+    ExecutionCredentialStatus,
     ProjectAssetNode,
     PromptExecutionResult,
     ProjectSummary,
@@ -25,6 +26,12 @@
     onSaveTab: (path: string) => void | Promise<void>;
     onReloadTab: (path: string) => void | Promise<void>;
     onRunTab: (path: string) => void | Promise<void>;
+    credentialState: ExecutionCredentialStatus;
+    credentialDraft: string;
+    credentialLoading: boolean;
+    onExecutionCredentialInput: (value: string) => void;
+    onSaveExecutionCredential: () => void | Promise<void>;
+    onClearExecutionCredential: () => void | Promise<void>;
     validationResult: TemplateValidationResult | null;
     validationLoading: boolean;
     executionResult: PromptExecutionResult | null;
@@ -45,6 +52,12 @@
     onSaveTab,
     onReloadTab,
     onRunTab,
+    credentialState,
+    credentialDraft,
+    credentialLoading,
+    onExecutionCredentialInput,
+    onSaveExecutionCredential,
+    onClearExecutionCredential,
     validationResult,
     validationLoading,
     executionResult,
@@ -150,6 +163,12 @@
           loading={validationLoading}
           execution={activeExecution}
           executionLoading={executionLoading && activeTab?.kind === 'tera'}
+          credentialState={credentialState}
+          credentialDraft={credentialDraft}
+          credentialLoading={credentialLoading}
+          onCredentialInput={onExecutionCredentialInput}
+          onSaveCredential={onSaveExecutionCredential}
+          onClearCredential={onClearExecutionCredential}
         />
       {/if}
     </section>

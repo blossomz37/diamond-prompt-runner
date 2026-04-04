@@ -3,8 +3,8 @@ mod project_store;
 use std::path::PathBuf;
 
 use project_store::{
-    AssetContent, ProjectAssetNode, ProjectSummary, PromptExecutionResult, RecentProjectEntry,
-    TemplateValidationResult,
+    AssetContent, ExecutionCredentialStatus, ProjectAssetNode, ProjectSummary,
+    PromptExecutionResult, RecentProjectEntry, TemplateValidationResult,
 };
 use tauri::Manager;
 
@@ -90,6 +90,21 @@ fn execute_prompt_block(
         .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn get_execution_credential_status() -> Result<ExecutionCredentialStatus, String> {
+    project_store::get_execution_credential_status().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn save_execution_api_key(api_key: String) -> Result<ExecutionCredentialStatus, String> {
+    project_store::save_execution_api_key(&api_key).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn clear_execution_api_key() -> Result<ExecutionCredentialStatus, String> {
+    project_store::clear_execution_api_key().map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -103,7 +118,10 @@ pub fn run() {
             read_project_asset,
             write_project_asset,
             validate_project_template,
-            execute_prompt_block
+            execute_prompt_block,
+            get_execution_credential_status,
+            save_execution_api_key,
+            clear_execution_api_key
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

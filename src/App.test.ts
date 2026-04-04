@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.svelte';
 import type {
   AssetContent,
+  ExecutionCredentialStatus,
   ProjectAssetNode,
   PromptExecutionResult,
   ProjectSummary,
@@ -11,14 +12,17 @@ import type {
 } from '$lib/types/project';
 
 const tauri = vi.hoisted(() => ({
+  clearExecutionApiKey: vi.fn(),
   createProject: vi.fn(),
   getRecentProjects: vi.fn(),
+  getExecutionCredentialStatus: vi.fn(),
   listProjectAssets: vi.fn(),
   openProject: vi.fn(),
   pickDirectory: vi.fn(),
   removeRecentProject: vi.fn(),
   readProjectAsset: vi.fn(),
   executePromptBlock: vi.fn(),
+  saveExecutionApiKey: vi.fn(),
   validateProjectTemplate: vi.fn(),
   writeProjectAsset: vi.fn()
 }));
@@ -194,9 +198,21 @@ const executionResult: PromptExecutionResult = {
   completedAt: '2026-04-03T20:13:05Z'
 };
 
+const missingCredentialStatus: ExecutionCredentialStatus = {
+  source: 'missing',
+  hasStoredKey: false
+};
+
+const keychainCredentialStatus: ExecutionCredentialStatus = {
+  source: 'keychain',
+  hasStoredKey: true
+};
+
 describe('App', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     tauri.getRecentProjects.mockResolvedValue(recents);
+    tauri.getExecutionCredentialStatus.mockResolvedValue(missingCredentialStatus);
     tauri.pickDirectory.mockResolvedValue('/tmp');
     tauri.createProject.mockResolvedValue(summary);
     tauri.openProject.mockResolvedValue(summary);
@@ -215,6 +231,8 @@ describe('App', () => {
     });
     tauri.validateProjectTemplate.mockResolvedValue(validationResult);
     tauri.executePromptBlock.mockResolvedValue(executionResult);
+    tauri.saveExecutionApiKey.mockResolvedValue(keychainCredentialStatus);
+    tauri.clearExecutionApiKey.mockResolvedValue(missingCredentialStatus);
     tauri.writeProjectAsset.mockImplementation(async (_rootPath: string, relativePath: string, content: string) => {
       if (relativePath === 'models/default.yaml') {
         return {
@@ -483,7 +501,9 @@ describe('App', () => {
   });
 
   it('shows execution failure in the bottom panel', async () => {
-    tauri.executePromptBlock.mockRejectedValueOnce(new Error('Missing API key in environment variable: OPENROUTER_API_KEY'));
+    tauri.executePromptBlock.mockRejectedValueOnce(
+      new Error('Missing OpenRouter API key. Save one in the app or set OPENROUTER_API_KEY.')
+    );
 
     render(App);
 
@@ -500,6 +520,31 @@ describe('App', () => {
     await fireEvent.click(await screen.findByRole('button', { name: 'Run' }));
 
     expect(await screen.findByText('Run failed')).toBeInTheDocument();
-    expect(screen.getByText('Missing API key in environment variable: OPENROUTER_API_KEY')).toBeInTheDocument();
+    expect(
+      screen.getByText('Missing OpenRouter API key. Save one in the app or set OPENROUTER_API_KEY.')
+    ).toBeInTheDocument();
+  });
+
+  it('stores an execution api key in app credential storage', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('prompts'));
+    await fireEvent.click(within(explorer).getByText('brief-review.tera'));
+
+    const input = await screen.findByLabelText('OpenRouter API key');
+    await fireEvent.input(input, { target: { value: 'sk-test-123' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save key' }));
+
+    await waitFor(() => expect(tauri.saveExecutionApiKey).toHaveBeenCalledWith('sk-test-123'));
+
+    expect(await screen.findByText('Stored in the native keychain for this app.')).toBeInTheDocument();
+    expect(input).toHaveValue('');
   });
 });

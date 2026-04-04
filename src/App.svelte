@@ -3,18 +3,22 @@
   import ProjectBrowser from '$lib/components/ProjectBrowser.svelte';
   import WorkspaceShell from '$lib/components/WorkspaceShell.svelte';
   import {
+    clearExecutionApiKey,
     createProject,
     executePromptBlock,
+    getExecutionCredentialStatus,
     getRecentProjects,
     listProjectAssets,
     openProject,
     pickDirectory,
     removeRecentProject,
     readProjectAsset,
+    saveExecutionApiKey,
     validateProjectTemplate,
     writeProjectAsset
   } from '$lib/tauri';
   import type {
+    ExecutionCredentialStatus,
     ProjectAssetNode,
     PromptExecutionResult,
     ProjectSummary,
@@ -38,11 +42,26 @@
   let validationLoading = $state(false);
   let executionResult = $state<PromptExecutionResult | null>(null);
   let executionLoading = $state(false);
+  let executionCredentialStatus = $state<ExecutionCredentialStatus>({
+    source: 'missing',
+    hasStoredKey: false
+  });
+  let executionCredentialDraft = $state('');
+  let executionCredentialLoading = $state(false);
   let validationTimer: ReturnType<typeof setTimeout> | null = null;
   let validationRequestId = 0;
 
   onMount(async () => {
-    recentProjects = await getRecentProjects();
+    try {
+      const [projects, credentialStatus] = await Promise.all([
+        getRecentProjects(),
+        getExecutionCredentialStatus()
+      ]);
+      recentProjects = projects;
+      executionCredentialStatus = credentialStatus;
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : 'Failed to load app state.';
+    }
   });
 
   async function enterWorkspace(summary: ProjectSummary): Promise<void> {
@@ -323,6 +342,47 @@
     }
   }
 
+  async function handleSaveExecutionCredential(): Promise<void> {
+    if (executionCredentialLoading) {
+      return;
+    }
+
+    const apiKey = executionCredentialDraft.trim();
+    if (!apiKey) {
+      return;
+    }
+
+    executionCredentialLoading = true;
+    errorMessage = null;
+
+    try {
+      executionCredentialStatus = await saveExecutionApiKey(apiKey);
+      executionCredentialDraft = '';
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : 'Failed to save execution API key.';
+    } finally {
+      executionCredentialLoading = false;
+    }
+  }
+
+  async function handleClearExecutionCredential(): Promise<void> {
+    if (executionCredentialLoading) {
+      return;
+    }
+
+    executionCredentialLoading = true;
+    errorMessage = null;
+
+    try {
+      executionCredentialStatus = await clearExecutionApiKey();
+      executionCredentialDraft = '';
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : 'Failed to clear execution API key.';
+    } finally {
+      executionCredentialLoading = false;
+    }
+  }
+
   function handleCloseTab(path: string): void {
     const index = tabs.findIndex((tab) => tab.path === path);
     if (index === -1) {
@@ -370,6 +430,12 @@
     onSaveTab={handleSaveTab}
     onReloadTab={handleReloadTab}
     onRunTab={handleExecuteTab}
+    credentialState={executionCredentialStatus}
+    credentialDraft={executionCredentialDraft}
+    credentialLoading={executionCredentialLoading}
+    onExecutionCredentialInput={(value: string) => (executionCredentialDraft = value)}
+    onSaveExecutionCredential={handleSaveExecutionCredential}
+    onClearExecutionCredential={handleClearExecutionCredential}
     {validationResult}
     {validationLoading}
     {executionResult}

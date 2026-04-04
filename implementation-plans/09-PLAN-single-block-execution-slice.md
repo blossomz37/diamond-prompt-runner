@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 8:00 PM
-modified: 2026-04-03 9:05 PM
+modified: 2026-04-03 10:15 PM
 ---
 # Plan To Reach The Single-Block Execution Slice
 
@@ -44,6 +44,13 @@ Sequence around this milestone:
 - Show latest execution metadata and output in the existing bottom panel beside validation and preview.
 - Add frontend tests for successful run output display and execution failure display.
 
+### App-level credential storage
+
+- Resolve the OpenRouter API key from native app keychain storage before falling back to `OPENROUTER_API_KEY`.
+- Add Tauri commands to read credential status plus save or clear the stored key without placing secrets in project files.
+- Expose minimal key save or clear controls in the bottom-panel execution area for active `.tera` tabs.
+- Add backend unit coverage for credential selection priority and frontend tests for saving the key from the UI.
+
 ## Scope
 
 Included in this slice:
@@ -72,7 +79,7 @@ Current recommendation:
 - keep project truth file-first while treating credentials as app-level state
 
 Current first-pass implementation default:
-- use `OPENROUTER_API_KEY` from the process environment until native secure storage is added
+- use native app keychain storage first and fall back to `OPENROUTER_API_KEY` when no stored key exists
 
 Implementation implication:
 - execution code should depend on an app-level credential lookup rather than reading secrets from `project.json` or model YAML files
@@ -152,7 +159,7 @@ Likely integration points:
 
 - [x] Implement the first backend-only execution foundation for a single `.tera` prompt tab.
 - [x] Wire frontend run controls and bottom-panel execution output for active `.tera` tabs.
-- [ ] Finalize API-key storage approach for local desktop execution beyond the current env-var default.
+- [x] Finalize API-key storage approach for local desktop execution with native keychain storage and env-var fallback.
 - [ ] Decide whether to keep direct HTTP for the first full slice or replace it with the official SDK before frontend wiring.
 - [ ] Define exact strict-failure rules for unresolved variables and document references during execution.
 - [ ] Define the on-disk structure for first-pass run artifacts under `runs/`.

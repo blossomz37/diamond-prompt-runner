@@ -93,3 +93,10 @@ export interface PromptExecutionResult {
   startedAt: string;
   completedAt: string;
 }
+
+export type ExecutionCredentialSource = 'keychain' | 'environment' | 'missing';
+
+export interface ExecutionCredentialStatus {
+  source: ExecutionCredentialSource;
+  hasStoredKey: boolean;
+}
