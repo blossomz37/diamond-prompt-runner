@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 12:57 PM
-modified: 2026-04-04 12:20 AM
+modified: 2026-04-04 1:22 PM
 ---
 
 # Rolling TODO List
@@ -52,6 +52,8 @@ Oldest to Newest
 - [x] Export Bundle Slice: export selected open tabs into derived bundles under `exports/` and block unsaved editable drafts from being exported.
 - [x] Usage Metrics Slice: extract and display prompt tokens, completion tokens, total tokens, cost, and output word count from OpenRouter responses.
 - [x] Usage Metrics Slice: persist usage metrics in run artifacts and surface them in execution metadata and run history UI.
+- [x] Variable Assignment UI: add global and project variable editing with in-app UI, backend persistence, and template context injection.
+- [x] Workspace Shell Restructure: move Pipelines, Variables, Exports to collapsible left sidebar sections; pipeline authoring opens in center pane; strip Inspector to read-only.
 
 
 ## Post-MVP

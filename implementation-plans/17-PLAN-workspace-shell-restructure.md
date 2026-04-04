@@ -1,8 +1,10 @@
 # Plan: Workspace Shell Restructure — Sidebar-Driven Workflow
 
+**Status: Complete** (2026-04-04)
+
 ## Context
 
-The Inspector (right sidebar) currently hosts both read-only summaries *and* interactive authoring UI (Pipelines, Variables, Exports). This makes the Inspector too crowded and puts "doing work" in a narrow column that should only show summaries.
+The Inspector (right sidebar) hosted both read-only summaries *and* interactive authoring UI (Pipelines, Variables, Exports). This made the Inspector too crowded and put "doing work" in a narrow column that should only show summaries.
 
 **Principle from the user:**
 - Left sidebar = navigation + access to work surfaces
@@ -82,24 +84,13 @@ No forms, no inputs, no authoring controls.
 
 ---
 
-## User Review Required
+## Resolved Decisions
 
-> [!IMPORTANT]
-> **Activity bar scope**: Should the activity bar icons be text labels, emoji-style icons, or SVG icons? For v1 I'd default to compact text labels (Explorer / Pipes / Vars / Export) to avoid an icon asset dependency. SVG icons can follow.
-
-> [!IMPORTANT]
-> **Variables view**: Should the variable editing UI stay in the left sidebar (it's a compact form that fits well there), or should it also open as a center-pane tab? The current form is small enough for a sidebar — unlike pipeline authoring which genuinely benefits from more space.
-
-> [!IMPORTANT]
-> **Exports view**: Same question — the export builder is also fairly compact (checkboxes + name input). Left sidebar vs center pane tab?
-
----
-
-## Open Questions
-
-1. **Pipeline editor tab lifecycle**: When the user saves a new pipeline, should the tab close automatically, or stay open showing the saved result?
-2. **Activity bar persistence**: Should the selected sidebar view persist across sessions, or always reset to Explorer on project open?
-3. **Pipeline run from sidebar**: Should the "Run pipeline" button stay on the pipeline card in the sidebar, or should running require opening the pipeline in the center pane?
+- **Sidebar model**: Collapsible stacked sections (Explorer, Pipelines, Variables, Exports) instead of an activity-bar view switcher. Text labels for section headers; icons deferred.
+- **Variables and Exports**: Stay in the left sidebar as compact collapsible sections.
+- **Pipeline Run**: Available directly from the sidebar pipeline card. Results viewable in the center pane.
+- **Pipeline editor tab lifecycle**: Saving closes the virtual tab automatically.
+- **Sidebar state**: Sections reset on project open (Explorer open, others collapsed).
 
 ---
 

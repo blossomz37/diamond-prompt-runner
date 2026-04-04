@@ -33,14 +33,14 @@ Rules:
 Use these docs by question type:
 - Current product direction, approved prototype, and shipped milestone status: `README.md`
 - MVP behavior, data model, and public product scope: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
-- Current implementation sequence and active slice details: `implementation-plans/15-PLAN-usage-metrics-slice.md`
+- Current implementation sequence and active slice details: `implementation-plans/17-PLAN-workspace-shell-restructure.md`
 - Rolling task inventory and follow-ups: `TODO.md`
 - Historical planning context or milestone references: other files under `implementation-plans/`
 
 ## Current Active Slice
-- The most recently completed implementation plan is `implementation-plans/15-PLAN-usage-metrics-slice.md`.
-- Usage Metrics Extraction is complete.
-- All prior slices (Milestone 1, Editing, Rendering and Validation, Single-Block Execution, Pipeline Runner, Run History, Pipeline Authoring, Export Bundle, Online Research) are complete and should be treated as closed work unless a regression is introduced.
+- The most recently completed implementation plan is `implementation-plans/17-PLAN-workspace-shell-restructure.md`.
+- Workspace Shell Restructure is complete.
+- All prior slices (Milestone 1, Editing, Rendering and Validation, Single-Block Execution, Pipeline Runner, Run History, Pipeline Authoring, Export Bundle, Online Research, Usage Metrics, Variable Assignment UI) are complete and should be treated as closed work unless a regression is introduced.
 
 ## Build And Test Commands
 
@@ -63,11 +63,16 @@ Dev workflow note:
 
 The app is split into a narrow frontend-to-backend boundary:
 - `src/App.svelte` orchestrates workspace state and routes actions into the shell
-- `src/lib/components/` contains the IDE shell UI pieces such as explorer, asset viewer, inspector, and validation panel
+- `src/lib/components/` contains the IDE shell UI pieces:
+  - `WorkspaceShell.svelte` — main layout with collapsible sidebar sections (Explorer, Pipelines, Variables, Exports), center editor pane, and right-side inspector
+  - `SidebarPipelines.svelte`, `SidebarVariables.svelte`, `SidebarExports.svelte` — interactive sidebar sections
+  - `PipelineEditorTab.svelte` — pipeline create/edit form rendered as a center-pane virtual tab
+  - `InspectorPanel.svelte` — read-only right sidebar (Project, Usage, File Metadata, Run History)
+  - `ExplorerTree.svelte`, `AssetViewer.svelte`, `ValidationPanel.svelte` — explorer, editor, and bottom panel
 - `src/lib/types/project.ts` is the shared frontend domain-type source
 - `src/lib/tauri.ts` is the frontend bridge for all Tauri commands
 - `src-tauri/src/main.rs` registers the Tauri command surface
-- `src-tauri/src/project_store.rs` is the current backend core for project IO, validation, execution, credential lookup, and run history
+- `src-tauri/src/project_store.rs` is the current backend core for project IO, validation, execution, credential lookup, run history, and global variable storage
 
 Boundary rules:
 - Keep filesystem access, credential handling, and provider HTTP calls in Rust

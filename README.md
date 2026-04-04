@@ -11,7 +11,7 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 - Product spec: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
 - Approved prototype: `Diamond Runner v2 - IDE Pass`
 - App direction: Tauri + Svelte desktop app with an IDE-like shell
-- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, the Single-Block Execution Slice, the Pipeline Runner Slice, the Run History Slice, the Pipeline Authoring Slice, the Export Bundle Slice, and the Usage Metrics Slice are complete
+- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, the Single-Block Execution Slice, the Pipeline Runner Slice, the Run History Slice, the Pipeline Authoring Slice, the Export Bundle Slice, the Usage Metrics Slice, the Variable Assignment UI, and the Workspace Shell Restructure are complete
 - Current Rendering and Validation behavior:
 	- markdown, text, `.tera`, and model YAML assets are editable in the workspace
 	- new prompt blocks can be created directly from the explorer without hand-editing `project.json`
@@ -32,20 +32,27 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 	- the bottom panel shows latest execution metadata and output alongside validation and preview
 	- the bottom panel also exposes minimal save or clear controls for the app-level OpenRouter key
 	- the bottom panel now lists recent persisted runs for the active prompt and can open the JSON artifact in a tab
-	- manifest-defined pipelines can now be listed and run sequentially from the inspector
-	- manifest-defined pipelines can now be created and edited from the inspector without hand-editing `project.json`
+	- the left sidebar lists and runs manifest-defined pipelines; pipeline create and edit open in the center pane
+	- manifest-defined pipelines can be created and edited without hand-editing `project.json`
 	- pipeline runs stop on the first failing block and reuse the existing per-block run artifact contract under `runs/`
 	- pipeline runs are guarded against unsaved related `.tera` drafts so the user does not accidentally run stale saved prompt files
-	- the inspector now shows project-wide persisted run history sourced from `runs/` and can filter those artifacts by block or pipeline
+	- the inspector shows project-wide persisted run history sourced from `runs/` and can filter those artifacts by block or pipeline
 	- pipeline-originated block runs now retain pipeline metadata in their persisted artifacts so project history can group and inspect them later
-	- the inspector can export selected open tabs into a derived bundle under `exports/` and writes bundle metadata alongside the copied artifacts
+	- the left sidebar can export selected open tabs into a derived bundle under `exports/` and writes bundle metadata alongside the copied artifacts
 	- export bundles are derived from saved files on disk and block attempts to export unsaved editable drafts
 	- prompts whose first non-empty line is `{# diamond:online #}` now opt into OpenRouter web-backed execution without changing standard prompt runs
 	- online-enabled runs now persist audit metadata for whether online mode was enabled, how many web-search requests were issued, and how many citations were returned
 	- execution results now extract and display usage metrics from the provider response: prompt tokens, completion tokens, total tokens, estimated cost, and output word count
 	- persisted run artifacts and run history entries carry usage metrics extracted from the raw OpenRouter response
+- Current variable and layout status:
+	- global variables persist to `app_data_dir/global-variables.json` and are shared across all projects
+	- project variables persist in `project.json` and override globals with the same name
+	- template context merges global → project → built-in variables
+	- the left sidebar now has collapsible sections: Explorer, Pipelines, Variables, and Exports
+	- pipeline create and edit open in the center pane as virtual tabs
+	- the right inspector is read-only: Project summary, Usage, File Metadata, and Run History
 
-Active implementation plan: `implementation-plans/15-PLAN-usage-metrics-slice.md`
+Active implementation plan: `implementation-plans/17-PLAN-workspace-shell-restructure.md`
 
 ## Recommended Agent Setup
 
