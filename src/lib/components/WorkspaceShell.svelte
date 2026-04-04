@@ -13,11 +13,13 @@
   import PipelineEditorTab from '$lib/components/PipelineEditorTab.svelte';
   import SidebarExports from '$lib/components/SidebarExports.svelte';
   import SidebarPipelines from '$lib/components/SidebarPipelines.svelte';
+  import SidebarSettings from '$lib/components/SidebarSettings.svelte';
   import SidebarVariables from '$lib/components/SidebarVariables.svelte';
   import ValidationPanel from '$lib/components/ValidationPanel.svelte';
   import type {
     ExportBundleResult,
     ExecutionCredentialStatus,
+    ModelPresetSummary,
     PipelineExecutionResult,
     ProjectAssetNode,
     ProjectPipeline,
@@ -82,6 +84,13 @@
     validationLoading: boolean;
     executionResult: PromptExecutionResult | null;
     executionLoading: boolean;
+    modelPresets: ModelPresetSummary[];
+    onRenameProject: (newName: string) => Promise<void>;
+    onSetDefaultPreset: (presetPath: string) => Promise<void>;
+    onCreatePreset: (filename: string, modelId: string) => Promise<void>;
+    onDeletePreset: (presetPath: string) => Promise<void>;
+    onOpenPresetFile: (presetPath: string) => void;
+    onSetBlockPreset: (blockId: string, presetPath: string | null) => Promise<void>;
   }
 
   let {
@@ -129,10 +138,22 @@
     validationResult,
     validationLoading,
     executionResult,
-    executionLoading
+    executionLoading,
+    modelPresets,
+    onRenameProject,
+    onSetDefaultPreset,
+    onCreatePreset,
+    onDeletePreset,
+    onOpenPresetFile,
+    onSetBlockPreset
   }: Props = $props();
 
   const activeTab = $derived(tabs.find((tab) => tab.path === activePath) ?? null);
+  const activePromptBlock = $derived(
+    activeTab && activeTab.kind === 'tera'
+      ? promptBlocks.find((b) => b.templateSource === activeTab.path) ?? null
+      : null
+  );
   const activeExecution = $derived(
     activeTab && executionResult?.path === activeTab.path ? executionResult : null
   );
@@ -142,6 +163,7 @@
   let pipelinesOpen = $state(false);
   let variablesOpen = $state(false);
   let exportsOpen = $state(false);
+  let settingsOpen = $state(false);
 
   // Bottom panel
   let bottomOpen = $state(true);
@@ -312,6 +334,28 @@
           </div>
         {/if}
       </div>
+
+      <!-- Settings section -->
+      <div class="sidebar-section" class:collapsed={!settingsOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (settingsOpen = !settingsOpen)}>
+          <span>Settings</span>
+          <span class="toggle">{settingsOpen ? '▾' : '▸'}</span>
+        </button>
+        {#if settingsOpen}
+          <div class="sidebar-body">
+            <SidebarSettings
+              {summary}
+              presets={modelPresets}
+              credentialStatus={credentialState}
+              {onRenameProject}
+              {onSetDefaultPreset}
+              {onCreatePreset}
+              {onDeletePreset}
+              {onOpenPresetFile}
+            />
+          </div>
+        {/if}
+      </div>
     </aside>
 
     <main class="editor panel">
@@ -385,6 +429,9 @@
         runHistoryLoading={projectRunHistoryLoading}
         usageSummary={projectUsageSummary}
         onOpenRunPath={onOpenRunPath}
+        activePromptBlock={activePromptBlock}
+        modelPresets={modelPresets}
+        onSetBlockPreset={onSetBlockPreset}
       />
     </aside>
 

@@ -4,9 +4,11 @@
   import WorkspaceShell from '$lib/components/WorkspaceShell.svelte';
   import {
     clearExecutionApiKey,
+    createModelPreset,
     createPipeline,
     createProject,
     createPromptBlock,
+    deleteModelPreset,
     executePipeline,
     executePromptBlock,
     exportProjectAssets,
@@ -14,6 +16,7 @@
     getGlobalVariables,
     getRecentProjects,
     getProjectUsageSummary,
+    listModelPresets,
     listProjectPromptBlocks,
     listProjectRunHistory,
     listProjectPipelines,
@@ -22,9 +25,12 @@
     locateRecentProject,
     openProject,
     pickDirectory,
-    removeRecentProject,
     readProjectAsset,
+    removeRecentProject,
+    renameProject,
     saveExecutionApiKey,
+    setDefaultModelPreset,
+    setBlockModelPreset,
     setGlobalVariables,
     setProjectVariables,
     updatePipeline,
@@ -35,6 +41,7 @@
     ExecutionCredentialStatus,
     CreatedPromptBlockResult,
     ExportBundleResult,
+    ModelPresetSummary,
     PipelineExecutionResult,
     ProjectAssetNode,
     ProjectPipeline,
@@ -78,6 +85,7 @@
   let pipelineAuthoringLoading = $state(false);
   let exportLoading = $state(false);
   let promptCreationLoading = $state(false);
+  let modelPresets = $state<ModelPresetSummary[]>([]);
   let executionCredentialStatus = $state<ExecutionCredentialStatus>({
     source: 'missing',
     hasStoredKey: false
@@ -105,18 +113,20 @@
 
   async function enterWorkspace(summary: ProjectSummary): Promise<void> {
     workspace = summary;
-    const [nodes, pipelines, promptBlocks, runHistory, usageSummary] = await Promise.all([
+    const [nodes, pipelines, promptBlocks, runHistory, usageSummary, presets] = await Promise.all([
       listProjectAssets(summary.rootPath),
       listProjectPipelines(summary.rootPath),
       listProjectPromptBlocks(summary.rootPath),
       listProjectRunHistory(summary.rootPath),
-      getProjectUsageSummary(summary.rootPath)
+      getProjectUsageSummary(summary.rootPath),
+      listModelPresets(summary.rootPath)
     ]);
     assetNodes = nodes;
     projectPipelines = pipelines;
     projectPromptBlocks = promptBlocks;
     projectRunHistory = runHistory;
     projectUsageSummary = usageSummary;
+    modelPresets = presets;
     tabs = [];
     activePath = null;
     loadingPath = null;
@@ -677,6 +687,66 @@
     workspace = await setProjectVariables(workspace.rootPath, variables);
   }
 
+  async function handleRenameProject(newName: string): Promise<void> {
+    if (!workspace) return;
+    workspace = await renameProject(workspace.rootPath, newName);
+  }
+
+  async function handleSetDefaultPreset(presetPath: string): Promise<void> {
+    if (!workspace) return;
+    workspace = await setDefaultModelPreset(workspace.rootPath, presetPath);
+  }
+
+  async function handleCreatePreset(filename: string, modelId: string): Promise<void> {
+    if (!workspace) return;
+    await createModelPreset(workspace.rootPath, filename, modelId);
+    modelPresets = await listModelPresets(workspace.rootPath);
+    // Refresh asset tree since models/ changed
+    assetNodes = await listProjectAssets(workspace.rootPath);
+  }
+
+  async function handleDeletePreset(presetPath: string): Promise<void> {
+    if (!workspace) return;
+    await deleteModelPreset(workspace.rootPath, presetPath);
+    modelPresets = await listModelPresets(workspace.rootPath);
+    // Close the tab if the deleted preset was open
+    const existingTab = tabs.find((t) => t.path === presetPath);
+    if (existingTab) {
+      tabs = tabs.filter((t) => t.path !== presetPath);
+      if (activePath === presetPath) {
+        activePath = tabs.length > 0 ? tabs[tabs.length - 1].path : null;
+      }
+    }
+    assetNodes = await listProjectAssets(workspace.rootPath);
+  }
+
+  function handleOpenPresetFile(presetPath: string): void {
+    if (!workspace) return;
+    // Find the asset node in the tree and select it
+    const node = findAssetNode(assetNodes, presetPath);
+    if (node) {
+      handleSelectAsset(node);
+    }
+  }
+
+  async function handleSetBlockPreset(blockId: string, presetPath: string | null): Promise<void> {
+    if (!workspace) return;
+    workspace = await setBlockModelPreset(workspace.rootPath, blockId, presetPath);
+    // Refresh prompt blocks list to see the update
+    projectPromptBlocks = await listProjectPromptBlocks(workspace.rootPath);
+  }
+
+  function findAssetNode(nodes: ProjectAssetNode[], path: string): ProjectAssetNode | null {
+    for (const node of nodes) {
+      if (node.path === path) return node;
+      if (node.isDirectory && node.children.length > 0) {
+        const found = findAssetNode(node.children, path);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
   async function refreshPipelineAuthoringState(rootPath: string): Promise<void> {
     const [pipelines, promptBlocks] = await Promise.all([
       listProjectPipelines(rootPath),
@@ -852,5 +922,12 @@
     {validationLoading}
     {executionResult}
     {executionLoading}
+    {modelPresets}
+    onRenameProject={handleRenameProject}
+    onSetDefaultPreset={handleSetDefaultPreset}
+    onCreatePreset={handleCreatePreset}
+    onDeletePreset={handleDeletePreset}
+    onOpenPresetFile={handleOpenPresetFile}
+    onSetBlockPreset={handleSetBlockPreset}
   />
 {/if}

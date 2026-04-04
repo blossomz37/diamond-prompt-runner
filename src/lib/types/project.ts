@@ -195,3 +195,9 @@ export interface ExecutionCredentialStatus {
   source: ExecutionCredentialSource;
   hasStoredKey: boolean;
 }
+
+export interface ModelPresetSummary {
+  path: string;
+  filename: string;
+  modelId: string;
+}

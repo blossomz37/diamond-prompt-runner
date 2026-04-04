@@ -4,9 +4,10 @@ use std::path::PathBuf;
 
 use project_store::{
     AssetContent, CreatedPromptBlockResult, ExecutionCredentialStatus, ExportBundleResult,
-    PipelineExecutionResult, ProjectAssetNode, ProjectPipelineSummary, ProjectPromptBlockSummary,
-    ProjectRunHistoryEntry, ProjectSummary, ProjectUsageSummary, PromptExecutionResult,
-    PromptRunHistoryEntry, RecentProjectEntry, SavedPipelineResult, TemplateValidationResult,
+    ModelPresetSummary, PipelineExecutionResult, ProjectAssetNode, ProjectPipelineSummary,
+    ProjectPromptBlockSummary, ProjectRunHistoryEntry, ProjectSummary, ProjectUsageSummary,
+    PromptExecutionResult, PromptRunHistoryEntry, RecentProjectEntry, SavedPipelineResult,
+    TemplateValidationResult,
 };
 use std::collections::BTreeMap;
 use tauri::Manager;
@@ -226,15 +227,12 @@ fn set_global_variables(
 
 #[tauri::command]
 fn set_project_variables(
-    app: tauri::AppHandle,
     root_path: String,
     variables: BTreeMap<String, String>,
 ) -> Result<ProjectSummary, String> {
-    let app_data_dir = app_data_dir(&app)?;
     project_store::set_project_variables(
         PathBuf::from(root_path).as_path(),
         variables,
-        &app_data_dir,
     )
     .map_err(|error| error.to_string())
 }
@@ -275,6 +273,73 @@ fn get_project_usage_summary(root_path: String) -> Result<ProjectUsageSummary, S
         .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn list_model_presets(root_path: String) -> Result<Vec<ModelPresetSummary>, String> {
+    project_store::list_model_presets(PathBuf::from(root_path).as_path())
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn set_default_model_preset(
+    root_path: String,
+    preset_path: String,
+) -> Result<ProjectSummary, String> {
+    project_store::set_default_model_preset(
+        PathBuf::from(root_path).as_path(),
+        &preset_path,
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn create_model_preset(
+    root_path: String,
+    filename: String,
+    model_id: String,
+) -> Result<ModelPresetSummary, String> {
+    project_store::create_model_preset(
+        PathBuf::from(root_path).as_path(),
+        &filename,
+        &model_id,
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn delete_model_preset(root_path: String, preset_path: String) -> Result<(), String> {
+    project_store::delete_model_preset(PathBuf::from(root_path).as_path(), &preset_path)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn set_block_model_preset(
+    root_path: String,
+    block_id: String,
+    preset_path: Option<String>,
+) -> Result<ProjectSummary, String> {
+    project_store::set_block_model_preset(
+        PathBuf::from(root_path).as_path(),
+        &block_id,
+        preset_path.as_deref(),
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn rename_project(
+    app: tauri::AppHandle,
+    root_path: String,
+    new_name: String,
+) -> Result<ProjectSummary, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::rename_project(
+        PathBuf::from(root_path).as_path(),
+        &new_name,
+        &app_data_dir,
+    )
+    .map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -305,7 +370,13 @@ pub fn run() {
             get_project_usage_summary,
             get_global_variables,
             set_global_variables,
-            set_project_variables
+            set_project_variables,
+            list_model_presets,
+            set_default_model_preset,
+            create_model_preset,
+            delete_model_preset,
+            set_block_model_preset,
+            rename_project
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

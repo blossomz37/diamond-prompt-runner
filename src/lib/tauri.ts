@@ -5,6 +5,7 @@ import type {
   CreatedPromptBlockResult,
   ExecutionCredentialStatus,
   ExportBundleResult,
+  ModelPresetSummary,
   PipelineExecutionResult,
   ProjectAssetNode,
   ProjectPipeline,
@@ -209,4 +210,45 @@ export async function setProjectVariables(
   variables: Record<string, string>
 ): Promise<ProjectSummary> {
   return invoke<ProjectSummary>('set_project_variables', { rootPath, variables });
+}
+
+export async function listModelPresets(rootPath: string): Promise<ModelPresetSummary[]> {
+  return invoke<ModelPresetSummary[]>('list_model_presets', { rootPath });
+}
+
+export async function setDefaultModelPreset(
+  rootPath: string,
+  presetPath: string
+): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>('set_default_model_preset', { rootPath, presetPath });
+}
+
+export async function createModelPreset(
+  rootPath: string,
+  filename: string,
+  modelId: string
+): Promise<ModelPresetSummary> {
+  return invoke<ModelPresetSummary>('create_model_preset', { rootPath, filename, modelId });
+}
+
+export async function deleteModelPreset(
+  rootPath: string,
+  presetPath: string
+): Promise<void> {
+  return invoke('delete_model_preset', { rootPath, presetPath });
+}
+
+export async function setBlockModelPreset(
+  rootPath: string,
+  blockId: string,
+  presetPath: string | null
+): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>('set_block_model_preset', { rootPath, blockId, presetPath });
+}
+
+export async function renameProject(
+  rootPath: string,
+  newName: string
+): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>('rename_project', { rootPath, newName });
 }

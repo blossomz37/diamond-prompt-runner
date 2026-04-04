@@ -9,6 +9,8 @@
   // ──────────────────────────────────────────────
   import type {
     AssetMetadata,
+    ModelPresetSummary,
+    ProjectPromptBlock,
     ProjectRunHistoryEntry,
     ProjectSummary,
     ProjectUsageSummary
@@ -20,7 +22,10 @@
     runHistory: ProjectRunHistoryEntry[];
     runHistoryLoading: boolean;
     usageSummary: ProjectUsageSummary | null;
+    activePromptBlock: ProjectPromptBlock | null;
+    modelPresets: ModelPresetSummary[];
     onOpenRunPath: (path: string) => void | Promise<void>;
+    onSetBlockPreset: (blockId: string, presetPath: string | null) => Promise<void>;
   }
 
   let {
@@ -29,7 +34,10 @@
     runHistory,
     runHistoryLoading,
     usageSummary,
-    onOpenRunPath
+    activePromptBlock,
+    modelPresets,
+    onOpenRunPath,
+    onSetBlockPreset
   }: Props = $props();
 
   let historyFilter = $state('all');
@@ -73,65 +81,95 @@
 
     return runHistory;
   });
+
+  let prevMetadataPath = $state<string | null>(null);
+  let runHistoryOpen = $state(true);
+
+  $effect(() => {
+    const currentPath = metadata?.path ?? null;
+    if (currentPath !== prevMetadataPath) {
+      runHistoryOpen = (currentPath === null);
+      prevMetadataPath = currentPath;
+    }
+  });
+
+  let presetSaving = $state(false);
+  let presetError = $state('');
+
+  async function handlePresetChange(event: Event): Promise<void> {
+    if (!activePromptBlock) return;
+    const select = event.target as HTMLSelectElement;
+    const value = select.value || null;
+    
+    presetSaving = true;
+    presetError = '';
+    try {
+      await onSetBlockPreset(activePromptBlock.blockId, value);
+    } catch (e) {
+      presetError = String(e);
+    } finally {
+      presetSaving = false;
+    }
+  }
 </script>
 
 <aside class="inspector">
-  <section class="section">
-    <p class="eyebrow">Project</p>
-    <h3>{summary.projectName}</h3>
-    <dl>
-      <div>
-        <dt>Root</dt>
-        <dd>{summary.rootPath}</dd>
-      </div>
-      <div>
-        <dt>Default preset</dt>
-        <dd>{summary.defaultModelPreset}</dd>
-      </div>
-      <div>
-        <dt>Assets</dt>
-        <dd>{summary.counts.documents} docs / {summary.counts.prompts} prompts / {summary.counts.models} models</dd>
-      </div>
-    </dl>
-  </section>
-
-  {#if usageSummary && usageSummary.totalRuns > 0}
+  {#if !metadata}
     <section class="section">
-      <p class="eyebrow">Usage</p>
+      <p class="eyebrow">Project</p>
+      <h3>{summary.projectName}</h3>
       <dl>
         <div>
-          <dt>Runs</dt>
-          <dd>{usageSummary.successfulRuns} succeeded · {usageSummary.failedRuns} failed</dd>
+          <dt>Root</dt>
+          <dd>{summary.rootPath}</dd>
         </div>
         <div>
-          <dt>Total Tokens</dt>
-          <dd>{usageSummary.totalTokens.toLocaleString()}</dd>
+          <dt>Default preset</dt>
+          <dd>{summary.defaultModelPreset}</dd>
         </div>
-        {#if usageSummary.totalCost > 0}
-          <div>
-            <dt>Total Cost</dt>
-            <dd>${usageSummary.totalCost.toFixed(4)}</dd>
-          </div>
-        {/if}
-        {#if usageSummary.totalOutputWords > 0}
-          <div>
-            <dt>Output Words</dt>
-            <dd>{usageSummary.totalOutputWords.toLocaleString()}</dd>
-          </div>
-        {/if}
-        {#if usageSummary.totalRetries > 0}
-          <div>
-            <dt>Total Retries</dt>
-            <dd>{usageSummary.totalRetries}</dd>
-          </div>
-        {/if}
+        <div>
+          <dt>Assets</dt>
+          <dd>{summary.counts.documents} docs / {summary.counts.prompts} prompts / {summary.counts.models} models</dd>
+        </div>
       </dl>
     </section>
-  {/if}
 
-  <section class="section">
-    <p class="eyebrow">Inspector</p>
-    {#if metadata}
+    {#if usageSummary && usageSummary.totalRuns > 0}
+      <section class="section">
+        <p class="eyebrow">Usage</p>
+        <dl>
+          <div>
+            <dt>Runs</dt>
+            <dd>{usageSummary.successfulRuns} succeeded · {usageSummary.failedRuns} failed</dd>
+          </div>
+          <div>
+            <dt>Total Tokens</dt>
+            <dd>{usageSummary.totalTokens.toLocaleString()}</dd>
+          </div>
+          {#if usageSummary.totalCost > 0}
+            <div>
+              <dt>Total Cost</dt>
+              <dd>${usageSummary.totalCost.toFixed(4)}</dd>
+            </div>
+          {/if}
+          {#if usageSummary.totalOutputWords > 0}
+            <div>
+              <dt>Output Words</dt>
+              <dd>{usageSummary.totalOutputWords.toLocaleString()}</dd>
+            </div>
+          {/if}
+          {#if usageSummary.totalRetries > 0}
+            <div>
+              <dt>Total Retries</dt>
+              <dd>{usageSummary.totalRetries}</dd>
+            </div>
+          {/if}
+        </dl>
+      </section>
+    {/if}
+  {:else}
+    <section class="section">
+      <p class="eyebrow">File Info</p>
       <h3>{metadata.name}</h3>
       <dl>
         <div>
@@ -157,63 +195,89 @@
           </div>
         {/each}
       </dl>
-    {:else}
-      <p class="empty">Open a file from the explorer to inspect file metadata here.</p>
+    </section>
+
+    {#if activePromptBlock}
+      <section class="section preset-section">
+        <p class="eyebrow">Block Settings</p>
+        <div class="preset-override">
+          <label for="block-preset-select">Model Override</label>
+          <select
+            id="block-preset-select"
+            class="preset-select"
+            value={activePromptBlock.modelPreset}
+            onchange={handlePresetChange}
+            disabled={presetSaving}
+          >
+            <option value="">(Use project default)</option>
+            {#each modelPresets as preset (preset.path)}
+              <option value={preset.path}>{preset.filename} — {preset.modelId}</option>
+            {/each}
+          </select>
+          {#if presetError}
+            <p class="preset-error">{presetError}</p>
+          {/if}
+        </div>
+      </section>
     {/if}
-  </section>
+  {/if}
 
   <section class="section">
     <div class="history-heading">
-      <div>
+      <button type="button" class="history-toggle" onclick={() => (runHistoryOpen = !runHistoryOpen)}>
         <p class="eyebrow">Run History</p>
-        <h3>Project Runs</h3>
-      </div>
-      <label class="history-filter">
-        <span>Filter</span>
-        <select bind:value={historyFilter}>
-          <option value="all">All runs</option>
-          {#if blockFilters.length > 0}
-            {#each blockFilters as item (item.blockId)}
-              <option value={`block:${item.blockId}`}>Block: {item.blockName}</option>
-            {/each}
-          {/if}
-          {#if pipelineFilters.length > 0}
-            {#each pipelineFilters as item (item.pipelineId)}
-              <option value={`pipeline:${item.pipelineId}`}>Pipeline: {item.pipelineName}</option>
-            {/each}
-          {/if}
-        </select>
-      </label>
+        <span class="toggle">{runHistoryOpen ? '▾' : '▸'}</span>
+      </button>
+      {#if runHistoryOpen}
+        <label class="history-filter">
+          <span>Filter</span>
+          <select bind:value={historyFilter}>
+            <option value="all">All runs</option>
+            {#if blockFilters.length > 0}
+              {#each blockFilters as item (item.blockId)}
+                <option value={`block:${item.blockId}`}>Block: {item.blockName}</option>
+              {/each}
+            {/if}
+            {#if pipelineFilters.length > 0}
+              {#each pipelineFilters as item (item.pipelineId)}
+                <option value={`pipeline:${item.pipelineId}`}>Pipeline: {item.pipelineName}</option>
+              {/each}
+            {/if}
+          </select>
+        </label>
+      {/if}
     </div>
 
-    {#if runHistoryLoading}
-      <p class="empty">Loading persisted project runs…</p>
-    {:else if filteredHistory.length === 0}
-      <p class="empty">No matching run artifacts yet.</p>
-    {:else}
-      <div class="history-list">
-        {#each filteredHistory as item (item.runId)}
-          <article class="history-item">
-            <div class="history-item-head">
-              <div>
-                <strong>{item.blockName}</strong>
-                <p class="meta">{item.completedAt}</p>
+    {#if runHistoryOpen}
+      {#if runHistoryLoading}
+        <p class="empty">Loading persisted project runs…</p>
+      {:else if filteredHistory.length === 0}
+        <p class="empty">No matching run artifacts yet.</p>
+      {:else}
+        <div class="history-list">
+          {#each filteredHistory as item (item.runId)}
+            <article class="history-item">
+              <div class="history-item-head">
+                <div>
+                  <strong>{item.blockName}</strong>
+                  <p class="meta">{item.completedAt}</p>
+                </div>
+                <span class:failed={item.status === 'failed'} class="meta strong">{item.status}</span>
               </div>
-              <span class:failed={item.status === 'failed'} class="meta strong">{item.status}</span>
-            </div>
-            {#if item.pipelineName}
-              <p class="meta">Pipeline: {item.pipelineName}</p>
-            {/if}
-            <p class="meta">{item.modelId}{item.usage.retryCount != null && item.usage.retryCount > 0 ? ` · ${item.usage.retryCount} retr${item.usage.retryCount === 1 ? 'y' : 'ies'}` : ''}</p>
-            {#if item.outputPreview}
-              <p>{item.outputPreview}</p>
-            {:else if item.error}
-              <p class="failed">{item.error}</p>
-            {/if}
-            <button type="button" class="history-open" onclick={() => onOpenRunPath(item.runPath)}>Open artifact</button>
-          </article>
-        {/each}
-      </div>
+              {#if item.pipelineName}
+                <p class="meta">Pipeline: {item.pipelineName}</p>
+              {/if}
+              <p class="meta">{item.modelId}{item.usage.retryCount != null && item.usage.retryCount > 0 ? ` · ${item.usage.retryCount} retr${item.usage.retryCount === 1 ? 'y' : 'ies'}` : ''}</p>
+              {#if item.outputPreview}
+                <p>{item.outputPreview}</p>
+              {:else if item.error}
+                <p class="failed">{item.error}</p>
+              {/if}
+              <button type="button" class="history-open" onclick={() => onOpenRunPath(item.runPath)}>Open artifact</button>
+            </article>
+          {/each}
+        </div>
+      {/if}
     {/if}
   </section>
 </aside>
@@ -329,5 +393,61 @@
     border-radius: 14px;
     border: 1px solid rgba(157, 180, 255, 0.12);
     background: rgba(255, 255, 255, 0.03);
+  }
+
+  .history-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .history-toggle:hover .eyebrow {
+    color: var(--text);
+  }
+
+  .history-toggle .toggle {
+    font-size: 11px;
+    color: var(--text-soft);
+  }
+
+  .preset-override {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .preset-override label {
+    font-size: 0.72rem;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .preset-select {
+    width: 100%;
+    min-height: 2rem;
+    border-radius: 8px;
+    border: 1px solid rgba(157, 180, 255, 0.16);
+    background: rgba(7, 11, 20, 0.82);
+    color: var(--text);
+    padding: 0.3rem 0.5rem;
+    font-size: 11.5px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .preset-select:focus {
+    border-color: rgba(139, 177, 255, 0.35);
+  }
+
+  .preset-error {
+    font-size: 11px;
+    color: var(--danger);
+    margin: 0;
   }
 </style>
