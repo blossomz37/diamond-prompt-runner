@@ -2,7 +2,13 @@
   import AssetViewer from '$lib/components/AssetViewer.svelte';
   import ExplorerTree from '$lib/components/ExplorerTree.svelte';
   import InspectorPanel from '$lib/components/InspectorPanel.svelte';
-  import type { ProjectAssetNode, ProjectSummary, WorkspaceTab } from '$lib/types/project';
+  import ValidationPanel from '$lib/components/ValidationPanel.svelte';
+  import type {
+    ProjectAssetNode,
+    ProjectSummary,
+    TemplateValidationResult,
+    WorkspaceTab
+  } from '$lib/types/project';
 
   interface Props {
     summary: ProjectSummary;
@@ -17,6 +23,8 @@
     onDraftChange: (path: string, content: string) => void;
     onSaveTab: (path: string) => void | Promise<void>;
     onReloadTab: (path: string) => void | Promise<void>;
+    validationResult: TemplateValidationResult | null;
+    validationLoading: boolean;
   }
 
   let {
@@ -31,10 +39,14 @@
     onCloseTab,
     onDraftChange,
     onSaveTab,
-    onReloadTab
+    onReloadTab,
+    validationResult,
+    validationLoading
   }: Props = $props();
 
   const activeTab = $derived(tabs.find((tab) => tab.path === activePath) ?? null);
+
+  let bottomOpen = $state(true);
 </script>
 
 <section class="workspace-shell">
@@ -55,7 +67,7 @@
     <p class="error-banner">{errorMessage}</p>
   {/if}
 
-  <div class="shell-grid">
+  <div class="shell-grid" class:bottom-closed={!bottomOpen}>
     <aside class="explorer panel">
       <div class="pane-head">
         <p class="eyebrow">Explorer</p>
@@ -108,12 +120,19 @@
     <section class="bottom panel">
       <div class="pane-head">
         <p class="eyebrow">Bottom Panel</p>
-        <span>Placeholder</span>
+        <div class="pane-controls">
+          <span>{activeTab?.kind === 'tera' ? 'Validation' : 'Preview'}</span>
+          <button
+            type="button"
+            class="pane-toggle"
+            onclick={() => (bottomOpen = !bottomOpen)}
+            aria-label={bottomOpen ? 'Collapse bottom panel' : 'Expand bottom panel'}
+          >{bottomOpen ? '▾' : '▸'}</button>
+        </div>
       </div>
-      <p>
-        Preview, validation, run history, and logs will land in later slices. Milestone 1 keeps this
-        area intentionally inactive.
-      </p>
+      {#if bottomOpen}
+        <ValidationPanel tab={activeTab} validation={validationResult} loading={validationLoading} />
+      {/if}
     </section>
   </div>
 </section>
@@ -174,10 +193,14 @@
   .shell-grid {
     display: grid;
     grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr) minmax(17rem, 21rem);
-    grid-template-rows: minmax(0, 1fr) 10rem;
+    grid-template-rows: minmax(0, 1fr) minmax(10rem, auto);
     gap: 0.85rem;
     min-height: 0;
     flex: 1;
+  }
+
+  .shell-grid.bottom-closed {
+    grid-template-rows: minmax(0, 1fr) auto;
   }
 
   .explorer,
@@ -200,6 +223,28 @@
     margin-bottom: 0.75rem;
     color: var(--text-dim);
     font-size: 0.8rem;
+  }
+
+  .pane-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .pane-toggle {
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    padding: 0.15rem 0.35rem;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .pane-toggle:hover {
+    border-color: rgba(157, 180, 255, 0.2);
+    color: var(--text);
   }
 
   .editor {
@@ -264,6 +309,7 @@
   .bottom {
     grid-column: 1 / span 3;
     display: grid;
+    grid-template-rows: auto auto;
     gap: 0.45rem;
     padding: 0.8rem 1rem;
     color: var(--text-dim);
@@ -276,7 +322,11 @@
   @media (max-width: 1160px) {
     .shell-grid {
       grid-template-columns: minmax(14rem, 16rem) minmax(0, 1fr);
-      grid-template-rows: minmax(0, 1fr) minmax(16rem, auto) 10rem;
+      grid-template-rows: minmax(0, 1fr) minmax(16rem, auto) minmax(10rem, auto);
+    }
+
+    .shell-grid.bottom-closed {
+      grid-template-rows: minmax(0, 1fr) minmax(16rem, auto) auto;
     }
 
     .inspector {
@@ -295,7 +345,11 @@
     }
 
     .shell-grid {
-      grid-template-rows: minmax(16rem, auto) minmax(24rem, auto) minmax(16rem, auto) 10rem;
+      grid-template-rows: minmax(16rem, auto) minmax(24rem, auto) minmax(16rem, auto) minmax(10rem, auto);
+    }
+
+    .shell-grid.bottom-closed {
+      grid-template-rows: minmax(16rem, auto) minmax(24rem, auto) minmax(16rem, auto) auto;
     }
 
     .inspector,

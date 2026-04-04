@@ -68,3 +68,12 @@ export interface WorkspaceTab extends AssetContent {
   draftContent: string;
   isSaving: boolean;
 }
+
+export interface TemplateValidationResult {
+  path: string;
+  status: 'valid' | 'warnings' | 'invalid';
+  preview: string | null;
+  warnings: string[];
+  errors: string[];
+  contextSummary: MetadataField[];
+}

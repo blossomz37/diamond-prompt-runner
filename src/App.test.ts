@@ -1,7 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.svelte';
-import type { AssetContent, ProjectAssetNode, ProjectSummary, RecentProjectEntry } from '$lib/types/project';
+import type {
+  AssetContent,
+  ProjectAssetNode,
+  ProjectSummary,
+  RecentProjectEntry,
+  TemplateValidationResult
+} from '$lib/types/project';
 
 const tauri = vi.hoisted(() => ({
   createProject: vi.fn(),
@@ -11,6 +17,7 @@ const tauri = vi.hoisted(() => ({
   pickDirectory: vi.fn(),
   removeRecentProject: vi.fn(),
   readProjectAsset: vi.fn(),
+  validateProjectTemplate: vi.fn(),
   writeProjectAsset: vi.fn()
 }));
 
@@ -135,6 +142,40 @@ const yamlAssetContent: AssetContent = {
   parsedJson: null
 };
 
+const teraAssetContent: AssetContent = {
+  path: 'prompts/brief-review.tera',
+  kind: 'tera',
+  view: 'text',
+  content:
+    'You are reviewing the current project context.\n\nContext:\n{{ doc("context.md") }}\n\nRespond with a short summary and one next action.\n',
+  isEditable: true,
+  metadata: {
+    kind: 'tera',
+    path: 'prompts/brief-review.tera',
+    name: 'brief-review.tera',
+    sizeBytes: 126,
+    modifiedAt: '2026-04-03T20:12:00Z',
+    details: [
+      { label: 'Lines', value: '6' },
+      { label: 'Linked Blocks', value: 'Brief Review' }
+    ]
+  },
+  parsedJson: null
+};
+
+const validationResult: TemplateValidationResult = {
+  path: 'prompts/brief-review.tera',
+  status: 'valid',
+  preview:
+    'You are reviewing the current project context.\n\nContext:\n# Product Context\n\nDiamond Prompt Runner stores prompts, documents, and model presets as local project files.\n\nRespond with a short summary and one next action.',
+  warnings: [],
+  errors: [],
+  contextSummary: [
+    { label: 'Project', value: 'Story Lab' },
+    { label: 'Model ID', value: 'openai/gpt-5.4' }
+  ]
+};
+
 describe('App', () => {
   beforeEach(() => {
     tauri.getRecentProjects.mockResolvedValue(recents);
@@ -144,12 +185,28 @@ describe('App', () => {
     tauri.removeRecentProject.mockResolvedValue(undefined);
     tauri.listProjectAssets.mockResolvedValue(assetNodes);
     tauri.readProjectAsset.mockImplementation(async (_rootPath: string, relativePath: string) => {
-      return relativePath === 'models/default.yaml' ? yamlAssetContent : assetContent;
+      if (relativePath === 'models/default.yaml') {
+        return yamlAssetContent;
+      }
+
+      if (relativePath === 'prompts/brief-review.tera') {
+        return teraAssetContent;
+      }
+
+      return assetContent;
     });
+    tauri.validateProjectTemplate.mockResolvedValue(validationResult);
     tauri.writeProjectAsset.mockImplementation(async (_rootPath: string, relativePath: string, content: string) => {
       if (relativePath === 'models/default.yaml') {
         return {
           ...yamlAssetContent,
+          content
+        };
+      }
+
+      if (relativePath === 'prompts/brief-review.tera') {
+        return {
+          ...teraAssetContent,
           content
         };
       }
@@ -182,6 +239,7 @@ describe('App', () => {
     );
 
     const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('documents'));
     await fireEvent.click(within(explorer).getByText('context.md'));
     await waitFor(() => expect(screen.getAllByText('context.md')).not.toHaveLength(0));
 
@@ -223,6 +281,7 @@ describe('App', () => {
     );
 
     const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('documents'));
     await fireEvent.click(within(explorer).getByText('context.md'));
 
     const editor = await screen.findByTestId('asset-editor');
@@ -253,10 +312,127 @@ describe('App', () => {
     );
 
     const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('models'));
     await fireEvent.click(within(explorer).getByText('default.yaml'));
 
     const editor = await screen.findByTestId('asset-editor');
     expect(editor).toHaveValue(yamlAssetContent.content);
     expect(screen.queryByText('Read-only View')).not.toBeInTheDocument();
+  });
+
+  it('shows template preview and validation state in the bottom panel', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('prompts'));
+    await fireEvent.click(within(explorer).getByText('brief-review.tera'));
+
+    await waitFor(() =>
+      expect(tauri.validateProjectTemplate).toHaveBeenCalledWith(
+        '/tmp/story-lab',
+        'prompts/brief-review.tera',
+        teraAssetContent.content
+      )
+    );
+
+    expect(await screen.findByText('valid')).toBeInTheDocument();
+    expect(screen.getByText('Preview')).toBeInTheDocument();
+    expect(screen.getByText(/Diamond Prompt Runner stores prompts/)).toBeInTheDocument();
+  });
+
+  it('clears validation result when switching away from a tera tab', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    const explorer = screen.getByTestId('explorer-tree');
+
+    await fireEvent.click(within(explorer).getByText('prompts'));
+    await fireEvent.click(within(explorer).getByText('brief-review.tera'));
+    await waitFor(() => expect(screen.findByText('valid')).toBeTruthy());
+
+    await fireEvent.click(within(explorer).getByText('documents'));
+    await fireEvent.click(within(explorer).getByText('context.md'));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Template preview and validation are available for `.tera` prompt templates in this slice.')
+      ).toBeInTheDocument()
+    );
+    expect(screen.queryByText('valid')).not.toBeInTheDocument();
+  });
+
+  it('shows loading state while validation is in flight', async () => {
+    let resolveValidation: ((result: TemplateValidationResult) => void) | null = null;
+    tauri.validateProjectTemplate.mockReturnValueOnce(
+      new Promise<TemplateValidationResult>((resolve) => {
+        resolveValidation = resolve;
+      })
+    );
+
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('prompts'));
+    await fireEvent.click(within(explorer).getByText('brief-review.tera'));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Refreshing validation from the current draft…')
+      ).toBeInTheDocument()
+    );
+
+    resolveValidation!(validationResult);
+    await waitFor(() => expect(screen.getByText('valid')).toBeInTheDocument());
+  });
+
+  it('re-runs validation when the draft content changes', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('prompts'));
+    await fireEvent.click(within(explorer).getByText('brief-review.tera'));
+
+    await waitFor(() =>
+      expect(tauri.validateProjectTemplate).toHaveBeenCalledWith(
+        '/tmp/story-lab',
+        'prompts/brief-review.tera',
+        teraAssetContent.content
+      )
+    );
+
+    const editor = await screen.findByTestId('asset-editor');
+    const updatedContent = 'Updated template content.';
+    await fireEvent.input(editor, { target: { value: updatedContent } });
+
+    await waitFor(() =>
+      expect(tauri.validateProjectTemplate).toHaveBeenCalledWith(
+        '/tmp/story-lab',
+        'prompts/brief-review.tera',
+        updatedContent
+      )
+    );
   });
 });

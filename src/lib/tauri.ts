@@ -1,6 +1,12 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import type { AssetContent, ProjectAssetNode, ProjectSummary, RecentProjectEntry } from './types/project';
+import type {
+  AssetContent,
+  ProjectAssetNode,
+  ProjectSummary,
+  RecentProjectEntry,
+  TemplateValidationResult
+} from './types/project';
 
 export async function pickDirectory(title: string): Promise<string | null> {
   const result = await open({
@@ -46,4 +52,16 @@ export async function writeProjectAsset(
   content: string
 ): Promise<AssetContent> {
   return invoke<AssetContent>('write_project_asset', { rootPath, relativePath, content });
+}
+
+export async function validateProjectTemplate(
+  rootPath: string,
+  relativePath: string,
+  content: string
+): Promise<TemplateValidationResult> {
+  return invoke<TemplateValidationResult>('validate_project_template', {
+    rootPath,
+    relativePath,
+    content
+  });
 }

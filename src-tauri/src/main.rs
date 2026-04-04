@@ -2,7 +2,9 @@ mod project_store;
 
 use std::path::PathBuf;
 
-use project_store::{AssetContent, ProjectAssetNode, ProjectSummary, RecentProjectEntry};
+use project_store::{
+    AssetContent, ProjectAssetNode, ProjectSummary, RecentProjectEntry, TemplateValidationResult,
+};
 use tauri::Manager;
 
 fn app_data_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -63,6 +65,20 @@ fn write_project_asset(
         .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn validate_project_template(
+    root_path: String,
+    relative_path: String,
+    content: String,
+) -> Result<TemplateValidationResult, String> {
+    project_store::validate_project_template(
+        PathBuf::from(root_path).as_path(),
+        &relative_path,
+        &content,
+    )
+    .map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -74,7 +90,8 @@ pub fn run() {
             remove_recent_project,
             list_project_assets,
             read_project_asset,
-            write_project_asset
+            write_project_asset,
+            validate_project_template
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

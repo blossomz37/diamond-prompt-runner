@@ -10,12 +10,14 @@
     pickDirectory,
     removeRecentProject,
     readProjectAsset,
+    validateProjectTemplate,
     writeProjectAsset
   } from '$lib/tauri';
   import type {
     ProjectAssetNode,
     ProjectSummary,
     RecentProjectEntry,
+    TemplateValidationResult,
     WorkspaceTab
   } from '$lib/types/project';
 
@@ -30,6 +32,10 @@
   let tabs = $state<WorkspaceTab[]>([]);
   let activePath = $state<string | null>(null);
   let loadingPath = $state<string | null>(null);
+  let validationResult = $state<TemplateValidationResult | null>(null);
+  let validationLoading = $state(false);
+  let validationTimer: ReturnType<typeof setTimeout> | null = null;
+  let validationRequestId = 0;
 
   onMount(async () => {
     recentProjects = await getRecentProjects();
@@ -41,8 +47,42 @@
     tabs = [];
     activePath = null;
     loadingPath = null;
+    validationResult = null;
+    validationLoading = false;
     mode = 'workspace';
   }
+
+  $effect(() => {
+    const currentTab = tabs.find((tab) => tab.path === activePath) ?? null;
+    const rootPath = workspace?.rootPath ?? null;
+
+    if (validationTimer) {
+      clearTimeout(validationTimer);
+      validationTimer = null;
+    }
+
+    if (!rootPath || !currentTab || currentTab.kind !== 'tera') {
+      validationRequestId += 1;
+      validationLoading = false;
+      validationResult = null;
+      return;
+    }
+
+    validationLoading = true;
+    const path = currentTab.path;
+    const content = currentTab.draftContent;
+
+    validationTimer = setTimeout(() => {
+      void runTemplateValidation(rootPath, path, content);
+    }, 250);
+
+    return () => {
+      if (validationTimer) {
+        clearTimeout(validationTimer);
+        validationTimer = null;
+      }
+    };
+  });
 
   async function withBusy(work: () => Promise<void>): Promise<void> {
     busy = true;
@@ -146,6 +186,40 @@
       ...tab,
       draftContent: content
     }));
+  }
+
+  async function runTemplateValidation(
+    rootPath: string,
+    path: string,
+    content: string
+  ): Promise<void> {
+    const requestId = ++validationRequestId;
+
+    try {
+      const result = await validateProjectTemplate(rootPath, path, content);
+      if (requestId !== validationRequestId) {
+        return;
+      }
+
+      validationResult = result;
+    } catch (error) {
+      if (requestId !== validationRequestId) {
+        return;
+      }
+
+      validationResult = {
+        path,
+        status: 'invalid',
+        preview: null,
+        warnings: [],
+        errors: [error instanceof Error ? error.message : 'Template validation failed.'],
+        contextSummary: []
+      };
+    } finally {
+      if (requestId === validationRequestId) {
+        validationLoading = false;
+      }
+    }
   }
 
   async function handleSaveTab(path: string): Promise<void> {
@@ -252,5 +326,7 @@
     onDraftChange={handleDraftChange}
     onSaveTab={handleSaveTab}
     onReloadTab={handleReloadTab}
+    {validationResult}
+    {validationLoading}
   />
 {/if}
