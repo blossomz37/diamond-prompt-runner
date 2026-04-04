@@ -63,6 +63,12 @@ Oldest to Newest
 - [ ] Decide whether to create custom Diamond-specific skills for implementation, fixtures, and prompt-pack porting.
 
 
+## Release
+- [ ] Generate app icons: `npm run tauri icon path/to/source.png` → commit `src-tauri/icons/` → update `"icon"` array in `tauri.conf.json`.
+- [ ] Set repository secrets for installer signing: `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (optional for dev-only releases).
+- [ ] Sync version number across `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json` before tagging.
+- [ ] Cut first release: bump version → commit → `git tag v0.x.0 && git push origin v0.x.0` → review draft release → publish.
+
 ## Other
 - [ ] Test GitHub app tools directly for repo workflows in this workspace.
 
