@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 8:00 PM
-modified: 2026-04-03 10:30 PM
+modified: 2026-04-03 11:20 PM
 ---
 # Plan To Reach The Single-Block Execution Slice
 
@@ -57,6 +57,20 @@ Sequence around this milestone:
 - Surface recent run summaries in the bottom panel without introducing a separate history screen.
 - Open a selected run artifact JSON in a regular editor tab.
 - Add backend coverage for prompt-scoped run listing and frontend coverage for opening a persisted run artifact.
+
+### Execution strictness and artifact contract
+
+- Treat invalid or missing `doc("...")` references as hard execution failures before any provider call is attempted.
+- Treat unresolved variables as hard execution failures unless the template explicitly guards them with `is defined` or a defaulting pattern.
+- Keep preview validation more permissive than execution so the UI can warn without blocking exploratory editing.
+- Persist typed run records under `runs/` with `artifactVersion`, prompt path, block metadata, model metadata, rendered prompt snapshot, timestamps, output or error fields, and the raw provider response payload.
+
+### Seeded model preset defaults
+
+- Seed new projects with a small curated starter set inferred from `workshop-parts/openrouter/models/`.
+- Keep `models/default.yaml` pointed at the strong general-purpose `openai/gpt-5.4` preset.
+- Include `gpt-5.4-nano`, `claude-sonnet-4.6`, and `gpt-5.2-think` as explicit alternates in the starter pack.
+- Keep `aion-2.0` out of the seeded defaults for now because the workshop notes treat it as an experimental later candidate rather than a standard route.
 
 ## Scope
 
@@ -117,6 +131,11 @@ Locked default for planning:
 - execution should be stricter than preview validation
 - unresolved required context should fail execution rather than degrade to a warning-only result
 
+Locked implementation rules:
+- invalid or missing `doc("...")` references fail execution before provider transport runs
+- unresolved variables fail execution when referenced directly in the rendered template
+- variables remain optional only when the template explicitly guards them with `is defined` checks or a defaulting pattern
+
 Implementation implication:
 - reuse the current rendering path where possible, but separate preview behavior from execution behavior explicitly in backend code
 
@@ -133,6 +152,22 @@ Locked minimum contract for planning:
 - timestamp
 - completion status
 - output text or error payload
+
+Locked first-pass on-disk contract:
+- `artifactVersion`
+- `runId`
+- `path`
+- `blockId`
+- `blockName`
+- `modelPreset`
+- `modelId`
+- `status`
+- `renderedPrompt`
+- `output`
+- `error`
+- `startedAt`
+- `completedAt`
+- `response`
 
 Implementation implication:
 - the first execution slice should prove run persistence on disk before any richer run-history UI is built
@@ -172,9 +207,10 @@ Likely integration points:
 - [x] Finalize API-key storage approach for local desktop execution with native keychain storage and env-var fallback.
 - [x] Decide to keep direct HTTP for the first full slice instead of switching to the SDK mid-slice.
 - [x] Add prompt-scoped run history browsing and open-artifact support in the bottom panel.
-- [ ] Define exact strict-failure rules for unresolved variables and document references during execution.
-- [ ] Define the on-disk structure for first-pass run artifacts under `runs/`.
-- [ ] Add the execution-slice implementation plan to the umbrella roadmap once decisions are locked.
+- [x] Define exact strict-failure rules for unresolved variables and document references during execution.
+- [x] Define the on-disk structure for first-pass run artifacts under `runs/`.
+- [x] Add the execution-slice implementation plan to the umbrella roadmap once decisions are locked.
+- [x] Review curated model preset defaults and choose the seeded starter set for new projects.
 
 ## Verification
 

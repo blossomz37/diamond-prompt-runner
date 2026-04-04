@@ -24,7 +24,9 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 	- backend-only `execute_prompt_block` support exists in the Tauri layer
 	- the first full execution slice stays on direct Rust HTTP to OpenRouter
 	- execution now resolves the OpenRouter API key from native app keychain storage first, then falls back to `OPENROUTER_API_KEY`
-	- run artifacts are persisted under `runs/` as JSON records
+	- execution fails strictly on invalid or missing `doc("...")` references and on unresolved variables unless the template guards them explicitly
+	- run artifacts are persisted under `runs/` as typed JSON records with `artifactVersion`, prompt and model metadata, rendered prompt snapshot, output or error fields, timestamps, and raw provider response payload
+	- new projects now seed a small curated preset set inferred from `workshop-parts/openrouter/models/`: `default`, `gpt-5.4`, `gpt-5.4-nano`, `claude-sonnet-4.6`, and `gpt-5.2-think`
 	- active editable `.tera` tabs now expose a `Run` action in the editor
 	- the bottom panel shows latest execution metadata and output alongside validation and preview
 	- the bottom panel also exposes minimal save or clear controls for the app-level OpenRouter key

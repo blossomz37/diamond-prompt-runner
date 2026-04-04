@@ -15,11 +15,33 @@ use uuid::Uuid;
 
 const PROJECT_DIRS: [&str; 5] = ["documents", "prompts", "models", "runs", "exports"];
 const RECENTS_FILE_NAME: &str = "recent-projects.json";
-const DEFAULT_MODEL_PRESET_CONTENT: &str = "# Default fallback model used when no stronger override applies.\nmodel: openai/gpt-5.4\ntemperature: 0.7\nmax_completion_tokens: 12000\n";
+const SEEDED_MODEL_PRESETS: [(&str, &str); 5] = [
+    (
+        "default.yaml",
+        "# Default fallback model used when no stronger override applies.\nmodel: openai/gpt-5.4\nreasoning:\n  effort: high\ntemperature: 1\nmax_completion_tokens: 128000\n",
+    ),
+    (
+        "gpt-5.4.yaml",
+        "# Strong default drafting and final-pass model.\nmodel: openai/gpt-5.4\nreasoning:\n  effort: high\ntemperature: 1\nmax_completion_tokens: 128000\n",
+    ),
+    (
+        "gpt-5.4-nano.yaml",
+        "# Cheap, rule-following model reserved primarily for test runs.\nmodel: openai/gpt-5.4-nano\ntemperature: 0.3\nmax_completion_tokens: 8000\n",
+    ),
+    (
+        "claude-sonnet-4.6.yaml",
+        "# Strong controlled prose and planning candidate from the workshop presets.\nmodel: anthropic/claude-sonnet-4.6\ntemperature: 0.9\nmax_completion_tokens: 8000\n",
+    ),
+    (
+        "gpt-5.2-think.yaml",
+        "# Higher-effort planning model carried forward from the workshop routing.\nmodel: openai/gpt-5.2\nreasoning:\n  effort: high\ntemperature: 1\nmax_completion_tokens: 65000\n",
+    ),
+];
 const OPENROUTER_CHAT_COMPLETIONS_URL: &str = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_API_KEY_ENV: &str = "OPENROUTER_API_KEY";
 const OPENROUTER_KEYCHAIN_SERVICE: &str = "com.blossomz37.diamondrunner";
 const OPENROUTER_KEYCHAIN_ACCOUNT: &str = "openrouter-api-key";
+const PERSISTED_RUN_RECORD_VERSION: u32 = 1;
 
 #[derive(Debug, Error)]
 pub enum ProjectStoreError {
@@ -271,7 +293,7 @@ pub fn create_project(parent_path: &Path, project_name: &str, app_data_dir: &Pat
         fs::create_dir_all(root_path.join(directory))?;
     }
 
-    fs::write(root_path.join("models").join("default.yaml"), DEFAULT_MODEL_PRESET_CONTENT)?;
+    write_seeded_model_presets(&root_path)?;
 
     let now = timestamp();
     let manifest = ProjectManifest {
@@ -613,7 +635,7 @@ where
         return Err(ProjectStoreError::message(prepared.errors.join("\n")));
     }
 
-    let rendered_prompt = render_template_strict(&prepared.content, &prepared.context)?;
+    let rendered_prompt = render_template_for_execution(&prepared.content, &prepared.context)?;
     let model_config = load_model_preset_config(&root_path, &model_preset)?;
     let payload = build_openrouter_payload(model_config, &rendered_prompt);
     let response = transport(api_key, payload)?;
@@ -906,6 +928,14 @@ fn update_recent_projects(app_data_dir: &Path, summary: &ProjectSummary) -> Stor
     Ok(())
 }
 
+fn write_seeded_model_presets(root_path: &Path) -> StoreResult<()> {
+    for (file_name, content) in SEEDED_MODEL_PRESETS {
+        fs::write(root_path.join("models").join(file_name), content)?;
+    }
+
+    Ok(())
+}
+
 fn read_recents_store(app_data_dir: &Path) -> StoreResult<RecentsStore> {
     let store_path = app_data_dir.join(RECENTS_FILE_NAME);
     if !store_path.exists() {
@@ -1156,14 +1186,24 @@ fn preprocess_doc_references(
     })
 }
 
-fn render_template_strict(content: &str, context: &Context) -> StoreResult<String> {
+fn render_template_for_execution(content: &str, context: &Context) -> StoreResult<String> {
     let mut tera = Tera::default();
     tera.autoescape_on(Vec::new());
     tera.add_raw_template("active", content)
         .map_err(|error| ProjectStoreError::message(error.to_string()))?;
 
     tera.render("active", context)
-        .map_err(|error| ProjectStoreError::message(flatten_error_chain(&error)))
+        .map_err(|error| ProjectStoreError::message(execution_render_error_message(&flatten_error_chain(&error))))
+}
+
+fn execution_render_error_message(message: &str) -> String {
+    if is_missing_context_warning(message) {
+        format!(
+            "Execution requires all referenced variables to resolve unless the template guards them with `is defined` or a default.\n{message}"
+        )
+    } else {
+        message.to_string()
+    }
 }
 
 fn flatten_error_chain(error: &dyn std::error::Error) -> String {
@@ -1265,37 +1305,58 @@ fn extract_completion_text(response: &Value) -> String {
 }
 
 fn persist_run_record(root_path: &Path, result: &PromptExecutionResult, raw_response: &Value) -> StoreResult<()> {
-    let run_record = json!({
-        "runId": result.run_id,
-        "path": result.path,
-        "blockId": result.block_id,
-        "blockName": result.block_name,
-        "modelPreset": result.model_preset,
-        "modelId": result.model_id,
-        "status": result.status,
-        "renderedPrompt": result.rendered_prompt,
-        "output": result.output,
-        "error": result.error,
-        "startedAt": result.started_at,
-        "completedAt": result.completed_at,
-        "response": raw_response,
-    });
+    let run_record = PersistedRunRecord::from_result(result, raw_response.clone());
     fs::write(root_path.join(&result.run_path), serde_json::to_string_pretty(&run_record)?)?;
     Ok(())
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct PersistedRunRecord {
+    #[serde(default = "persisted_run_record_version")]
+    artifact_version: u32,
     run_id: String,
     path: String,
+    #[serde(default)]
+    block_id: Option<String>,
     block_name: String,
+    #[serde(default)]
+    model_preset: String,
     model_id: String,
     status: ExecutionStatus,
+    #[serde(default)]
+    rendered_prompt: String,
     output: Option<String>,
     error: Option<String>,
     started_at: String,
     completed_at: String,
+    #[serde(default)]
+    response: Value,
+}
+
+impl PersistedRunRecord {
+    fn from_result(result: &PromptExecutionResult, response: Value) -> Self {
+        Self {
+            artifact_version: PERSISTED_RUN_RECORD_VERSION,
+            run_id: result.run_id.clone(),
+            path: result.path.clone(),
+            block_id: result.block_id.clone(),
+            block_name: result.block_name.clone(),
+            model_preset: result.model_preset.clone(),
+            model_id: result.model_id.clone(),
+            status: result.status.clone(),
+            rendered_prompt: result.rendered_prompt.clone(),
+            output: result.output.clone(),
+            error: result.error.clone(),
+            started_at: result.started_at.clone(),
+            completed_at: result.completed_at.clone(),
+            response,
+        }
+    }
+}
+
+fn persisted_run_record_version() -> u32 {
+    PERSISTED_RUN_RECORD_VERSION
 }
 
 fn preview_text(value: &str, max_chars: usize) -> String {
@@ -1406,6 +1467,11 @@ mod tests {
         assert_eq!(summary.project_name, "Story Lab");
         assert!(temp.path().join("Story Lab").join("project.json").is_file());
         assert!(temp.path().join("Story Lab").join("models").join("default.yaml").is_file());
+        assert!(temp.path().join("Story Lab").join("models").join("gpt-5.4.yaml").is_file());
+        assert!(temp.path().join("Story Lab").join("models").join("gpt-5.4-nano.yaml").is_file());
+        assert!(temp.path().join("Story Lab").join("models").join("claude-sonnet-4.6.yaml").is_file());
+        assert!(temp.path().join("Story Lab").join("models").join("gpt-5.2-think.yaml").is_file());
+        assert_eq!(summary.counts.models, 5);
 
         let recents = get_recent_projects(&app_data).unwrap();
         assert_eq!(recents.len(), 1);
@@ -1692,6 +1758,16 @@ mod tests {
         assert_eq!(result.output.as_deref(), Some("Execution output."));
         assert!(result.rendered_prompt.contains("Doc body."));
         assert!(root.join(&result.run_path).is_file());
+
+        let persisted = serde_json::from_str::<PersistedRunRecord>(
+            &fs::read_to_string(root.join(&result.run_path)).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(persisted.artifact_version, 1);
+        assert_eq!(persisted.block_id.as_deref(), Some("block-1"));
+        assert_eq!(persisted.model_preset, "models/default.yaml");
+        assert!(persisted.rendered_prompt.contains("Doc body."));
+        assert!(persisted.response.get("choices").is_some());
     }
 
     #[test]
@@ -1711,6 +1787,61 @@ mod tests {
         .unwrap_err();
 
         assert!(error.to_string().contains("could not be resolved"));
+    }
+
+    #[test]
+    fn execution_fails_on_unresolved_required_variable() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "ExecuteVarFail", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let error = execute_prompt_block_with_transport(
+            &root,
+            "prompts/review.tera",
+            "Tone: {{ missing_tone }}",
+            "test-key",
+            |_api_key, _payload| unreachable!("transport should not run when required variables are missing"),
+        )
+        .unwrap_err();
+
+        assert!(error
+            .to_string()
+            .contains("Execution requires all referenced variables to resolve"));
+        assert!(error.to_string().contains("missing_tone"));
+    }
+
+    #[test]
+    fn execution_allows_optional_variable_when_template_guards_it() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "ExecuteVarGuard", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let result = execute_prompt_block_with_transport(
+            &root,
+            "prompts/review.tera",
+            "{% if missing_tone is defined %}{{ missing_tone }}{% else %}Fallback tone{% endif %}",
+            "test-key",
+            |_api_key, payload| {
+                assert!(payload["messages"][0]["content"]
+                    .as_str()
+                    .unwrap()
+                    .contains("Fallback tone"));
+                Ok(json!({
+                    "choices": [
+                        {
+                            "message": {
+                                "content": "Guarded output."
+                            }
+                        }
+                    ]
+                }))
+            },
+        )
+        .unwrap();
+
+        assert_eq!(result.output.as_deref(), Some("Guarded output."));
     }
 
     #[test]

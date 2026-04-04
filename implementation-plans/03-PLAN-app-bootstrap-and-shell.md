@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 2:16 PM
-modified: 2026-04-03 8:00 PM
+modified: 2026-04-03 11:20 PM
 ---
 # Diamond Runner: Planning, Setup, and Engineering Roadmap
 
@@ -123,14 +123,18 @@ Sequence after Milestone 1:
 ### Phase 6: Single-Block Execution Slice
 
 - Add OpenRouter settings only after shell, files, and validation are working.
-- Evaluate the official OpenRouter TypeScript SDK at the start of this slice for any TypeScript-owned integration surface, while keeping milestone 1 free of provider calls and SDK wiring.
+- Keep the first full execution slice on direct Rust HTTP to OpenRouter and defer any SDK evaluation until after the slice is complete.
 - Initial execution capabilities:
   - per-project default preset
   - per-block preset override
+  - curated starter presets seeded into `models/` for new projects
   - API-key storage with local desktop-safe storage strategy
   - single-block render and execute
   - persisted run record in `runs/`
-  - usage, token, and cost capture
+  - raw provider response persistence so usage, token, and cost data remain available in the artifact when returned by OpenRouter
+- Execution strictness rules for this slice:
+  - invalid or missing `doc("...")` references fail before provider transport
+  - unresolved variables fail unless the template explicitly guards them with `is defined` or a defaulting pattern
 - Do not ship advanced provider controls in this slice.
 - Treat any future online-research behavior as an extension point, not part of the initial runtime path.
 
@@ -138,7 +142,7 @@ Sequence after Milestone 1:
 
 - Add linear pipeline execution after single-block execution is stable.
 - Persist run records and artifacts to `runs/`.
-- Add run history browsing and output inspection to the shell.
+- Add broader run history browsing and output inspection beyond the current prompt-scoped bottom-panel history.
 - Add import and export support for:
   - markdown documents
   - `.tera` templates
@@ -200,7 +204,7 @@ Sequence after Milestone 1:
   - unresolved document references warn correctly
 - Later execution slice:
   - OpenRouter settings persist correctly
-  - single-block runs create run records with prompt snapshot, output, status, and usage
+  - single-block runs create typed run records with version, prompt snapshot, output or error state, and raw provider response payload
 - Post-MVP online slice:
   - scoped online-enabled prompts use the intended runtime path
   - non-online prompts remain unaffected

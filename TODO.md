@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 12:57 PM
-modified: 2026-04-03 10:30 PM
+modified: 2026-04-03 11:20 PM
 ---
 
 # Rolling TODO List
@@ -38,7 +38,9 @@ Oldest to Newest
 - [x] Single-Block Execution Slice: add app-level OpenRouter key storage via native keychain with env-var fallback.
 - [x] Single-Block Execution Slice: keep direct Rust HTTP for the first full execution slice instead of switching to the SDK mid-slice.
 - [x] Single-Block Execution Slice: add prompt-scoped browsing for persisted run artifacts and open the run JSON in a tab.
-- [ ] Single-Block Execution Slice: review curated model preset defaults and decide what should seed Diamond presets.
+- [x] Single-Block Execution Slice: lock strict execution failures for unresolved variables and invalid or missing `doc("...")` references.
+- [x] Single-Block Execution Slice: lock the typed on-disk run artifact contract under `runs/` and roll it into the umbrella roadmap.
+- [x] Single-Block Execution Slice: seed curated model preset defaults from the workshop routing set while keeping `aion-2.0` out of the default project starter pack.
 - [ ] Post-MVP online extension: support scoped `:online` behavior for prompts that require live web research.
 - [ ] Post-MVP online extension: add tests for scoped online-research prompt behavior.
 - [ ] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.
