@@ -14,17 +14,19 @@ Current slice status:
 - Milestone 1 is complete
 - the Editing Slice is complete
 - the Rendering and Validation Slice is complete
-- the active milestone is the Single-Block Execution Slice
+- the Single-Block Execution Slice is complete
+- the active milestone is the Pipeline Runner Slice
 
-Next active milestone plan after the Rendering and Validation Slice:
-- `implementation-plans/09-PLAN-single-block-execution-slice.md`
+Next active milestone plan after the Single-Block Execution Slice:
+- `implementation-plans/10-PLAN-pipeline-runner-slice.md`
 
 Sequence after Milestone 1:
 - completed small follow-up: unavailable-recents `Locate` flow
 - completed milestone: Editing Slice
 - completed milestone: Rendering and Validation Slice
-- active milestone: Single-Block Execution Slice
-- later Pipelines, History, and Exports
+- completed milestone: Single-Block Execution Slice
+- active milestone: Pipeline Runner Slice
+- later broader run history and exports
 - later scoped online-research extension
 
 ## Implementation Plan

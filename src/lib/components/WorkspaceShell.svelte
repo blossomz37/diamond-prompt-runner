@@ -5,7 +5,9 @@
   import ValidationPanel from '$lib/components/ValidationPanel.svelte';
   import type {
     ExecutionCredentialStatus,
+    PipelineExecutionResult,
     ProjectAssetNode,
+    ProjectPipeline,
     PromptExecutionResult,
     PromptRunHistoryEntry,
     ProjectSummary,
@@ -20,6 +22,9 @@
     activePath: string | null;
     loadingPath: string | null;
     errorMessage: string | null;
+    pipelines: ProjectPipeline[];
+    pipelineExecution: PipelineExecutionResult | null;
+    pipelineLoading: boolean;
     onSelectAsset: (node: ProjectAssetNode) => void | Promise<void>;
     onSelectTab: (path: string) => void;
     onCloseTab: (path: string) => void;
@@ -27,6 +32,7 @@
     onSaveTab: (path: string) => void | Promise<void>;
     onReloadTab: (path: string) => void | Promise<void>;
     onRunTab: (path: string) => void | Promise<void>;
+    onRunPipeline: (pipelineId: string) => void | Promise<void>;
     credentialState: ExecutionCredentialStatus;
     credentialDraft: string;
     credentialLoading: boolean;
@@ -49,6 +55,9 @@
     activePath,
     loadingPath,
     errorMessage,
+    pipelines,
+    pipelineExecution,
+    pipelineLoading,
     onSelectAsset,
     onSelectTab,
     onCloseTab,
@@ -56,6 +65,7 @@
     onSaveTab,
     onReloadTab,
     onRunTab,
+    onRunPipeline,
     credentialState,
     credentialDraft,
     credentialLoading,
@@ -147,7 +157,14 @@
     </main>
 
     <aside class="inspector panel">
-      <InspectorPanel summary={summary} metadata={activeTab?.metadata ?? null} />
+      <InspectorPanel
+        summary={summary}
+        metadata={activeTab?.metadata ?? null}
+        {pipelines}
+        pipelineExecution={pipelineExecution}
+        pipelineLoading={pipelineLoading}
+        onRunPipeline={onRunPipeline}
+      />
     </aside>
 
     <section class="bottom panel">

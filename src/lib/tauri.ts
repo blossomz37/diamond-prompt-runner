@@ -3,7 +3,9 @@ import { open } from '@tauri-apps/plugin-dialog';
 import type {
   AssetContent,
   ExecutionCredentialStatus,
+  PipelineExecutionResult,
   ProjectAssetNode,
+  ProjectPipeline,
   ProjectSummary,
   PromptExecutionResult,
   PromptRunHistoryEntry,
@@ -55,6 +57,10 @@ export async function listProjectAssets(rootPath: string): Promise<ProjectAssetN
   return invoke<ProjectAssetNode[]>('list_project_assets', { rootPath });
 }
 
+export async function listProjectPipelines(rootPath: string): Promise<ProjectPipeline[]> {
+  return invoke<ProjectPipeline[]>('list_project_pipelines', { rootPath });
+}
+
 export async function readProjectAsset(rootPath: string, relativePath: string): Promise<AssetContent> {
   return invoke<AssetContent>('read_project_asset', { rootPath, relativePath });
 }
@@ -88,6 +94,16 @@ export async function executePromptBlock(
     rootPath,
     relativePath,
     content
+  });
+}
+
+export async function executePipeline(
+  rootPath: string,
+  pipelineId: string
+): Promise<PipelineExecutionResult> {
+  return invoke<PipelineExecutionResult>('execute_pipeline', {
+    rootPath,
+    pipelineId
   });
 }
 

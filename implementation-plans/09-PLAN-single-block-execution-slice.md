@@ -6,7 +6,7 @@ modified: 2026-04-03 11:20 PM
 
 ## Summary
 
-Rendering and Validation is complete. The next active milestone is the Single-Block Execution Slice.
+Rendering and Validation is complete. The Single-Block Execution Slice is now complete.
 
 This slice should prove the end-to-end path for one prompt block:
 - render one `.tera` prompt from the current draft content
@@ -20,8 +20,9 @@ This slice does not include pipelines, run-history browsing, prompt-pack work, o
 Sequence around this milestone:
 - completed small follow-up: unavailable-recents `Locate` flow
 - completed milestone: Rendering and Validation Slice
-- active milestone: Single-Block Execution Slice
-- later: Pipelines, History, and Exports
+- completed milestone: Single-Block Execution Slice
+- next active milestone: Pipeline Runner Slice
+- later: broader run history and exports
 - later: scoped online-research extension
 
 ## Delivered So Far

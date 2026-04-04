@@ -11,7 +11,7 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 - Product spec: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
 - Approved prototype: `Diamond Runner v2 - IDE Pass`
 - App direction: Tauri + Svelte desktop app with an IDE-like shell
-- Current implementation status: Milestone 1, the Editing Slice, and the Rendering and Validation Slice are complete; the Single-Block Execution Slice is in progress with backend execution, frontend run controls, app-level credential storage, and prompt-scoped run history in place
+- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, and the Single-Block Execution Slice are complete; the Pipeline Runner Slice is now active with manifest-driven sequential pipeline runs and inspector-level pipeline controls in place
 - Current Rendering and Validation behavior:
 	- markdown, text, `.tera`, and model YAML assets are editable in the workspace
 	- `project.json` remains read-only
@@ -31,8 +31,11 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 	- the bottom panel shows latest execution metadata and output alongside validation and preview
 	- the bottom panel also exposes minimal save or clear controls for the app-level OpenRouter key
 	- the bottom panel now lists recent persisted runs for the active prompt and can open the JSON artifact in a tab
+	- manifest-defined pipelines can now be listed and run sequentially from the inspector
+	- pipeline runs stop on the first failing block and reuse the existing per-block run artifact contract under `runs/`
+	- pipeline runs are guarded against unsaved related `.tera` drafts so the user does not accidentally run stale saved prompt files
 
-Active implementation plan: `implementation-plans/09-PLAN-single-block-execution-slice.md`
+Active implementation plan: `implementation-plans/10-PLAN-pipeline-runner-slice.md`
 
 ## Recommended Agent Setup
 

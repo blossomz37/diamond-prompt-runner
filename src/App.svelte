@@ -5,9 +5,11 @@
   import {
     clearExecutionApiKey,
     createProject,
+    executePipeline,
     executePromptBlock,
     getExecutionCredentialStatus,
     getRecentProjects,
+    listProjectPipelines,
     listPromptRunHistory,
     listProjectAssets,
     locateRecentProject,
@@ -21,7 +23,9 @@
   } from '$lib/tauri';
   import type {
     ExecutionCredentialStatus,
+    PipelineExecutionResult,
     ProjectAssetNode,
+    ProjectPipeline,
     PromptExecutionResult,
     PromptRunHistoryEntry,
     ProjectSummary,
@@ -38,6 +42,7 @@
   let errorMessage = $state<string | null>(null);
   let workspace = $state<ProjectSummary | null>(null);
   let assetNodes = $state<ProjectAssetNode[]>([]);
+  let projectPipelines = $state<ProjectPipeline[]>([]);
   let tabs = $state<WorkspaceTab[]>([]);
   let activePath = $state<string | null>(null);
   let loadingPath = $state<string | null>(null);
@@ -47,6 +52,8 @@
   let executionLoading = $state(false);
   let executionHistory = $state<PromptRunHistoryEntry[]>([]);
   let executionHistoryLoading = $state(false);
+  let pipelineExecutionResult = $state<PipelineExecutionResult | null>(null);
+  let pipelineExecutionLoading = $state(false);
   let executionCredentialStatus = $state<ExecutionCredentialStatus>({
     source: 'missing',
     hasStoredKey: false
@@ -72,7 +79,12 @@
 
   async function enterWorkspace(summary: ProjectSummary): Promise<void> {
     workspace = summary;
-    assetNodes = await listProjectAssets(summary.rootPath);
+    const [nodes, pipelines] = await Promise.all([
+      listProjectAssets(summary.rootPath),
+      listProjectPipelines(summary.rootPath)
+    ]);
+    assetNodes = nodes;
+    projectPipelines = pipelines;
     tabs = [];
     activePath = null;
     loadingPath = null;
@@ -82,6 +94,8 @@
     executionLoading = false;
     executionHistory = [];
     executionHistoryLoading = false;
+    pipelineExecutionResult = null;
+    pipelineExecutionLoading = false;
     mode = 'workspace';
   }
 
@@ -366,6 +380,7 @@
     try {
       executionResult = await executePromptBlock(workspace.rootPath, path, tab.draftContent);
       await refreshExecutionHistory(workspace.rootPath, path);
+      assetNodes = await listProjectAssets(workspace.rootPath);
       workspace = {
         ...workspace,
         counts: {
@@ -392,6 +407,75 @@
       };
     } finally {
       executionLoading = false;
+    }
+  }
+
+  function latestStepForPath(
+    steps: PromptExecutionResult[],
+    path: string
+  ): PromptExecutionResult | null {
+    for (let index = steps.length - 1; index >= 0; index -= 1) {
+      if (steps[index]?.path === path) {
+        return steps[index];
+      }
+    }
+
+    return null;
+  }
+
+  async function handleRunPipeline(pipelineId: string): Promise<void> {
+    if (!workspace || pipelineExecutionLoading) {
+      return;
+    }
+
+    const pipeline = projectPipelines.find((candidate) => candidate.pipelineId === pipelineId);
+    if (!pipeline) {
+      return;
+    }
+
+    const dirtyPrompt = tabs.find(
+      (tab) =>
+        tab.kind === 'tera' &&
+        tab.draftContent !== tab.savedContent &&
+        pipeline.blocks.some((block) => block.templateSource === tab.path)
+    );
+
+    if (dirtyPrompt) {
+      errorMessage = `Save prompt changes before running ${pipeline.name}. Pipeline runs use the saved files on disk.`;
+      return;
+    }
+
+    pipelineExecutionLoading = true;
+    errorMessage = null;
+
+    try {
+      const result = await executePipeline(workspace.rootPath, pipelineId);
+      pipelineExecutionResult = result;
+
+      if (result.steps.length > 0) {
+        executionResult = result.steps[result.steps.length - 1] ?? null;
+        assetNodes = await listProjectAssets(workspace.rootPath);
+
+        if (activePath) {
+          const activeStep = latestStepForPath(result.steps, activePath);
+          if (activeStep) {
+            executionResult = activeStep;
+            await refreshExecutionHistory(workspace.rootPath, activeStep.path);
+          }
+        }
+
+        workspace = {
+          ...workspace,
+          counts: {
+            ...workspace.counts,
+            runs: workspace.counts.runs + result.steps.length
+          }
+        };
+      }
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : `Failed to run ${pipeline.name}.`;
+    } finally {
+      pipelineExecutionLoading = false;
     }
   }
 
@@ -512,6 +596,9 @@
     {activePath}
     {loadingPath}
     {errorMessage}
+    pipelines={projectPipelines}
+    pipelineExecution={pipelineExecutionResult}
+    pipelineLoading={pipelineExecutionLoading}
     onSelectAsset={handleSelectAsset}
     onSelectTab={handleSelectTab}
     onCloseTab={handleCloseTab}
@@ -519,6 +606,7 @@
     onSaveTab={handleSaveTab}
     onReloadTab={handleReloadTab}
     onRunTab={handleExecuteTab}
+    onRunPipeline={handleRunPipeline}
     credentialState={executionCredentialStatus}
     credentialDraft={executionCredentialDraft}
     credentialLoading={executionCredentialLoading}

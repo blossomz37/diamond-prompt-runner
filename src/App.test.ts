@@ -4,7 +4,9 @@ import App from './App.svelte';
 import type {
   AssetContent,
   ExecutionCredentialStatus,
+  PipelineExecutionResult,
   ProjectAssetNode,
+  ProjectPipeline,
   PromptExecutionResult,
   PromptRunHistoryEntry,
   ProjectSummary,
@@ -15,8 +17,10 @@ import type {
 const tauri = vi.hoisted(() => ({
   clearExecutionApiKey: vi.fn(),
   createProject: vi.fn(),
+  executePipeline: vi.fn(),
   getRecentProjects: vi.fn(),
   getExecutionCredentialStatus: vi.fn(),
+  listProjectPipelines: vi.fn(),
   listPromptRunHistory: vi.fn(),
   listProjectAssets: vi.fn(),
   locateRecentProject: vi.fn(),
@@ -226,6 +230,32 @@ const runHistory: PromptRunHistoryEntry[] = [
   }
 ];
 
+const pipelines: ProjectPipeline[] = [
+  {
+    pipelineId: 'review-pipeline',
+    name: 'Review Pipeline',
+    executionMode: 'sequential',
+    blocks: [
+      {
+        blockId: 'brief-review',
+        name: 'Brief Review',
+        templateSource: 'prompts/brief-review.tera',
+        modelPreset: 'models/default.yaml'
+      }
+    ]
+  }
+];
+
+const pipelineExecutionResult: PipelineExecutionResult = {
+  pipelineId: 'review-pipeline',
+  pipelineName: 'Review Pipeline',
+  status: 'success',
+  startedAt: '2026-04-03T20:21:00Z',
+  completedAt: '2026-04-03T20:21:08Z',
+  error: null,
+  steps: [executionResult]
+};
+
 const runAssetContent: AssetContent = {
   path: 'runs/run-2.json',
   kind: 'json',
@@ -251,12 +281,14 @@ describe('App', () => {
     vi.clearAllMocks();
     tauri.getRecentProjects.mockResolvedValue(recents);
     tauri.getExecutionCredentialStatus.mockResolvedValue(missingCredentialStatus);
+    tauri.listProjectPipelines.mockResolvedValue(pipelines);
     tauri.listPromptRunHistory.mockResolvedValue(runHistory);
     tauri.pickDirectory.mockResolvedValue('/tmp');
     tauri.createProject.mockResolvedValue(summary);
     tauri.locateRecentProject.mockResolvedValue(summary);
     tauri.openProject.mockResolvedValue(summary);
     tauri.removeRecentProject.mockResolvedValue(undefined);
+    tauri.executePipeline.mockResolvedValue(pipelineExecutionResult);
     tauri.listProjectAssets.mockResolvedValue(assetNodes);
     tauri.readProjectAsset.mockImplementation(async (_rootPath: string, relativePath: string) => {
       if (relativePath === 'models/default.yaml') {
@@ -417,6 +449,51 @@ describe('App', () => {
       )
     ).toBeInTheDocument();
     expect(screen.getByText('Reopen quickly')).toBeInTheDocument();
+  });
+
+  it('runs a manifest pipeline from the inspector', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    expect(screen.getByText('Review Pipeline')).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('button', { name: 'Run Review Pipeline' }));
+
+    await waitFor(() =>
+      expect(tauri.executePipeline).toHaveBeenCalledWith('/tmp/story-lab', 'review-pipeline')
+    );
+
+    expect(await screen.findByText('Pipeline complete')).toBeInTheDocument();
+    expect(screen.getByText('1 / 1 blocks completed')).toBeInTheDocument();
+  });
+
+  it('blocks pipeline runs when a related prompt tab has unsaved changes', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('prompts'));
+    await fireEvent.click(within(explorer).getByText('brief-review.tera'));
+
+    const editor = await screen.findByTestId('asset-editor');
+    await fireEvent.input(editor, { target: { value: `${teraAssetContent.content}\n# unsaved` } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Run Review Pipeline' }));
+
+    expect(
+      await screen.findByText(
+        'Save prompt changes before running Review Pipeline. Pipeline runs use the saved files on disk.'
+      )
+    ).toBeInTheDocument();
+    expect(tauri.executePipeline).not.toHaveBeenCalled();
   });
 
   it('edits and saves an editable asset', async () => {

@@ -3,8 +3,9 @@ mod project_store;
 use std::path::PathBuf;
 
 use project_store::{
-    AssetContent, ExecutionCredentialStatus, ProjectAssetNode, ProjectSummary,
-    PromptExecutionResult, PromptRunHistoryEntry, RecentProjectEntry, TemplateValidationResult,
+    AssetContent, ExecutionCredentialStatus, PipelineExecutionResult, ProjectAssetNode,
+    ProjectPipelineSummary, ProjectSummary, PromptExecutionResult, PromptRunHistoryEntry,
+    RecentProjectEntry, TemplateValidationResult,
 };
 use tauri::Manager;
 
@@ -66,6 +67,12 @@ fn list_project_assets(root_path: String) -> Result<Vec<ProjectAssetNode>, Strin
 }
 
 #[tauri::command]
+fn list_project_pipelines(root_path: String) -> Result<Vec<ProjectPipelineSummary>, String> {
+    project_store::list_project_pipelines(PathBuf::from(root_path).as_path())
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn read_project_asset(root_path: String, relative_path: String) -> Result<AssetContent, String> {
     project_store::read_project_asset(PathBuf::from(root_path).as_path(), &relative_path)
         .map_err(|error| error.to_string())
@@ -106,6 +113,12 @@ fn execute_prompt_block(
 }
 
 #[tauri::command]
+fn execute_pipeline(root_path: String, pipeline_id: String) -> Result<PipelineExecutionResult, String> {
+    project_store::execute_pipeline(PathBuf::from(root_path).as_path(), &pipeline_id)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn get_execution_credential_status() -> Result<ExecutionCredentialStatus, String> {
     project_store::get_execution_credential_status().map_err(|error| error.to_string())
 }
@@ -140,10 +153,12 @@ pub fn run() {
             remove_recent_project,
             locate_recent_project,
             list_project_assets,
+            list_project_pipelines,
             read_project_asset,
             write_project_asset,
             validate_project_template,
             execute_prompt_block,
+            execute_pipeline,
             get_execution_credential_status,
             save_execution_api_key,
             clear_execution_api_key,

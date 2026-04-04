@@ -107,6 +107,30 @@ export interface PromptRunHistoryEntry {
   error: string | null;
 }
 
+export interface ProjectPipelineBlock {
+  blockId: string;
+  name: string;
+  templateSource: string;
+  modelPreset: string;
+}
+
+export interface ProjectPipeline {
+  pipelineId: string;
+  name: string;
+  executionMode: string;
+  blocks: ProjectPipelineBlock[];
+}
+
+export interface PipelineExecutionResult {
+  pipelineId: string;
+  pipelineName: string;
+  status: 'success' | 'failed';
+  startedAt: string;
+  completedAt: string;
+  error: string | null;
+  steps: PromptExecutionResult[];
+}
+
 export type ExecutionCredentialSource = 'keychain' | 'environment' | 'missing';
 
 export interface ExecutionCredentialStatus {

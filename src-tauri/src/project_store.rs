@@ -181,6 +181,36 @@ pub struct PromptRunHistoryEntry {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct ProjectPipelineBlockSummary {
+    pub block_id: String,
+    pub name: String,
+    pub template_source: String,
+    pub model_preset: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectPipelineSummary {
+    pub pipeline_id: String,
+    pub name: String,
+    pub execution_mode: String,
+    pub blocks: Vec<ProjectPipelineBlockSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PipelineExecutionResult {
+    pub pipeline_id: String,
+    pub pipeline_name: String,
+    pub status: ExecutionStatus,
+    pub started_at: String,
+    pub completed_at: String,
+    pub error: Option<String>,
+    pub steps: Vec<PromptExecutionResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct ExecutionCredentialStatus {
     pub source: CredentialSource,
     pub has_stored_key: bool,
@@ -413,6 +443,16 @@ pub fn list_project_assets(root_path: &Path) -> StoreResult<Vec<ProjectAssetNode
     Ok(nodes)
 }
 
+pub fn list_project_pipelines(root_path: &Path) -> StoreResult<Vec<ProjectPipelineSummary>> {
+    let (_, manifest) = validate_project(root_path)?;
+
+    Ok(manifest
+        .pipelines
+        .iter()
+        .map(|pipeline| summarize_pipeline(&manifest, pipeline))
+        .collect())
+}
+
 pub fn read_project_asset(root_path: &Path, relative_path: &str) -> StoreResult<AssetContent> {
     let (root_path, manifest) = validate_project(root_path)?;
     let safe_relative = sanitize_relative_path(relative_path)?;
@@ -560,10 +600,29 @@ pub fn execute_prompt_block(
     content: &str,
 ) -> StoreResult<PromptExecutionResult> {
     let api_key = load_execution_api_key()?;
-
-    execute_prompt_block_with_transport(root_path, relative_path, content, &api_key, |api_key, payload| {
+    let (root_path, manifest) = validate_project(root_path)?;
+    let mut transport = |api_key: &str, payload: Value| {
         post_openrouter_chat_completion(OPENROUTER_CHAT_COMPLETIONS_URL, api_key, &payload)
-    })
+    };
+
+    execute_prompt_block_with_transport(
+        &root_path,
+        &manifest,
+        relative_path,
+        content,
+        &api_key,
+        &mut transport,
+    )
+}
+
+pub fn execute_pipeline(root_path: &Path, pipeline_id: &str) -> StoreResult<PipelineExecutionResult> {
+    let api_key = load_execution_api_key()?;
+    let (root_path, manifest) = validate_project(root_path)?;
+    let mut transport = |api_key: &str, payload: Value| {
+        post_openrouter_chat_completion(OPENROUTER_CHAT_COMPLETIONS_URL, api_key, &payload)
+    };
+
+    execute_pipeline_with_transport(&root_path, &manifest, pipeline_id, &api_key, &mut transport)
 }
 
 pub fn get_execution_credential_status() -> StoreResult<ExecutionCredentialStatus> {
@@ -640,16 +699,16 @@ pub fn list_prompt_run_history(root_path: &Path, relative_path: &str) -> StoreRe
 
 fn execute_prompt_block_with_transport<F>(
     root_path: &Path,
+    manifest: &ProjectManifest,
     relative_path: &str,
     content: &str,
     api_key: &str,
-    transport: F,
+    transport: &mut F,
 ) -> StoreResult<PromptExecutionResult>
 where
-    F: FnOnce(&str, Value) -> StoreResult<Value>,
+    F: FnMut(&str, Value) -> StoreResult<Value>,
 {
     let started_at = timestamp();
-    let (root_path, manifest) = validate_project(root_path)?;
     let safe_relative = sanitize_relative_path(relative_path)?;
     let safe_relative_string = safe_relative.to_string_lossy().replace('\\', "/");
 
@@ -724,6 +783,126 @@ where
 
     persist_run_record(&root_path, &result, &response)?;
     Ok(result)
+}
+
+fn execute_pipeline_with_transport<F>(
+    root_path: &Path,
+    manifest: &ProjectManifest,
+    pipeline_id: &str,
+    api_key: &str,
+    transport: &mut F,
+) -> StoreResult<PipelineExecutionResult>
+where
+    F: FnMut(&str, Value) -> StoreResult<Value>,
+{
+    let pipeline = manifest
+        .pipelines
+        .iter()
+        .find(|pipeline| pipeline.pipeline_id == pipeline_id)
+        .ok_or_else(|| ProjectStoreError::message(format!("Pipeline `{pipeline_id}` was not found.")))?;
+
+    if pipeline.execution_mode != "sequential" {
+        return Err(ProjectStoreError::message(format!(
+            "Pipeline `{}` must use sequential execution mode.",
+            pipeline.name
+        )));
+    }
+
+    if pipeline.ordered_blocks.is_empty() {
+        return Err(ProjectStoreError::message(format!(
+            "Pipeline `{}` has no blocks to run.",
+            pipeline.name
+        )));
+    }
+
+    let started_at = timestamp();
+    let mut steps = Vec::new();
+    let mut status = ExecutionStatus::Success;
+    let mut error = None;
+
+    for block_id in &pipeline.ordered_blocks {
+        let block = manifest
+            .prompt_blocks
+            .iter()
+            .find(|block| &block.block_id == block_id)
+            .ok_or_else(|| {
+                ProjectStoreError::message(format!(
+                    "Pipeline `{}` references missing block `{block_id}`.",
+                    pipeline.name
+                ))
+            })?;
+
+        let template_path = sanitize_relative_path(&block.template_source)?;
+        let relative_path = template_path.to_string_lossy().replace('\\', "/");
+        let full_path = root_path.join(&template_path);
+        if !full_path.is_file() {
+            return Err(ProjectStoreError::message(format!(
+                "Pipeline block `{}` is missing template `{}` on disk.",
+                block.name, block.template_source
+            )));
+        }
+
+        let content = fs::read_to_string(&full_path)?;
+        match execute_prompt_block_with_transport(
+            root_path,
+            manifest,
+            &relative_path,
+            &content,
+            api_key,
+            transport,
+        ) {
+            Ok(result) => steps.push(result),
+            Err(step_error) => {
+                status = ExecutionStatus::Failed;
+                error = Some(format!("{}: {}", block.name, step_error));
+                break;
+            }
+        }
+    }
+
+    Ok(PipelineExecutionResult {
+        pipeline_id: pipeline.pipeline_id.clone(),
+        pipeline_name: pipeline.name.clone(),
+        status,
+        started_at,
+        completed_at: timestamp(),
+        error,
+        steps,
+    })
+}
+
+fn summarize_pipeline(manifest: &ProjectManifest, pipeline: &Pipeline) -> ProjectPipelineSummary {
+    let blocks = pipeline
+        .ordered_blocks
+        .iter()
+        .map(|block_id| {
+            if let Some(block) = manifest.prompt_blocks.iter().find(|block| &block.block_id == block_id) {
+                ProjectPipelineBlockSummary {
+                    block_id: block.block_id.clone(),
+                    name: block.name.clone(),
+                    template_source: block.template_source.clone(),
+                    model_preset: block
+                        .model_preset
+                        .clone()
+                        .unwrap_or_else(|| manifest.default_model_preset.clone()),
+                }
+            } else {
+                ProjectPipelineBlockSummary {
+                    block_id: block_id.clone(),
+                    name: block_id.clone(),
+                    template_source: String::new(),
+                    model_preset: manifest.default_model_preset.clone(),
+                }
+            }
+        })
+        .collect();
+
+    ProjectPipelineSummary {
+        pipeline_id: pipeline.pipeline_id.clone(),
+        name: pipeline.name.clone(),
+        execution_mode: pipeline.execution_mode.clone(),
+        blocks,
+    }
 }
 
 fn build_tree_node(root_path: &Path, full_path: &Path, relative_path: String) -> StoreResult<ProjectAssetNode> {
@@ -1815,23 +1994,27 @@ mod tests {
         });
         write_manifest(&root, &manifest).unwrap();
 
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        let mut transport = |_api_key: &str, payload: Value| {
+            assert_eq!(payload["model"], json!("openai/gpt-5.4"));
+            Ok(json!({
+                "choices": [
+                    {
+                        "message": {
+                            "content": "Execution output."
+                        }
+                    }
+                ]
+            }))
+        };
+
         let result = execute_prompt_block_with_transport(
             &root,
+            &manifest,
             "prompts/review.tera",
             "Context:\n{{ doc(\"context.md\") }}\nTone: {{ tone }}\nModel: {{ model_id }}",
             "test-key",
-            |_api_key, payload| {
-                assert_eq!(payload["model"], json!("openai/gpt-5.4"));
-                Ok(json!({
-                    "choices": [
-                        {
-                            "message": {
-                                "content": "Execution output."
-                            }
-                        }
-                    ]
-                }))
-            },
+            &mut transport,
         )
         .unwrap();
 
@@ -1858,13 +2041,18 @@ mod tests {
         let app_data = temp.path().join("app-data");
         let summary = create_project(temp.path(), "ExecuteFail", &app_data).unwrap();
         let root = PathBuf::from(&summary.root_path);
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        let mut transport = |_api_key: &str, _payload: Value| {
+            unreachable!("transport should not run for invalid execution input")
+        };
 
         let error = execute_prompt_block_with_transport(
             &root,
+            &manifest,
             "prompts/review.tera",
             "{{ doc(\"missing.md\") }}",
             "test-key",
-            |_api_key, _payload| unreachable!("transport should not run for invalid execution input"),
+            &mut transport,
         )
         .unwrap_err();
 
@@ -1877,13 +2065,18 @@ mod tests {
         let app_data = temp.path().join("app-data");
         let summary = create_project(temp.path(), "ExecuteVarFail", &app_data).unwrap();
         let root = PathBuf::from(&summary.root_path);
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        let mut transport = |_api_key: &str, _payload: Value| {
+            unreachable!("transport should not run when required variables are missing")
+        };
 
         let error = execute_prompt_block_with_transport(
             &root,
+            &manifest,
             "prompts/review.tera",
             "Tone: {{ missing_tone }}",
             "test-key",
-            |_api_key, _payload| unreachable!("transport should not run when required variables are missing"),
+            &mut transport,
         )
         .unwrap_err();
 
@@ -1899,27 +2092,30 @@ mod tests {
         let app_data = temp.path().join("app-data");
         let summary = create_project(temp.path(), "ExecuteVarGuard", &app_data).unwrap();
         let root = PathBuf::from(&summary.root_path);
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        let mut transport = |_api_key: &str, payload: Value| {
+            assert!(payload["messages"][0]["content"]
+                .as_str()
+                .unwrap()
+                .contains("Fallback tone"));
+            Ok(json!({
+                "choices": [
+                    {
+                        "message": {
+                            "content": "Guarded output."
+                        }
+                    }
+                ]
+            }))
+        };
 
         let result = execute_prompt_block_with_transport(
             &root,
+            &manifest,
             "prompts/review.tera",
             "{% if missing_tone is defined %}{{ missing_tone }}{% else %}Fallback tone{% endif %}",
             "test-key",
-            |_api_key, payload| {
-                assert!(payload["messages"][0]["content"]
-                    .as_str()
-                    .unwrap()
-                    .contains("Fallback tone"));
-                Ok(json!({
-                    "choices": [
-                        {
-                            "message": {
-                                "content": "Guarded output."
-                            }
-                        }
-                    ]
-                }))
-            },
+            &mut transport,
         )
         .unwrap();
 
@@ -1950,23 +2146,27 @@ mod tests {
         });
         write_manifest(&root, &manifest).unwrap();
 
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        let mut transport = |_api_key: &str, payload: Value| {
+            assert_eq!(payload["model"], json!("openai/gpt-5.4-nano"));
+            Ok(json!({
+                "choices": [
+                    {
+                        "message": {
+                            "content": "Override output."
+                        }
+                    }
+                ]
+            }))
+        };
+
         let result = execute_prompt_block_with_transport(
             &root,
+            &manifest,
             "prompts/review.tera",
             "Hello world",
             "test-key",
-            |_api_key, payload| {
-                assert_eq!(payload["model"], json!("openai/gpt-5.4-nano"));
-                Ok(json!({
-                    "choices": [
-                        {
-                            "message": {
-                                "content": "Override output."
-                            }
-                        }
-                    ]
-                }))
-            },
+            &mut transport,
         )
         .unwrap();
 
@@ -2063,5 +2263,105 @@ mod tests {
         assert_eq!(history[0].run_id, "run-new");
         assert_eq!(history[1].run_id, "run-old");
         assert_eq!(history[0].run_path, "runs/run-new.json");
+    }
+
+    #[test]
+    fn lists_manifest_pipelines_with_resolved_block_metadata() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "Pipelines", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let mut manifest = read_manifest(&root.join("project.json")).unwrap();
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "block-1".to_string(),
+            name: "Review".to_string(),
+            template_source: "prompts/review.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+        });
+        manifest.pipelines.push(Pipeline {
+            pipeline_id: "pipeline-1".to_string(),
+            name: "Review Pipeline".to_string(),
+            ordered_blocks: vec!["block-1".to_string()],
+            execution_mode: "sequential".to_string(),
+        });
+        write_manifest(&root, &manifest).unwrap();
+
+        let pipelines = list_project_pipelines(&root).unwrap();
+
+        assert_eq!(pipelines.len(), 1);
+        assert_eq!(pipelines[0].name, "Review Pipeline");
+        assert_eq!(pipelines[0].blocks[0].name, "Review");
+        assert_eq!(pipelines[0].blocks[0].model_preset, "models/default.yaml");
+    }
+
+    #[test]
+    fn executes_pipeline_sequentially_and_stops_on_failure() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "PipelineRun", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        fs::write(root.join("documents").join("context.md"), "Doc body.").unwrap();
+        fs::write(root.join("prompts").join("review.tera"), "Review {{ doc(\"context.md\") }}").unwrap();
+        fs::write(root.join("prompts").join("outline.tera"), "Outline {{ missing_value }}").unwrap();
+
+        let mut manifest = read_manifest(&root.join("project.json")).unwrap();
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "review".to_string(),
+            name: "Review".to_string(),
+            template_source: "prompts/review.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+        });
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "outline".to_string(),
+            name: "Outline".to_string(),
+            template_source: "prompts/outline.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+        });
+        manifest.variables.insert("tone".to_string(), json!("precise"));
+        manifest.pipelines.push(Pipeline {
+            pipeline_id: "pipeline-1".to_string(),
+            name: "Review Pipeline".to_string(),
+            ordered_blocks: vec!["review".to_string(), "outline".to_string()],
+            execution_mode: "sequential".to_string(),
+        });
+        write_manifest(&root, &manifest).unwrap();
+
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        let mut calls = 0usize;
+        let mut transport = |_api_key: &str, _payload: Value| {
+            calls += 1;
+            Ok(json!({
+                "choices": [
+                    {
+                        "message": {
+                            "content": format!("Step output {calls}")
+                        }
+                    }
+                ]
+            }))
+        };
+
+        let result = execute_pipeline_with_transport(
+            &root,
+            &manifest,
+            "pipeline-1",
+            "test-key",
+            &mut transport,
+        )
+        .unwrap();
+
+        assert_eq!(result.status, ExecutionStatus::Failed);
+        assert_eq!(result.steps.len(), 1);
+        assert_eq!(result.steps[0].block_name, "Review");
+        assert!(result.error.unwrap().contains("Outline"));
+        assert_eq!(calls, 1);
     }
 }
