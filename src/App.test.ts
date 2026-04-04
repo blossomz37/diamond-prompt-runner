@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.svelte';
 import type {
   AssetContent,
+  CreatedPromptBlockResult,
   ExecutionCredentialStatus,
   PipelineExecutionResult,
   ProjectAssetNode,
@@ -17,6 +18,7 @@ import type {
 const tauri = vi.hoisted(() => ({
   clearExecutionApiKey: vi.fn(),
   createProject: vi.fn(),
+  createPromptBlock: vi.fn(),
   executePipeline: vi.fn(),
   getRecentProjects: vi.fn(),
   getExecutionCredentialStatus: vi.fn(),
@@ -256,6 +258,39 @@ const pipelineExecutionResult: PipelineExecutionResult = {
   steps: [executionResult]
 };
 
+const createdPromptResult: CreatedPromptBlockResult = {
+  summary: {
+    ...summary,
+    updatedAt: '2026-04-03T20:22:00Z',
+    counts: {
+      ...summary.counts,
+      prompts: 2
+    }
+  },
+  path: 'prompts/scene-draft.tera'
+};
+
+const createdPromptAssetContent: AssetContent = {
+  path: 'prompts/scene-draft.tera',
+  kind: 'tera',
+  view: 'text',
+  content:
+    'Project: {{ project.name }}\nDate: {{ current_date }}\n\nWrite the instructions for this prompt block here.\n',
+  isEditable: true,
+  metadata: {
+    kind: 'tera',
+    path: 'prompts/scene-draft.tera',
+    name: 'scene-draft.tera',
+    sizeBytes: 101,
+    modifiedAt: '2026-04-03T20:22:00Z',
+    details: [
+      { label: 'Lines', value: '4' },
+      { label: 'Linked Blocks', value: 'Scene Draft' }
+    ]
+  },
+  parsedJson: null
+};
+
 const runAssetContent: AssetContent = {
   path: 'runs/run-2.json',
   kind: 'json',
@@ -285,6 +320,7 @@ describe('App', () => {
     tauri.listPromptRunHistory.mockResolvedValue(runHistory);
     tauri.pickDirectory.mockResolvedValue('/tmp');
     tauri.createProject.mockResolvedValue(summary);
+    tauri.createPromptBlock.mockResolvedValue(createdPromptResult);
     tauri.locateRecentProject.mockResolvedValue(summary);
     tauri.openProject.mockResolvedValue(summary);
     tauri.removeRecentProject.mockResolvedValue(undefined);
@@ -297,6 +333,10 @@ describe('App', () => {
 
       if (relativePath === 'prompts/brief-review.tera') {
         return teraAssetContent;
+      }
+
+      if (relativePath === 'prompts/scene-draft.tera') {
+        return createdPromptAssetContent;
       }
 
       if (relativePath === 'runs/run-2.json') {
@@ -361,6 +401,52 @@ describe('App', () => {
     expect(tauri.readProjectAsset).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Lines')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  it('creates a new prompt from the explorer and opens it in a tab', async () => {
+    tauri.listProjectAssets
+      .mockResolvedValueOnce(assetNodes)
+      .mockResolvedValueOnce([
+        ...assetNodes.slice(0, 2),
+        {
+          name: 'prompts',
+          path: 'prompts',
+          kind: 'directory',
+          isDirectory: true,
+          children: [
+            assetNodes[2].children[0],
+            {
+              name: 'scene-draft.tera',
+              path: 'prompts/scene-draft.tera',
+              kind: 'tera',
+              isDirectory: false,
+              children: []
+            }
+          ]
+        },
+        assetNodes[3]
+      ]);
+
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    await fireEvent.click(screen.getByRole('button', { name: 'New Prompt' }));
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Prompt name' }), {
+      target: { value: 'Scene Draft' }
+    });
+    await fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() =>
+      expect(tauri.createPromptBlock).toHaveBeenCalledWith('/tmp/story-lab', 'Scene Draft')
+    );
+
+    expect(await screen.findAllByText('scene-draft.tera')).not.toHaveLength(0);
+    expect(screen.getByTestId('asset-editor')).toHaveValue(createdPromptAssetContent.content);
   });
 
   it('removes an unavailable recent project', async () => {

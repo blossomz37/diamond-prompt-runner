@@ -42,6 +42,7 @@ Sequence around this milestone:
 - Add one `Run pipeline` action per pipeline from the existing shell.
 - Show the latest pipeline status and completed-step count in the inspector.
 - Guard against running pipelines from stale saved files when related `.tera` tabs have unsaved drafts.
+- Add a small explorer-side `New Prompt` flow so prompt authoring does not require manual file creation outside the app.
 
 ## Scope
 
@@ -50,6 +51,7 @@ Included in this slice:
 - sequential pipeline execution
 - saved-file execution semantics for pipeline runs
 - inspector-level run controls and latest pipeline status
+- dedicated prompt creation from the explorer that creates the `.tera` file and matching prompt-block manifest entry
 - backend and frontend tests for pipeline success and stop-on-failure behavior
 
 Explicitly out of scope for this slice:
@@ -66,6 +68,7 @@ Explicitly out of scope for this slice:
 - [x] Stop further execution after the first failing block.
 - [x] Surface pipeline run controls and latest pipeline status in the existing shell.
 - [x] Guard against pipeline runs when related prompt tabs have unsaved drafts.
+- [x] Add an in-app prompt creation flow so new prompt blocks no longer require manual filesystem edits.
 - [ ] Expand run-history UX beyond prompt-scoped bottom-panel browsing.
 - [ ] Add export-oriented slices after the pipeline runner behavior settles.
 

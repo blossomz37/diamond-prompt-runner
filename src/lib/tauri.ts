@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import type {
   AssetContent,
+  CreatedPromptBlockResult,
   ExecutionCredentialStatus,
   PipelineExecutionResult,
   ProjectAssetNode,
@@ -47,6 +48,13 @@ export async function locateRecentProject(
 
 export async function createProject(parentPath: string, projectName: string): Promise<ProjectSummary> {
   return invoke<ProjectSummary>('create_project', { parentPath, projectName });
+}
+
+export async function createPromptBlock(
+  rootPath: string,
+  promptName: string
+): Promise<CreatedPromptBlockResult> {
+  return invoke<CreatedPromptBlockResult>('create_prompt_block', { rootPath, promptName });
 }
 
 export async function openProject(rootPath: string): Promise<ProjectSummary> {

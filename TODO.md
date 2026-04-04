@@ -43,6 +43,7 @@ Oldest to Newest
 - [x] Single-Block Execution Slice: seed curated model preset defaults from the workshop routing set while keeping `aion-2.0` out of the default project starter pack.
 - [x] Pipeline Runner Slice: create the active implementation plan and add manifest-driven sequential pipeline runs to the inspector.
 - [x] Pipeline Runner Slice: stop pipeline execution on the first failing block while reusing the existing per-block run artifact contract under `runs/`.
+- [x] Prompt Authoring: add an explorer-side create flow for new `.tera` prompt blocks and manifest entries.
 - [ ] Post-MVP online extension: support scoped `:online` behavior for prompts that require live web research.
 - [ ] Post-MVP online extension: add tests for scoped online-research prompt behavior.
 - [ ] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.

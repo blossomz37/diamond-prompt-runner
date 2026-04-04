@@ -33,6 +33,8 @@
     onReloadTab: (path: string) => void | Promise<void>;
     onRunTab: (path: string) => void | Promise<void>;
     onRunPipeline: (pipelineId: string) => void | Promise<void>;
+    onCreatePrompt: (name: string) => void | Promise<void>;
+    promptCreationLoading: boolean;
     credentialState: ExecutionCredentialStatus;
     credentialDraft: string;
     credentialLoading: boolean;
@@ -66,6 +68,8 @@
     onReloadTab,
     onRunTab,
     onRunPipeline,
+    onCreatePrompt,
+    promptCreationLoading,
     credentialState,
     credentialDraft,
     credentialLoading,
@@ -87,6 +91,23 @@
   );
 
   let bottomOpen = $state(true);
+  let createPromptOpen = $state(false);
+  let newPromptName = $state('');
+
+  async function handleCreatePromptSubmit(): Promise<void> {
+    const trimmed = newPromptName.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    try {
+      await onCreatePrompt(trimmed);
+      newPromptName = '';
+      createPromptOpen = false;
+    } catch {
+      // Keep the form open so the user can correct and retry.
+    }
+  }
 </script>
 
 <section class="workspace-shell">
@@ -111,8 +132,27 @@
     <aside class="explorer panel">
       <div class="pane-head">
         <p class="eyebrow">Explorer</p>
-        <span>{nodes.length} root nodes</span>
+        <div class="pane-actions">
+          <span>{nodes.length} root nodes</span>
+          <button type="button" class="mini-action" onclick={() => (createPromptOpen = !createPromptOpen)}>
+            {createPromptOpen ? 'Close' : 'New Prompt'}
+          </button>
+        </div>
       </div>
+      {#if createPromptOpen}
+        <form class="create-form" onsubmit={(event) => { event.preventDefault(); void handleCreatePromptSubmit(); }}>
+          <input
+            type="text"
+            bind:value={newPromptName}
+            placeholder="Prompt name"
+            aria-label="Prompt name"
+            disabled={promptCreationLoading}
+          />
+          <button type="submit" class="mini-action primary" disabled={promptCreationLoading || !newPromptName.trim()}>
+            {promptCreationLoading ? 'Creating…' : 'Create'}
+          </button>
+        </form>
+      {/if}
       <ExplorerTree nodes={nodes} activePath={activePath} onSelectPath={onSelectAsset} />
     </aside>
 
@@ -294,6 +334,43 @@
     display: flex;
     align-items: center;
     gap: 0.55rem;
+  }
+
+  .pane-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .mini-action {
+    min-height: 2rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 10px;
+    border: 1px solid rgba(157, 180, 255, 0.16);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+  }
+
+  .mini-action.primary {
+    background: rgba(139, 177, 255, 0.14);
+    border-color: rgba(139, 177, 255, 0.28);
+  }
+
+  .create-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .create-form input {
+    min-width: 0;
+    min-height: 2.2rem;
+    border-radius: 12px;
+    border: 1px solid rgba(157, 180, 255, 0.16);
+    background: rgba(7, 11, 20, 0.82);
+    color: var(--text);
+    padding: 0.55rem 0.75rem;
   }
 
   .pane-toggle {

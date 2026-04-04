@@ -14,6 +14,7 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 - Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, and the Single-Block Execution Slice are complete; the Pipeline Runner Slice is now active with manifest-driven sequential pipeline runs and inspector-level pipeline controls in place
 - Current Rendering and Validation behavior:
 	- markdown, text, `.tera`, and model YAML assets are editable in the workspace
+	- new prompt blocks can be created directly from the explorer without hand-editing `project.json`
 	- `project.json` remains read-only
 	- `.tera` tabs validate against the current draft content
 	- Diamond `doc("...")` references are resolved from `documents/` during preview validation

@@ -3,9 +3,9 @@ mod project_store;
 use std::path::PathBuf;
 
 use project_store::{
-    AssetContent, ExecutionCredentialStatus, PipelineExecutionResult, ProjectAssetNode,
-    ProjectPipelineSummary, ProjectSummary, PromptExecutionResult, PromptRunHistoryEntry,
-    RecentProjectEntry, TemplateValidationResult,
+    AssetContent, CreatedPromptBlockResult, ExecutionCredentialStatus, PipelineExecutionResult,
+    ProjectAssetNode, ProjectPipelineSummary, ProjectSummary, PromptExecutionResult,
+    PromptRunHistoryEntry, RecentProjectEntry, TemplateValidationResult,
 };
 use tauri::Manager;
 
@@ -30,6 +30,17 @@ fn create_project(
 fn open_project(app: tauri::AppHandle, root_path: String) -> Result<ProjectSummary, String> {
     let app_data_dir = app_data_dir(&app)?;
     project_store::open_project(PathBuf::from(root_path).as_path(), &app_data_dir)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn create_prompt_block(
+    app: tauri::AppHandle,
+    root_path: String,
+    prompt_name: String,
+) -> Result<CreatedPromptBlockResult, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::create_prompt_block(PathBuf::from(root_path).as_path(), &prompt_name, &app_data_dir)
         .map_err(|error| error.to_string())
 }
 
@@ -149,6 +160,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             create_project,
             open_project,
+            create_prompt_block,
             get_recent_projects,
             remove_recent_project,
             locate_recent_project,

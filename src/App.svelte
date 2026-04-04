@@ -5,6 +5,7 @@
   import {
     clearExecutionApiKey,
     createProject,
+    createPromptBlock,
     executePipeline,
     executePromptBlock,
     getExecutionCredentialStatus,
@@ -23,6 +24,7 @@
   } from '$lib/tauri';
   import type {
     ExecutionCredentialStatus,
+    CreatedPromptBlockResult,
     PipelineExecutionResult,
     ProjectAssetNode,
     ProjectPipeline,
@@ -54,6 +56,7 @@
   let executionHistoryLoading = $state(false);
   let pipelineExecutionResult = $state<PipelineExecutionResult | null>(null);
   let pipelineExecutionLoading = $state(false);
+  let promptCreationLoading = $state(false);
   let executionCredentialStatus = $state<ExecutionCredentialStatus>({
     source: 'missing',
     hasStoredKey: false
@@ -254,6 +257,28 @@
       errorMessage = error instanceof Error ? error.message : `Failed to open ${path}.`;
     } finally {
       loadingPath = null;
+    }
+  }
+
+  async function handleCreatePrompt(promptName: string): Promise<void> {
+    if (!workspace || promptCreationLoading) {
+      return;
+    }
+
+    promptCreationLoading = true;
+    errorMessage = null;
+
+    try {
+      const created: CreatedPromptBlockResult = await createPromptBlock(workspace.rootPath, promptName);
+      workspace = created.summary;
+      recentProjects = await getRecentProjects();
+      assetNodes = await listProjectAssets(created.summary.rootPath);
+      await openAssetPath(created.path);
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : 'Failed to create prompt.';
+      throw error;
+    } finally {
+      promptCreationLoading = false;
     }
   }
 
@@ -607,6 +632,8 @@
     onReloadTab={handleReloadTab}
     onRunTab={handleExecuteTab}
     onRunPipeline={handleRunPipeline}
+    onCreatePrompt={handleCreatePrompt}
+    {promptCreationLoading}
     credentialState={executionCredentialStatus}
     credentialDraft={executionCredentialDraft}
     credentialLoading={executionCredentialLoading}

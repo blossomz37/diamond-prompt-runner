@@ -131,6 +131,11 @@ export interface PipelineExecutionResult {
   steps: PromptExecutionResult[];
 }
 
+export interface CreatedPromptBlockResult {
+  summary: ProjectSummary;
+  path: string;
+}
+
 export type ExecutionCredentialSource = 'keychain' | 'environment' | 'missing';
 
 export interface ExecutionCredentialStatus {

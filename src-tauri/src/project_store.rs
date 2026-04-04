@@ -42,6 +42,7 @@ const OPENROUTER_API_KEY_ENV: &str = "OPENROUTER_API_KEY";
 const OPENROUTER_KEYCHAIN_SERVICE: &str = "com.blossomz37.diamondrunner";
 const OPENROUTER_KEYCHAIN_ACCOUNT: &str = "openrouter-api-key";
 const PERSISTED_RUN_RECORD_VERSION: u32 = 1;
+const DEFAULT_PROMPT_TEMPLATE: &str = "Project: {{ project.name }}\nDate: {{ current_date }}\n\nWrite the instructions for this prompt block here.\n";
 
 #[derive(Debug, Error)]
 pub enum ProjectStoreError {
@@ -84,6 +85,13 @@ pub struct ProjectSummary {
     pub default_model_preset: String,
     pub updated_at: String,
     pub counts: ProjectCounts,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedPromptBlockResult {
+    pub summary: ProjectSummary,
+    pub path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -352,6 +360,43 @@ pub fn open_project(root_path: &Path, app_data_dir: &Path) -> StoreResult<Projec
     let summary = summarize_project(&path, &manifest)?;
     update_recent_projects(app_data_dir, &summary)?;
     Ok(summary)
+}
+
+pub fn create_prompt_block(
+    root_path: &Path,
+    prompt_name: &str,
+    app_data_dir: &Path,
+) -> StoreResult<CreatedPromptBlockResult> {
+    let trimmed_name = prompt_name.trim();
+    if trimmed_name.is_empty() {
+        return Err(ProjectStoreError::message("Prompt name cannot be empty."));
+    }
+
+    let (root_path, mut manifest) = validate_project(root_path)?;
+    let prompt_slug = unique_prompt_slug(&root_path, &manifest, trimmed_name);
+    let prompt_path = format!("prompts/{prompt_slug}.tera");
+    let full_path = root_path.join(&prompt_path);
+
+    fs::write(&full_path, DEFAULT_PROMPT_TEMPLATE)?;
+
+    manifest.prompt_blocks.push(PromptBlock {
+        block_id: prompt_slug.clone(),
+        name: trimmed_name.to_string(),
+        template_source: prompt_path.clone(),
+        input_bindings: Vec::new(),
+        model_preset: None,
+        output_target: "run_artifact".to_string(),
+    });
+    manifest.updated_at = timestamp();
+    write_manifest(&root_path, &manifest)?;
+
+    let summary = summarize_project(&root_path, &manifest)?;
+    update_recent_projects(app_data_dir, &summary)?;
+
+    Ok(CreatedPromptBlockResult {
+        summary,
+        path: prompt_path,
+    })
 }
 
 pub fn get_recent_projects(app_data_dir: &Path) -> StoreResult<Vec<RecentProjectEntry>> {
@@ -1194,6 +1239,38 @@ fn count_files(directory: PathBuf) -> StoreResult<usize> {
     Ok(total)
 }
 
+fn unique_prompt_slug(root_path: &Path, manifest: &ProjectManifest, prompt_name: &str) -> String {
+    let base_slug = slugify_prompt_name(prompt_name);
+    let mut candidate = base_slug.clone();
+    let mut suffix = 2usize;
+
+    loop {
+        let prompt_path = format!("prompts/{candidate}.tera");
+        let block_taken = manifest.prompt_blocks.iter().any(|block| block.block_id == candidate);
+        let path_taken = manifest.prompt_blocks.iter().any(|block| block.template_source == prompt_path)
+            || root_path.join(&prompt_path).exists();
+
+        if !block_taken && !path_taken {
+            return candidate;
+        }
+
+        candidate = format!("{base_slug}-{suffix}");
+        suffix += 1;
+    }
+}
+
+fn slugify_prompt_name(prompt_name: &str) -> String {
+    let lower = prompt_name.trim().to_lowercase();
+    let regex = Regex::new(r"[^a-z0-9]+").unwrap();
+    let collapsed = regex.replace_all(&lower, "-");
+    let slug = collapsed.trim_matches('-');
+    if slug.is_empty() {
+        "prompt".to_string()
+    } else {
+        slug.to_string()
+    }
+}
+
 fn classify_asset(relative_path: &str, is_directory: bool) -> AssetKind {
     if is_directory {
         return AssetKind::Directory;
@@ -1713,6 +1790,30 @@ mod tests {
 
         let error = open_project(&invalid_path, temp.path()).unwrap_err();
         assert!(error.to_string().contains("missing required directory"));
+    }
+
+    #[test]
+    fn creates_prompt_block_file_and_manifest_entry() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "PromptCreate", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let created = create_prompt_block(&root, "Scene Draft", &app_data).unwrap();
+
+        assert_eq!(created.path, "prompts/scene-draft.tera");
+        assert!(root.join(&created.path).is_file());
+        assert!(fs::read_to_string(root.join(&created.path))
+            .unwrap()
+            .contains("{{ project.name }}"));
+
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        assert_eq!(manifest.prompt_blocks.len(), 1);
+        assert_eq!(manifest.prompt_blocks[0].name, "Scene Draft");
+        assert_eq!(manifest.prompt_blocks[0].template_source, "prompts/scene-draft.tera");
+
+        let recents = get_recent_projects(&app_data).unwrap();
+        assert_eq!(recents[0].summary.counts.prompts, 1);
     }
 
     #[test]
