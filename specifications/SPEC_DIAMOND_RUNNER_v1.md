@@ -126,6 +126,12 @@ Editing, template validation, rendering, OpenRouter execution, and run history U
 - branch and merge semantics
 - notification polish such as toast systems as a required MVP dependency
 
+### Post-MVP Extensions
+
+Features that are implemented and functional but are scoped as extensions beyond the MVP boundary:
+
+- **Online Research (`:online`)** — Prompts whose first non-empty line is `{# diamond:online #}` opt into web-backed execution via OpenRouter's online feature. This is a post-MVP extension: it requires no architectural changes to the core, adds no new project data model fields, and is fully backward-compatible. Online run metadata (`enabled`, `web_search_requests`, `citation_count`) is persisted in run artifacts with serde defaults so existing artifacts are unaffected. The feature is documented in the ValidationPanel inline when the directive is detected.
+
 ## 4. Public Interfaces And Project Data Model
 
 ### 4.1 Project Manifest

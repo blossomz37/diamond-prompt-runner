@@ -117,8 +117,11 @@
       {:else if validation}
         {#if onlineDraftEnabled}
           <div class="messages info">
-            <h4>Online Research</h4>
-            <p>This prompt will use web-backed execution because its first non-empty line is {ONLINE_PROMPT_DIRECTIVE}.</p>
+            <h4>Online Research Mode</h4>
+            <p>This prompt opts into web-backed execution via the <code>{ONLINE_PROMPT_DIRECTIVE}</code> directive on its first non-empty line. During a run, OpenRouter will issue live web search requests and inject citations into the context before generating the response.</p>
+            <p><strong>Constraints:</strong> Online runs consume additional tokens for search context and cost more than standard runs. Citation count and quality depend on the model and search results — they are not guaranteed. The <code>:online</code> directive routes execution through OpenRouter's online feature; it does not call a separate search API.</p>
+            <p><strong>Setup:</strong> No additional configuration is required beyond a valid OpenRouter API key. Any model preset works; OpenRouter selects a compatible online-capable variant automatically.</p>
+            <p><strong>To disable:</strong> Remove or comment out the directive line, or move it below the first non-empty line.</p>
           </div>
         {/if}
 

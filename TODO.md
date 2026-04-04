@@ -58,8 +58,8 @@ Oldest to Newest
 - [x] Post-MVP online extension: add the active implementation plan and require the standalone OpenRouter probe to pass before app behavior is hardcoded.
 - [x] Post-MVP online extension: support scoped `:online` behavior for prompts that require live web research.
 - [x] Post-MVP online extension: add tests for scoped online-research prompt behavior.
-- [ ] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.
-- [ ] Post-MVP online extension: decide whether `:online` support belongs in the MVP spec or as a later extension.
+- [x] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.
+- [x] Post-MVP online extension: decide whether `:online` support belongs in the MVP spec or as a later extension. Decision: post-MVP extension, documented in SPEC_DIAMOND_RUNNER_v1.md §3 Post-MVP Extensions.
 - [ ] Decide whether to create custom Diamond-specific skills for implementation, fixtures, and prompt-pack porting.
 
 
