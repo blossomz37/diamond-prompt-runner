@@ -3,7 +3,9 @@
     AssetMetadata,
     PipelineExecutionResult,
     ProjectPipeline,
+    ProjectPromptBlock,
     ProjectRunHistoryEntry,
+    SavedPipelineResult,
     ProjectSummary
   } from '$lib/types/project';
 
@@ -11,9 +13,17 @@
     summary: ProjectSummary;
     metadata: AssetMetadata | null;
     pipelines: ProjectPipeline[];
+    promptBlocks: ProjectPromptBlock[];
     pipelineExecution: PipelineExecutionResult | null;
     pipelineLoading: boolean;
+    pipelineAuthoringLoading: boolean;
     onRunPipeline: (pipelineId: string) => void | Promise<void>;
+    onCreatePipeline: (name: string, orderedBlockIds: string[]) => Promise<SavedPipelineResult>;
+    onUpdatePipeline: (
+      pipelineId: string,
+      name: string,
+      orderedBlockIds: string[]
+    ) => Promise<SavedPipelineResult>;
     runHistory: ProjectRunHistoryEntry[];
     runHistoryLoading: boolean;
     onOpenRunPath: (path: string) => void | Promise<void>;
@@ -23,15 +33,43 @@
     summary,
     metadata,
     pipelines,
+    promptBlocks,
     pipelineExecution,
     pipelineLoading,
+    pipelineAuthoringLoading,
     onRunPipeline,
+    onCreatePipeline,
+    onUpdatePipeline,
     runHistory,
     runHistoryLoading,
     onOpenRunPath
   }: Props = $props();
 
+  let createPipelineOpen = $state(false);
+  let createPipelineName = $state('');
+  let createPipelineBlocks = $state<string[]>([]);
+  let createBlockChoice = $state('');
+  let editingPipelineId = $state<string | null>(null);
+  let editingPipelineName = $state('');
+  let editingPipelineBlocks = $state<string[]>([]);
+  let editingBlockChoice = $state('');
   let historyFilter = $state('all');
+
+  const defaultPromptBlockChoice = $derived(promptBlocks[0]?.blockId ?? '');
+
+  $effect(() => {
+    if (!createBlockChoice || createPipelineBlocks.includes(createBlockChoice)) {
+      createBlockChoice =
+        promptBlocks.find((block) => !createPipelineBlocks.includes(block.blockId))?.blockId ?? '';
+    }
+  });
+
+  $effect(() => {
+    if (!editingBlockChoice || editingPipelineBlocks.includes(editingBlockChoice)) {
+      editingBlockChoice =
+        promptBlocks.find((block) => !editingPipelineBlocks.includes(block.blockId))?.blockId ?? '';
+    }
+  });
 
   const blockFilters = $derived.by(() => {
     return runHistory.reduce<ProjectRunHistoryEntry[]>((items, item) => {
@@ -72,6 +110,101 @@
 
     return runHistory;
   });
+
+  function blockLabel(blockId: string): string {
+    const block = promptBlocks.find((item) => item.blockId === blockId);
+    return block ? `${block.name} (${block.blockId})` : blockId;
+  }
+
+  function startCreatePipeline(): void {
+    createPipelineOpen = true;
+    createPipelineName = '';
+    createPipelineBlocks = [];
+    createBlockChoice = defaultPromptBlockChoice;
+  }
+
+  function cancelCreatePipeline(): void {
+    createPipelineOpen = false;
+    createPipelineName = '';
+    createPipelineBlocks = [];
+    createBlockChoice = defaultPromptBlockChoice;
+  }
+
+  function startEditPipeline(pipeline: ProjectPipeline): void {
+    editingPipelineId = pipeline.pipelineId;
+    editingPipelineName = pipeline.name;
+    editingPipelineBlocks = pipeline.blocks.map((block) => block.blockId);
+    editingBlockChoice = promptBlocks.find(
+      (block) => !pipeline.blocks.some((pipelineBlock) => pipelineBlock.blockId === block.blockId)
+    )?.blockId ?? '';
+  }
+
+  function cancelEditPipeline(): void {
+    editingPipelineId = null;
+    editingPipelineName = '';
+    editingPipelineBlocks = [];
+    editingBlockChoice = '';
+  }
+
+  function addCreateBlock(): void {
+    if (!createBlockChoice || createPipelineBlocks.includes(createBlockChoice)) {
+      return;
+    }
+
+    createPipelineBlocks = [...createPipelineBlocks, createBlockChoice];
+  }
+
+  function addEditingBlock(): void {
+    if (!editingBlockChoice || editingPipelineBlocks.includes(editingBlockChoice)) {
+      return;
+    }
+
+    editingPipelineBlocks = [...editingPipelineBlocks, editingBlockChoice];
+  }
+
+  function removeCreateBlock(index: number): void {
+    createPipelineBlocks = createPipelineBlocks.filter((_, itemIndex) => itemIndex !== index);
+  }
+
+  function removeEditingBlock(index: number): void {
+    editingPipelineBlocks = editingPipelineBlocks.filter((_, itemIndex) => itemIndex !== index);
+  }
+
+  function moveCreateBlock(index: number, direction: -1 | 1): void {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= createPipelineBlocks.length) {
+      return;
+    }
+
+    const next = [...createPipelineBlocks];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    createPipelineBlocks = next;
+  }
+
+  function moveEditingBlock(index: number, direction: -1 | 1): void {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= editingPipelineBlocks.length) {
+      return;
+    }
+
+    const next = [...editingPipelineBlocks];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    editingPipelineBlocks = next;
+  }
+
+  async function handleCreatePipelineSubmit(): Promise<void> {
+    await onCreatePipeline(createPipelineName.trim(), createPipelineBlocks);
+    cancelCreatePipeline();
+  }
+
+  async function handleUpdatePipelineSubmit(): Promise<void> {
+    if (!editingPipelineId) {
+      return;
+    }
+
+    await onUpdatePipeline(editingPipelineId, editingPipelineName.trim(), editingPipelineBlocks);
+    cancelEditPipeline();
+  }
 </script>
 
 <aside class="inspector">
@@ -128,49 +261,171 @@
   </section>
 
   <section class="section">
-    <p class="eyebrow">Pipelines</p>
+    <div class="section-head">
+      <p class="eyebrow">Pipelines</p>
+      <button
+        type="button"
+        class="mini-action"
+        onclick={() => (createPipelineOpen ? cancelCreatePipeline() : startCreatePipeline())}
+        disabled={pipelineAuthoringLoading || promptBlocks.length === 0}
+      >
+        {createPipelineOpen ? 'Close' : 'New Pipeline'}
+      </button>
+    </div>
+
+    {#if promptBlocks.length === 0}
+      <p class="empty">Create at least one prompt block before authoring a pipeline.</p>
+    {:else if createPipelineOpen}
+      <form class="pipeline-form" onsubmit={(event) => { event.preventDefault(); void handleCreatePipelineSubmit(); }}>
+        <input
+          type="text"
+          bind:value={createPipelineName}
+          placeholder="Pipeline name"
+          aria-label="Pipeline name"
+          disabled={pipelineAuthoringLoading}
+        />
+        <div class="pipeline-picker-row">
+          <select bind:value={createBlockChoice} disabled={pipelineAuthoringLoading} aria-label="Available prompt blocks">
+            <option value="">Select a prompt block</option>
+            {#each promptBlocks.filter((block) => !createPipelineBlocks.includes(block.blockId)) as block (block.blockId)}
+              <option value={block.blockId}>{block.name}</option>
+            {/each}
+          </select>
+          <button
+            type="button"
+            class="mini-action"
+            onclick={addCreateBlock}
+            disabled={pipelineAuthoringLoading || !createBlockChoice}
+          >
+            Add Block
+          </button>
+        </div>
+
+        {#if createPipelineBlocks.length === 0}
+          <p class="empty">Add one or more prompt blocks to define the pipeline order.</p>
+        {:else}
+          <ol class="pipeline-editor-list">
+            {#each createPipelineBlocks as blockId, index (blockId)}
+              <li>
+                <span>{blockLabel(blockId)}</span>
+                <div class="pipeline-step-actions">
+                  <button type="button" class="mini-action" onclick={() => moveCreateBlock(index, -1)} disabled={index === 0 || pipelineAuthoringLoading}>↑</button>
+                  <button type="button" class="mini-action" onclick={() => moveCreateBlock(index, 1)} disabled={index === createPipelineBlocks.length - 1 || pipelineAuthoringLoading}>↓</button>
+                  <button type="button" class="mini-action" onclick={() => removeCreateBlock(index)} disabled={pipelineAuthoringLoading}>Remove</button>
+                </div>
+              </li>
+            {/each}
+          </ol>
+        {/if}
+
+        <div class="pipeline-form-actions">
+          <button type="submit" class="mini-action primary" disabled={pipelineAuthoringLoading || !createPipelineName.trim() || createPipelineBlocks.length === 0}>
+            {pipelineAuthoringLoading ? 'Saving…' : 'Save Pipeline'}
+          </button>
+          <button type="button" class="mini-action" onclick={cancelCreatePipeline} disabled={pipelineAuthoringLoading}>Cancel</button>
+        </div>
+      </form>
+    {/if}
+
     {#if pipelines.length === 0}
       <p class="empty">No manifest pipelines are defined for this project yet.</p>
     {:else}
       {#each pipelines as pipeline (pipeline.pipelineId)}
         <article class="pipeline-card">
-          <div class="pipeline-head">
-            <div>
-              <h3>{pipeline.name}</h3>
-              <p class="meta">{pipeline.executionMode} · {pipeline.blocks.length} blocks</p>
-            </div>
-            <button
-              type="button"
-              class="pipeline-run"
-              aria-label={`Run ${pipeline.name}`}
-              onclick={() => onRunPipeline(pipeline.pipelineId)}
-              disabled={pipelineLoading}
-            >
-              {pipelineLoading && pipelineExecution?.pipelineId === pipeline.pipelineId ? 'Running…' : 'Run pipeline'}
-            </button>
-          </div>
+          {#if editingPipelineId === pipeline.pipelineId}
+            <form class="pipeline-form" onsubmit={(event) => { event.preventDefault(); void handleUpdatePipelineSubmit(); }}>
+              <input
+                type="text"
+                bind:value={editingPipelineName}
+                aria-label={`Pipeline name for ${pipeline.name}`}
+                disabled={pipelineAuthoringLoading}
+              />
+              <div class="pipeline-picker-row">
+                <select bind:value={editingBlockChoice} disabled={pipelineAuthoringLoading} aria-label={`Available prompt blocks for ${pipeline.name}`}>
+                  <option value="">Select a prompt block</option>
+                  {#each promptBlocks.filter((block) => !editingPipelineBlocks.includes(block.blockId)) as block (block.blockId)}
+                    <option value={block.blockId}>{block.name}</option>
+                  {/each}
+                </select>
+                <button
+                  type="button"
+                  class="mini-action"
+                  onclick={addEditingBlock}
+                  disabled={pipelineAuthoringLoading || !editingBlockChoice}
+                >
+                  Add Block
+                </button>
+              </div>
 
-          <ol class="pipeline-steps">
-            {#each pipeline.blocks as block (block.blockId)}
-              <li>
-                <strong>{block.name}</strong>
-                <span>{block.modelPreset}</span>
-              </li>
-            {/each}
-          </ol>
+              <ol class="pipeline-editor-list">
+                {#each editingPipelineBlocks as blockId, index (blockId)}
+                  <li>
+                    <span>{blockLabel(blockId)}</span>
+                    <div class="pipeline-step-actions">
+                      <button type="button" class="mini-action" onclick={() => moveEditingBlock(index, -1)} disabled={index === 0 || pipelineAuthoringLoading}>↑</button>
+                      <button type="button" class="mini-action" onclick={() => moveEditingBlock(index, 1)} disabled={index === editingPipelineBlocks.length - 1 || pipelineAuthoringLoading}>↓</button>
+                      <button type="button" class="mini-action" onclick={() => removeEditingBlock(index)} disabled={pipelineAuthoringLoading}>Remove</button>
+                    </div>
+                  </li>
+                {/each}
+              </ol>
 
-          {#if pipelineExecution?.pipelineId === pipeline.pipelineId}
-            <div class="pipeline-status">
-              <p class:failed={pipelineExecution.status === 'failed'} class="meta strong">
-                {pipelineExecution.status === 'success' ? 'Pipeline complete' : 'Pipeline failed'}
-              </p>
-              <p class="meta">
-                {pipelineExecution.steps.length} / {pipeline.blocks.length} blocks completed
-              </p>
-              {#if pipelineExecution.error}
-                <p class="meta failed">{pipelineExecution.error}</p>
-              {/if}
+              <div class="pipeline-form-actions">
+                <button type="submit" class="mini-action primary" disabled={pipelineAuthoringLoading || !editingPipelineName.trim() || editingPipelineBlocks.length === 0}>
+                  {pipelineAuthoringLoading ? 'Saving…' : 'Save Changes'}
+                </button>
+                <button type="button" class="mini-action" onclick={cancelEditPipeline} disabled={pipelineAuthoringLoading}>Cancel</button>
+              </div>
+            </form>
+          {:else}
+            <div class="pipeline-head">
+              <div>
+                <h3>{pipeline.name}</h3>
+                <p class="meta">{pipeline.executionMode} · {pipeline.blocks.length} blocks</p>
+              </div>
+              <div class="pipeline-card-actions">
+                <button
+                  type="button"
+                  class="mini-action"
+                  onclick={() => startEditPipeline(pipeline)}
+                  disabled={pipelineLoading || pipelineAuthoringLoading}
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  class="pipeline-run"
+                  aria-label={`Run ${pipeline.name}`}
+                  onclick={() => onRunPipeline(pipeline.pipelineId)}
+                  disabled={pipelineLoading || pipelineAuthoringLoading}
+                >
+                  {pipelineLoading && pipelineExecution?.pipelineId === pipeline.pipelineId ? 'Running…' : 'Run pipeline'}
+                </button>
+              </div>
             </div>
+
+            <ol class="pipeline-steps">
+              {#each pipeline.blocks as block (block.blockId)}
+                <li>
+                  <strong>{block.name}</strong>
+                  <span>{block.modelPreset}</span>
+                </li>
+              {/each}
+            </ol>
+
+            {#if pipelineExecution?.pipelineId === pipeline.pipelineId}
+              <div class="pipeline-status">
+                <p class:failed={pipelineExecution.status === 'failed'} class="meta strong">
+                  {pipelineExecution.status === 'success' ? 'Pipeline complete' : 'Pipeline failed'}
+                </p>
+                <p class="meta">
+                  {pipelineExecution.steps.length} / {pipeline.blocks.length} blocks completed
+                </p>
+                {#if pipelineExecution.error}
+                  <p class="meta failed">{pipelineExecution.error}</p>
+                {/if}
+              </div>
+            {/if}
           {/if}
         </article>
       {/each}
@@ -305,6 +560,28 @@
     align-items: flex-start;
   }
 
+  .section-head,
+  .pipeline-card-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .mini-action {
+    min-height: 2rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 10px;
+    border: 1px solid rgba(157, 180, 255, 0.16);
+    background: rgba(7, 11, 20, 0.82);
+    color: var(--text);
+  }
+
+  .mini-action.primary {
+    border-color: rgba(153, 227, 190, 0.28);
+    background: linear-gradient(135deg, rgba(153, 227, 190, 0.22), rgba(49, 134, 96, 0.28));
+  }
+
   .pipeline-run {
     min-height: 2.2rem;
     padding: 0.5rem 0.8rem;
@@ -312,6 +589,43 @@
     border: 1px solid rgba(153, 227, 190, 0.28);
     color: var(--text);
     background: linear-gradient(135deg, rgba(153, 227, 190, 0.22), rgba(49, 134, 96, 0.28));
+  }
+
+  .pipeline-form,
+  .pipeline-picker-row,
+  .pipeline-form-actions {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .pipeline-form input,
+  .pipeline-picker-row select {
+    min-height: 2.2rem;
+    border-radius: 10px;
+    border: 1px solid rgba(157, 180, 255, 0.16);
+    background: rgba(7, 11, 20, 0.82);
+    color: var(--text);
+    padding: 0.45rem 0.6rem;
+  }
+
+  .pipeline-editor-list {
+    display: grid;
+    gap: 0.55rem;
+    margin: 0;
+    padding-left: 1.2rem;
+  }
+
+  .pipeline-editor-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .pipeline-step-actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
   }
 
   .pipeline-steps {

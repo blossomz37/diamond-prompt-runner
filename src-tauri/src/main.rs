@@ -4,8 +4,9 @@ use std::path::PathBuf;
 
 use project_store::{
     AssetContent, CreatedPromptBlockResult, ExecutionCredentialStatus, PipelineExecutionResult,
-    ProjectAssetNode, ProjectPipelineSummary, ProjectRunHistoryEntry, ProjectSummary,
-    PromptExecutionResult, PromptRunHistoryEntry, RecentProjectEntry, TemplateValidationResult,
+    ProjectAssetNode, ProjectPipelineSummary, ProjectPromptBlockSummary, ProjectRunHistoryEntry,
+    ProjectSummary, PromptExecutionResult, PromptRunHistoryEntry, RecentProjectEntry,
+    SavedPipelineResult, TemplateValidationResult,
 };
 use tauri::Manager;
 
@@ -81,6 +82,48 @@ fn list_project_assets(root_path: String) -> Result<Vec<ProjectAssetNode>, Strin
 fn list_project_pipelines(root_path: String) -> Result<Vec<ProjectPipelineSummary>, String> {
     project_store::list_project_pipelines(PathBuf::from(root_path).as_path())
         .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn list_project_prompt_blocks(root_path: String) -> Result<Vec<ProjectPromptBlockSummary>, String> {
+    project_store::list_project_prompt_blocks(PathBuf::from(root_path).as_path())
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn create_pipeline(
+    app: tauri::AppHandle,
+    root_path: String,
+    pipeline_name: String,
+    ordered_block_ids: Vec<String>,
+) -> Result<SavedPipelineResult, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::create_pipeline(
+        PathBuf::from(root_path).as_path(),
+        &pipeline_name,
+        &ordered_block_ids,
+        &app_data_dir,
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn update_pipeline(
+    app: tauri::AppHandle,
+    root_path: String,
+    pipeline_id: String,
+    pipeline_name: String,
+    ordered_block_ids: Vec<String>,
+) -> Result<SavedPipelineResult, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::update_pipeline(
+        PathBuf::from(root_path).as_path(),
+        &pipeline_id,
+        &pipeline_name,
+        &ordered_block_ids,
+        &app_data_dir,
+    )
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -172,6 +215,9 @@ pub fn run() {
             locate_recent_project,
             list_project_assets,
             list_project_pipelines,
+            list_project_prompt_blocks,
+            create_pipeline,
+            update_pipeline,
             read_project_asset,
             write_project_asset,
             validate_project_template,

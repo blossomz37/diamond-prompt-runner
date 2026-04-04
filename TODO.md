@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 12:57 PM
-modified: 2026-04-04 12:00 AM
+modified: 2026-04-04 12:20 AM
 ---
 
 # Rolling TODO List
@@ -46,6 +46,7 @@ Oldest to Newest
 - [x] Prompt Authoring: add an explorer-side create flow for new `.tera` prompt blocks and manifest entries.
 - [x] Run History Slice: expose project-wide persisted run history in the inspector while keeping prompt-scoped bottom-panel history in place.
 - [x] Run History Slice: retain pipeline metadata on persisted block runs so history can filter by pipeline.
+- [x] Pipeline Authoring Slice: add an active implementation plan and replace manual `project.json` edits with structured in-app pipeline editing.
 - [ ] Post-MVP online extension: support scoped `:online` behavior for prompts that require live web research.
 - [ ] Post-MVP online extension: add tests for scoped online-research prompt behavior.
 - [ ] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.

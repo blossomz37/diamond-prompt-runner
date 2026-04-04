@@ -8,22 +8,26 @@ import type {
   PipelineExecutionResult,
   ProjectAssetNode,
   ProjectPipeline,
+  ProjectPromptBlock,
   ProjectRunHistoryEntry,
   PromptExecutionResult,
   PromptRunHistoryEntry,
   ProjectSummary,
   RecentProjectEntry,
+  SavedPipelineResult,
   TemplateValidationResult
 } from '$lib/types/project';
 
 const tauri = vi.hoisted(() => ({
   clearExecutionApiKey: vi.fn(),
+  createPipeline: vi.fn(),
   createProject: vi.fn(),
   createPromptBlock: vi.fn(),
   executePipeline: vi.fn(),
   getRecentProjects: vi.fn(),
   getExecutionCredentialStatus: vi.fn(),
   listProjectPipelines: vi.fn(),
+  listProjectPromptBlocks: vi.fn(),
   listProjectRunHistory: vi.fn(),
   listPromptRunHistory: vi.fn(),
   listProjectAssets: vi.fn(),
@@ -34,6 +38,7 @@ const tauri = vi.hoisted(() => ({
   readProjectAsset: vi.fn(),
   executePromptBlock: vi.fn(),
   saveExecutionApiKey: vi.fn(),
+  updatePipeline: vi.fn(),
   validateProjectTemplate: vi.fn(),
   writeProjectAsset: vi.fn()
 }));
@@ -288,6 +293,21 @@ const pipelines: ProjectPipeline[] = [
   }
 ];
 
+const promptBlocks: ProjectPromptBlock[] = [
+  {
+    blockId: 'brief-review',
+    name: 'Brief Review',
+    templateSource: 'prompts/brief-review.tera',
+    modelPreset: 'models/default.yaml'
+  },
+  {
+    blockId: 'scene-draft',
+    name: 'Scene Draft',
+    templateSource: 'prompts/scene-draft.tera',
+    modelPreset: 'models/default.yaml'
+  }
+];
+
 const pipelineExecutionResult: PipelineExecutionResult = {
   pipelineId: 'review-pipeline',
   pipelineName: 'Review Pipeline',
@@ -308,6 +328,22 @@ const createdPromptResult: CreatedPromptBlockResult = {
     }
   },
   path: 'prompts/scene-draft.tera'
+};
+
+const createdPipelineResult: SavedPipelineResult = {
+  summary: {
+    ...summary,
+    updatedAt: '2026-04-03T20:23:00Z'
+  },
+  pipelineId: 'draft-pipeline'
+};
+
+const updatedPipelineResult: SavedPipelineResult = {
+  summary: {
+    ...summary,
+    updatedAt: '2026-04-03T20:24:00Z'
+  },
+  pipelineId: 'review-pipeline'
 };
 
 const createdPromptAssetContent: AssetContent = {
@@ -357,9 +393,11 @@ describe('App', () => {
     tauri.getRecentProjects.mockResolvedValue(recents);
     tauri.getExecutionCredentialStatus.mockResolvedValue(missingCredentialStatus);
     tauri.listProjectPipelines.mockResolvedValue(pipelines);
+    tauri.listProjectPromptBlocks.mockResolvedValue(promptBlocks);
     tauri.listProjectRunHistory.mockResolvedValue(projectRunHistory);
     tauri.listPromptRunHistory.mockResolvedValue(runHistory);
     tauri.pickDirectory.mockResolvedValue('/tmp');
+    tauri.createPipeline.mockResolvedValue(createdPipelineResult);
     tauri.createProject.mockResolvedValue(summary);
     tauri.createPromptBlock.mockResolvedValue(createdPromptResult);
     tauri.locateRecentProject.mockResolvedValue(summary);
@@ -390,6 +428,7 @@ describe('App', () => {
     tauri.executePromptBlock.mockResolvedValue(executionResult);
     tauri.saveExecutionApiKey.mockResolvedValue(keychainCredentialStatus);
     tauri.clearExecutionApiKey.mockResolvedValue(missingCredentialStatus);
+    tauri.updatePipeline.mockResolvedValue(updatedPipelineResult);
     tauri.writeProjectAsset.mockImplementation(async (_rootPath: string, relativePath: string, content: string) => {
       if (relativePath === 'models/default.yaml') {
         return {
@@ -596,6 +635,94 @@ describe('App', () => {
 
     expect(await screen.findByText('Pipeline complete')).toBeInTheDocument();
     expect(screen.getByText('1 / 1 blocks completed')).toBeInTheDocument();
+  });
+
+  it('creates a pipeline from the inspector authoring controls', async () => {
+    tauri.listProjectPipelines
+      .mockResolvedValueOnce(pipelines)
+      .mockResolvedValueOnce([
+        ...pipelines,
+        {
+          pipelineId: 'draft-pipeline',
+          name: 'Draft Pipeline',
+          executionMode: 'sequential',
+          blocks: [promptBlocks[0], promptBlocks[1]]
+        }
+      ]);
+
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    await fireEvent.click(screen.getByRole('button', { name: 'New Pipeline' }));
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Pipeline name' }), {
+      target: { value: 'Draft Pipeline' }
+    });
+
+    const pipelineSelect = screen.getByRole('combobox', { name: 'Available prompt blocks' });
+    await fireEvent.change(pipelineSelect, { target: { value: 'brief-review' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Add Block' }));
+    await fireEvent.change(pipelineSelect, { target: { value: 'scene-draft' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Add Block' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Pipeline' }));
+
+    await waitFor(() =>
+      expect(tauri.createPipeline).toHaveBeenCalledWith('/tmp/story-lab', 'Draft Pipeline', [
+        'brief-review',
+        'scene-draft'
+      ])
+    );
+
+    expect(await screen.findByText('Draft Pipeline')).toBeInTheDocument();
+  });
+
+  it('edits a pipeline from the inspector authoring controls', async () => {
+    tauri.listProjectPipelines
+      .mockResolvedValueOnce(pipelines)
+      .mockResolvedValueOnce([
+        {
+          pipelineId: 'review-pipeline',
+          name: 'Revised Review Pipeline',
+          executionMode: 'sequential',
+          blocks: [promptBlocks[0], promptBlocks[1]]
+        }
+      ]);
+
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    const editNameInput = screen.getByRole('textbox', { name: 'Pipeline name for Review Pipeline' });
+    await fireEvent.input(editNameInput, {
+      target: { value: 'Revised Review Pipeline' }
+    });
+
+    const editSelect = screen.getByRole('combobox', {
+      name: 'Available prompt blocks for Review Pipeline'
+    });
+    await fireEvent.change(editSelect, { target: { value: 'scene-draft' } });
+    await fireEvent.click(screen.getByRole('button', { name: 'Add Block' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() =>
+      expect(tauri.updatePipeline).toHaveBeenCalledWith(
+        '/tmp/story-lab',
+        'review-pipeline',
+        'Revised Review Pipeline',
+        ['brief-review', 'scene-draft']
+      )
+    );
+
+    expect(await screen.findByText('Revised Review Pipeline')).toBeInTheDocument();
   });
 
   it('filters project run history by pipeline in the inspector', async () => {

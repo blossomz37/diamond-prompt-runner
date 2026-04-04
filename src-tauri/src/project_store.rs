@@ -96,6 +96,13 @@ pub struct CreatedPromptBlockResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct SavedPipelineResult {
+    pub summary: ProjectSummary,
+    pub pipeline_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RecentProjectEntry {
     #[serde(flatten)]
     pub summary: ProjectSummary,
@@ -215,6 +222,15 @@ pub struct ProjectRunHistoryEntry {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectPipelineBlockSummary {
+    pub block_id: String,
+    pub name: String,
+    pub template_source: String,
+    pub model_preset: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectPromptBlockSummary {
     pub block_id: String,
     pub name: String,
     pub template_source: String,
@@ -521,6 +537,94 @@ pub fn list_project_pipelines(root_path: &Path) -> StoreResult<Vec<ProjectPipeli
         .iter()
         .map(|pipeline| summarize_pipeline(&manifest, pipeline))
         .collect())
+}
+
+pub fn list_project_prompt_blocks(root_path: &Path) -> StoreResult<Vec<ProjectPromptBlockSummary>> {
+    let (_, manifest) = validate_project(root_path)?;
+
+    Ok(manifest
+        .prompt_blocks
+        .iter()
+        .map(|block| ProjectPromptBlockSummary {
+            block_id: block.block_id.clone(),
+            name: block.name.clone(),
+            template_source: block.template_source.clone(),
+            model_preset: block
+                .model_preset
+                .clone()
+                .unwrap_or_else(|| manifest.default_model_preset.clone()),
+        })
+        .collect())
+}
+
+pub fn create_pipeline(
+    root_path: &Path,
+    pipeline_name: &str,
+    ordered_block_ids: &[String],
+    app_data_dir: &Path,
+) -> StoreResult<SavedPipelineResult> {
+    let trimmed_name = pipeline_name.trim();
+    if trimmed_name.is_empty() {
+        return Err(ProjectStoreError::message("Pipeline name cannot be empty."));
+    }
+
+    let (root_path, mut manifest) = validate_project(root_path)?;
+    validate_pipeline_block_ids(&manifest, ordered_block_ids, None)?;
+
+    let pipeline_id = unique_pipeline_slug(&manifest, trimmed_name);
+    manifest.pipelines.push(Pipeline {
+        pipeline_id: pipeline_id.clone(),
+        name: trimmed_name.to_string(),
+        ordered_blocks: ordered_block_ids.to_vec(),
+        execution_mode: "sequential".to_string(),
+    });
+    manifest.updated_at = timestamp();
+    write_manifest(&root_path, &manifest)?;
+
+    let summary = summarize_project(&root_path, &manifest)?;
+    update_recent_projects(app_data_dir, &summary)?;
+
+    Ok(SavedPipelineResult { summary, pipeline_id })
+}
+
+pub fn update_pipeline(
+    root_path: &Path,
+    pipeline_id: &str,
+    pipeline_name: &str,
+    ordered_block_ids: &[String],
+    app_data_dir: &Path,
+) -> StoreResult<SavedPipelineResult> {
+    let trimmed_name = pipeline_name.trim();
+    if trimmed_name.is_empty() {
+        return Err(ProjectStoreError::message("Pipeline name cannot be empty."));
+    }
+
+    let (root_path, mut manifest) = validate_project(root_path)?;
+    validate_pipeline_block_ids(&manifest, ordered_block_ids, Some(pipeline_id))?;
+
+    let Some(pipeline) = manifest
+        .pipelines
+        .iter_mut()
+        .find(|pipeline| pipeline.pipeline_id == pipeline_id)
+    else {
+        return Err(ProjectStoreError::message(format!(
+            "Pipeline `{pipeline_id}` was not found."
+        )));
+    };
+
+    pipeline.name = trimmed_name.to_string();
+    pipeline.ordered_blocks = ordered_block_ids.to_vec();
+    pipeline.execution_mode = "sequential".to_string();
+    manifest.updated_at = timestamp();
+    write_manifest(&root_path, &manifest)?;
+
+    let summary = summarize_project(&root_path, &manifest)?;
+    update_recent_projects(app_data_dir, &summary)?;
+
+    Ok(SavedPipelineResult {
+        summary,
+        pipeline_id: pipeline_id.to_string(),
+    })
 }
 
 pub fn read_project_asset(root_path: &Path, relative_path: &str) -> StoreResult<AssetContent> {
@@ -1326,6 +1430,66 @@ fn unique_prompt_slug(root_path: &Path, manifest: &ProjectManifest, prompt_name:
         candidate = format!("{base_slug}-{suffix}");
         suffix += 1;
     }
+}
+
+fn unique_pipeline_slug(manifest: &ProjectManifest, pipeline_name: &str) -> String {
+    let base_slug = slugify_prompt_name(pipeline_name);
+    let mut candidate = base_slug.clone();
+    let mut suffix = 2usize;
+
+    loop {
+        let taken = manifest
+            .pipelines
+            .iter()
+            .any(|pipeline| pipeline.pipeline_id == candidate);
+
+        if !taken {
+            return candidate;
+        }
+
+        candidate = format!("{base_slug}-{suffix}");
+        suffix += 1;
+    }
+}
+
+fn validate_pipeline_block_ids(
+    manifest: &ProjectManifest,
+    ordered_block_ids: &[String],
+    pipeline_id: Option<&str>,
+) -> StoreResult<()> {
+    let _ = pipeline_id;
+
+    if ordered_block_ids.is_empty() {
+        return Err(ProjectStoreError::message(
+            "Pipelines must contain at least one prompt block.",
+        ));
+    }
+
+    let mut seen = Vec::<&str>::new();
+    for block_id in ordered_block_ids {
+        let trimmed = block_id.trim();
+        if trimmed.is_empty() {
+            return Err(ProjectStoreError::message(
+                "Pipeline blocks cannot be empty.",
+            ));
+        }
+
+        if seen.contains(&trimmed) {
+            return Err(ProjectStoreError::message(format!(
+                "Pipeline block `{trimmed}` is duplicated."
+            )));
+        }
+
+        if !manifest.prompt_blocks.iter().any(|block| block.block_id == trimmed) {
+            return Err(ProjectStoreError::message(format!(
+                "Pipeline block `{trimmed}` was not found in the project prompt blocks."
+            )));
+        }
+
+        seen.push(trimmed);
+    }
+
+    Ok(())
 }
 
 fn slugify_prompt_name(prompt_name: &str) -> String {
@@ -2540,6 +2704,114 @@ mod tests {
         assert_eq!(pipelines[0].name, "Review Pipeline");
         assert_eq!(pipelines[0].blocks[0].name, "Review");
         assert_eq!(pipelines[0].blocks[0].model_preset, "models/default.yaml");
+    }
+
+    #[test]
+    fn lists_project_prompt_blocks_with_resolved_model_presets() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "PromptBlocks", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let mut manifest = read_manifest(&root.join("project.json")).unwrap();
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "review".to_string(),
+            name: "Review".to_string(),
+            template_source: "prompts/review.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+        });
+        write_manifest(&root, &manifest).unwrap();
+
+        let prompt_blocks = list_project_prompt_blocks(&root).unwrap();
+
+        assert_eq!(prompt_blocks.len(), 1);
+        assert_eq!(prompt_blocks[0].block_id, "review");
+        assert_eq!(prompt_blocks[0].model_preset, "models/default.yaml");
+    }
+
+    #[test]
+    fn creates_and_updates_pipeline_from_manifest_authoring_api() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "PipelineAuthoring", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let mut manifest = read_manifest(&root.join("project.json")).unwrap();
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "review".to_string(),
+            name: "Review".to_string(),
+            template_source: "prompts/review.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+        });
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "outline".to_string(),
+            name: "Outline".to_string(),
+            template_source: "prompts/outline.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+        });
+        write_manifest(&root, &manifest).unwrap();
+
+        let created = create_pipeline(
+            &root,
+            "Draft Pipeline",
+            &["review".to_string()],
+            &app_data,
+        )
+        .unwrap();
+
+        assert_eq!(created.pipeline_id, "draft-pipeline");
+
+        let updated = update_pipeline(
+            &root,
+            "draft-pipeline",
+            "Draft Pipeline Revised",
+            &["review".to_string(), "outline".to_string()],
+            &app_data,
+        )
+        .unwrap();
+
+        assert_eq!(updated.pipeline_id, "draft-pipeline");
+
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        assert_eq!(manifest.pipelines.len(), 1);
+        assert_eq!(manifest.pipelines[0].name, "Draft Pipeline Revised");
+        assert_eq!(manifest.pipelines[0].ordered_blocks, vec!["review", "outline"]);
+        assert_eq!(manifest.pipelines[0].execution_mode, "sequential");
+    }
+
+    #[test]
+    fn rejects_pipeline_authoring_with_duplicate_blocks() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "PipelineValidation", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let mut manifest = read_manifest(&root.join("project.json")).unwrap();
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "review".to_string(),
+            name: "Review".to_string(),
+            template_source: "prompts/review.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+        });
+        write_manifest(&root, &manifest).unwrap();
+
+        let error = create_pipeline(
+            &root,
+            "Invalid Pipeline",
+            &["review".to_string(), "review".to_string()],
+            &app_data,
+        )
+        .unwrap_err();
+
+        assert!(error.to_string().contains("duplicated"));
     }
 
     #[test]

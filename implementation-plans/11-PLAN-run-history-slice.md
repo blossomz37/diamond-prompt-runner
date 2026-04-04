@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 11:50 PM
-modified: 2026-04-04 12:00 AM
+modified: 2026-04-04 12:05 AM
 ---
 # Plan To Reach The Run History Slice
 
@@ -22,7 +22,8 @@ Sequence around this milestone:
 - completed milestone: Single-Block Execution Slice
 - completed milestone: Pipeline Runner Slice
 - completed follow-up: explorer-side prompt creation
-- active milestone: Run History Slice
+- completed milestone: Run History Slice
+- active milestone: Pipeline Authoring Slice
 - later: Exports and import/export workflows
 - later: scoped online-research extension
 

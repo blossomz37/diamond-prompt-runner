@@ -4,12 +4,14 @@
   import WorkspaceShell from '$lib/components/WorkspaceShell.svelte';
   import {
     clearExecutionApiKey,
+    createPipeline,
     createProject,
     createPromptBlock,
     executePipeline,
     executePromptBlock,
     getExecutionCredentialStatus,
     getRecentProjects,
+    listProjectPromptBlocks,
     listProjectRunHistory,
     listProjectPipelines,
     listPromptRunHistory,
@@ -20,6 +22,7 @@
     removeRecentProject,
     readProjectAsset,
     saveExecutionApiKey,
+    updatePipeline,
     validateProjectTemplate,
     writeProjectAsset
   } from '$lib/tauri';
@@ -29,11 +32,13 @@
     PipelineExecutionResult,
     ProjectAssetNode,
     ProjectPipeline,
+    ProjectPromptBlock,
     ProjectRunHistoryEntry,
     PromptExecutionResult,
     PromptRunHistoryEntry,
     ProjectSummary,
     RecentProjectEntry,
+    SavedPipelineResult,
     TemplateValidationResult,
     WorkspaceTab
   } from '$lib/types/project';
@@ -47,6 +52,7 @@
   let workspace = $state<ProjectSummary | null>(null);
   let assetNodes = $state<ProjectAssetNode[]>([]);
   let projectPipelines = $state<ProjectPipeline[]>([]);
+  let projectPromptBlocks = $state<ProjectPromptBlock[]>([]);
   let tabs = $state<WorkspaceTab[]>([]);
   let activePath = $state<string | null>(null);
   let loadingPath = $state<string | null>(null);
@@ -60,6 +66,7 @@
   let projectRunHistoryLoading = $state(false);
   let pipelineExecutionResult = $state<PipelineExecutionResult | null>(null);
   let pipelineExecutionLoading = $state(false);
+  let pipelineAuthoringLoading = $state(false);
   let promptCreationLoading = $state(false);
   let executionCredentialStatus = $state<ExecutionCredentialStatus>({
     source: 'missing',
@@ -86,13 +93,15 @@
 
   async function enterWorkspace(summary: ProjectSummary): Promise<void> {
     workspace = summary;
-    const [nodes, pipelines, runHistory] = await Promise.all([
+    const [nodes, pipelines, promptBlocks, runHistory] = await Promise.all([
       listProjectAssets(summary.rootPath),
       listProjectPipelines(summary.rootPath),
+      listProjectPromptBlocks(summary.rootPath),
       listProjectRunHistory(summary.rootPath)
     ]);
     assetNodes = nodes;
     projectPipelines = pipelines;
+    projectPromptBlocks = promptBlocks;
     projectRunHistory = runHistory;
     tabs = [];
     activePath = null;
@@ -106,6 +115,7 @@
     projectRunHistoryLoading = false;
     pipelineExecutionResult = null;
     pipelineExecutionLoading = false;
+    pipelineAuthoringLoading = false;
     mode = 'workspace';
   }
 
@@ -279,12 +289,14 @@
       const created: CreatedPromptBlockResult = await createPromptBlock(workspace.rootPath, promptName);
       workspace = created.summary;
       recentProjects = await getRecentProjects();
-      const [nodes, pipelines] = await Promise.all([
+      const [nodes, pipelines, promptBlocks] = await Promise.all([
         listProjectAssets(created.summary.rootPath),
-        listProjectPipelines(created.summary.rootPath)
+        listProjectPipelines(created.summary.rootPath),
+        listProjectPromptBlocks(created.summary.rootPath)
       ]);
       assetNodes = nodes;
       projectPipelines = pipelines;
+      projectPromptBlocks = promptBlocks;
       await openAssetPath(created.path);
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'Failed to create prompt.';
@@ -520,6 +532,62 @@
     }
   }
 
+  async function handleCreatePipeline(
+    pipelineName: string,
+    orderedBlockIds: string[]
+  ): Promise<SavedPipelineResult> {
+    if (!workspace || pipelineAuthoringLoading) {
+      throw new Error('Pipeline authoring is not available right now.');
+    }
+
+    pipelineAuthoringLoading = true;
+    errorMessage = null;
+
+    try {
+      const result = await createPipeline(workspace.rootPath, pipelineName, orderedBlockIds);
+      workspace = result.summary;
+      recentProjects = await getRecentProjects();
+      await refreshPipelineAuthoringState(result.summary.rootPath);
+      return result;
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : 'Failed to create pipeline.';
+      throw error;
+    } finally {
+      pipelineAuthoringLoading = false;
+    }
+  }
+
+  async function handleUpdatePipeline(
+    pipelineId: string,
+    pipelineName: string,
+    orderedBlockIds: string[]
+  ): Promise<SavedPipelineResult> {
+    if (!workspace || pipelineAuthoringLoading) {
+      throw new Error('Pipeline authoring is not available right now.');
+    }
+
+    pipelineAuthoringLoading = true;
+    errorMessage = null;
+
+    try {
+      const result = await updatePipeline(
+        workspace.rootPath,
+        pipelineId,
+        pipelineName,
+        orderedBlockIds
+      );
+      workspace = result.summary;
+      recentProjects = await getRecentProjects();
+      await refreshPipelineAuthoringState(result.summary.rootPath);
+      return result;
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : 'Failed to update pipeline.';
+      throw error;
+    } finally {
+      pipelineAuthoringLoading = false;
+    }
+  }
+
   async function loadExecutionHistory(
     rootPath: string,
     path: string,
@@ -561,6 +629,16 @@
     } finally {
       projectRunHistoryLoading = false;
     }
+  }
+
+  async function refreshPipelineAuthoringState(rootPath: string): Promise<void> {
+    const [pipelines, promptBlocks] = await Promise.all([
+      listProjectPipelines(rootPath),
+      listProjectPromptBlocks(rootPath)
+    ]);
+
+    projectPipelines = pipelines;
+    projectPromptBlocks = promptBlocks;
   }
 
   async function handleOpenRunPath(path: string): Promise<void> {
@@ -650,8 +728,10 @@
     {loadingPath}
     {errorMessage}
     pipelines={projectPipelines}
+    promptBlocks={projectPromptBlocks}
     pipelineExecution={pipelineExecutionResult}
     pipelineLoading={pipelineExecutionLoading}
+    {pipelineAuthoringLoading}
     {projectRunHistory}
     {projectRunHistoryLoading}
     onSelectAsset={handleSelectAsset}
@@ -662,6 +742,8 @@
     onReloadTab={handleReloadTab}
     onRunTab={handleExecuteTab}
     onRunPipeline={handleRunPipeline}
+    onCreatePipeline={handleCreatePipeline}
+    onUpdatePipeline={handleUpdatePipeline}
     onCreatePrompt={handleCreatePrompt}
     {promptCreationLoading}
     credentialState={executionCredentialStatus}

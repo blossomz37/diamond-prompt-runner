@@ -7,11 +7,13 @@ import type {
   PipelineExecutionResult,
   ProjectAssetNode,
   ProjectPipeline,
+  ProjectPromptBlock,
   ProjectRunHistoryEntry,
   ProjectSummary,
   PromptExecutionResult,
   PromptRunHistoryEntry,
   RecentProjectEntry,
+  SavedPipelineResult,
   TemplateValidationResult
 } from './types/project';
 
@@ -68,6 +70,36 @@ export async function listProjectAssets(rootPath: string): Promise<ProjectAssetN
 
 export async function listProjectPipelines(rootPath: string): Promise<ProjectPipeline[]> {
   return invoke<ProjectPipeline[]>('list_project_pipelines', { rootPath });
+}
+
+export async function listProjectPromptBlocks(rootPath: string): Promise<ProjectPromptBlock[]> {
+  return invoke<ProjectPromptBlock[]>('list_project_prompt_blocks', { rootPath });
+}
+
+export async function createPipeline(
+  rootPath: string,
+  pipelineName: string,
+  orderedBlockIds: string[]
+): Promise<SavedPipelineResult> {
+  return invoke<SavedPipelineResult>('create_pipeline', {
+    rootPath,
+    pipelineName,
+    orderedBlockIds
+  });
+}
+
+export async function updatePipeline(
+  rootPath: string,
+  pipelineId: string,
+  pipelineName: string,
+  orderedBlockIds: string[]
+): Promise<SavedPipelineResult> {
+  return invoke<SavedPipelineResult>('update_pipeline', {
+    rootPath,
+    pipelineId,
+    pipelineName,
+    orderedBlockIds
+  });
 }
 
 export async function readProjectAsset(rootPath: string, relativePath: string): Promise<AssetContent> {

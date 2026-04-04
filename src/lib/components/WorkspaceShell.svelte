@@ -8,9 +8,11 @@
     PipelineExecutionResult,
     ProjectAssetNode,
     ProjectPipeline,
+    ProjectPromptBlock,
     ProjectRunHistoryEntry,
     PromptExecutionResult,
     PromptRunHistoryEntry,
+    SavedPipelineResult,
     ProjectSummary,
     TemplateValidationResult,
     WorkspaceTab
@@ -24,8 +26,10 @@
     loadingPath: string | null;
     errorMessage: string | null;
     pipelines: ProjectPipeline[];
+    promptBlocks: ProjectPromptBlock[];
     pipelineExecution: PipelineExecutionResult | null;
     pipelineLoading: boolean;
+    pipelineAuthoringLoading: boolean;
     projectRunHistory: ProjectRunHistoryEntry[];
     projectRunHistoryLoading: boolean;
     onSelectAsset: (node: ProjectAssetNode) => void | Promise<void>;
@@ -36,6 +40,12 @@
     onReloadTab: (path: string) => void | Promise<void>;
     onRunTab: (path: string) => void | Promise<void>;
     onRunPipeline: (pipelineId: string) => void | Promise<void>;
+    onCreatePipeline: (name: string, orderedBlockIds: string[]) => Promise<SavedPipelineResult>;
+    onUpdatePipeline: (
+      pipelineId: string,
+      name: string,
+      orderedBlockIds: string[]
+    ) => Promise<SavedPipelineResult>;
     onCreatePrompt: (name: string) => void | Promise<void>;
     promptCreationLoading: boolean;
     credentialState: ExecutionCredentialStatus;
@@ -61,8 +71,10 @@
     loadingPath,
     errorMessage,
     pipelines,
+    promptBlocks,
     pipelineExecution,
     pipelineLoading,
+    pipelineAuthoringLoading,
     projectRunHistory,
     projectRunHistoryLoading,
     onSelectAsset,
@@ -73,6 +85,8 @@
     onReloadTab,
     onRunTab,
     onRunPipeline,
+    onCreatePipeline,
+    onUpdatePipeline,
     onCreatePrompt,
     promptCreationLoading,
     credentialState,
@@ -206,9 +220,13 @@
         summary={summary}
         metadata={activeTab?.metadata ?? null}
         {pipelines}
+        {promptBlocks}
         pipelineExecution={pipelineExecution}
         pipelineLoading={pipelineLoading}
+        pipelineAuthoringLoading={pipelineAuthoringLoading}
         onRunPipeline={onRunPipeline}
+        onCreatePipeline={onCreatePipeline}
+        onUpdatePipeline={onUpdatePipeline}
         runHistory={projectRunHistory}
         runHistoryLoading={projectRunHistoryLoading}
         onOpenRunPath={onOpenRunPath}

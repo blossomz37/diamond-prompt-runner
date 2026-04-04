@@ -121,11 +121,18 @@ export interface ProjectPipelineBlock {
   modelPreset: string;
 }
 
+export type ProjectPromptBlock = ProjectPipelineBlock;
+
 export interface ProjectPipeline {
   pipelineId: string;
   name: string;
   executionMode: string;
   blocks: ProjectPipelineBlock[];
+}
+
+export interface SavedPipelineResult {
+  summary: ProjectSummary;
+  pipelineId: string;
 }
 
 export interface PipelineExecutionResult {
