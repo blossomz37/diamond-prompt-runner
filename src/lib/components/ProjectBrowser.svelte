@@ -236,6 +236,10 @@
     gap: 0.45rem;
   }
 
+  .field button {
+    justify-self: start;
+  }
+
   .field span {
     color: var(--text-dim);
     font-size: 0.86rem;
@@ -244,26 +248,27 @@
   input,
   .secondary,
   .primary {
-    min-height: 2.8rem;
-    border-radius: 14px;
+    min-height: 0;
+    border-radius: 6px;
     border: 1px solid var(--panel-border);
   }
 
   input {
-    padding: 0.75rem 0.9rem;
+    padding: 0.3rem 0.55rem;
     background: rgba(7, 11, 20, 0.82);
     color: var(--text);
   }
 
   .actions {
-    display: flex;
-    gap: 0.7rem;
-    flex-wrap: wrap;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    gap: 0.5rem;
   }
 
   .primary,
   .secondary {
-    padding: 0.75rem 0.95rem;
+    padding: 0.3rem 0.65rem;
     color: var(--text);
   }
 

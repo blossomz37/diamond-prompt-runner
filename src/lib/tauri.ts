@@ -193,3 +193,20 @@ export async function listProjectRunHistory(rootPath: string): Promise<ProjectRu
 export async function getProjectUsageSummary(rootPath: string): Promise<ProjectUsageSummary> {
   return invoke<ProjectUsageSummary>('get_project_usage_summary', { rootPath });
 }
+
+export async function getGlobalVariables(): Promise<Record<string, string>> {
+  return invoke<Record<string, string>>('get_global_variables');
+}
+
+export async function setGlobalVariables(
+  variables: Record<string, string>
+): Promise<Record<string, string>> {
+  return invoke<Record<string, string>>('set_global_variables', { variables });
+}
+
+export async function setProjectVariables(
+  rootPath: string,
+  variables: Record<string, string>
+): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>('set_project_variables', { rootPath, variables });
+}

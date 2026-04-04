@@ -2,7 +2,7 @@
   "projectId": "sample-project-001",
   "projectName": "Sample Project",
   "createdAt": "2026-04-03T20:00:00Z",
-  "updatedAt": "2026-04-04T02:36:11Z",
+  "updatedAt": "2026-04-04T17:46:13Z",
   "defaultModelPreset": "models/default.yaml",
   "variables": {
     "tone": "precise"
@@ -76,6 +76,14 @@
       "blockId": "summary",
       "name": "summary",
       "templateSource": "prompts/summary.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "run_artifact"
+    },
+    {
+      "blockId": "genre-research",
+      "name": "genre-research",
+      "templateSource": "prompts/genre-research.tera",
       "inputBindings": [],
       "modelPreset": null,
       "outputTarget": "run_artifact"

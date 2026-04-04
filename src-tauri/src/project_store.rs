@@ -15,6 +15,7 @@ use uuid::Uuid;
 
 const PROJECT_DIRS: [&str; 5] = ["documents", "prompts", "models", "runs", "exports"];
 const RECENTS_FILE_NAME: &str = "recent-projects.json";
+const GLOBAL_VARIABLES_FILE_NAME: &str = "global-variables.json";
 const SEEDED_MODEL_PRESETS: [(&str, &str); 5] = [
     (
         "default.yaml",
@@ -89,6 +90,9 @@ pub struct ProjectSummary {
     pub default_model_preset: String,
     pub updated_at: String,
     pub counts: ProjectCounts,
+    // String-typed project variables only. Complex values set via direct file edit are omitted.
+    #[serde(default)]
+    pub variables: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -430,6 +434,12 @@ struct RecentsStore {
     projects: Vec<RecentProjectEntry>,
 }
 
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct GlobalVariablesStore {
+    #[serde(default)]
+    variables: BTreeMap<String, String>,
+}
+
 pub fn create_project(parent_path: &Path, project_name: &str, app_data_dir: &Path) -> StoreResult<ProjectSummary> {
     if !parent_path.is_dir() {
         return Err(ProjectStoreError::message("The selected parent folder does not exist."));
@@ -545,6 +555,34 @@ pub fn remove_recent_project(app_data_dir: &Path, root_path: &Path) -> StoreResu
     let store_path = app_data_dir.join(RECENTS_FILE_NAME);
     fs::write(store_path, serde_json::to_string_pretty(&store)?)?;
     Ok(())
+}
+
+pub fn get_global_variables(app_data_dir: &Path) -> StoreResult<BTreeMap<String, String>> {
+    Ok(read_global_variables_store(app_data_dir))
+}
+
+pub fn set_global_variables(
+    app_data_dir: &Path,
+    variables: BTreeMap<String, String>,
+) -> StoreResult<BTreeMap<String, String>> {
+    fs::create_dir_all(app_data_dir)?;
+    write_global_variables_store(app_data_dir, &variables)?;
+    Ok(variables)
+}
+
+pub fn set_project_variables(
+    root_path: &Path,
+    variables: BTreeMap<String, String>,
+    app_data_dir: &Path,
+) -> StoreResult<ProjectSummary> {
+    let (root_path, mut manifest) = validate_project(root_path)?;
+    manifest.variables = variables
+        .into_iter()
+        .map(|(k, v)| (k, Value::String(v)))
+        .collect();
+    manifest.updated_at = timestamp();
+    write_manifest(&root_path, &manifest)?;
+    summarize_project(&root_path, &manifest)
 }
 
 pub fn locate_recent_project(
@@ -873,6 +911,7 @@ pub fn validate_project_template(
     root_path: &Path,
     relative_path: &str,
     content: &str,
+    app_data_dir: &Path,
 ) -> StoreResult<TemplateValidationResult> {
     let (root_path, manifest) = validate_project(root_path)?;
     let safe_relative = sanitize_relative_path(relative_path)?;
@@ -884,7 +923,7 @@ pub fn validate_project_template(
         ));
     }
 
-    let prepared = prepare_template_context(&root_path, &manifest, content, false, None)?;
+    let prepared = prepare_template_context(&root_path, &manifest, content, false, None, Some(app_data_dir))?;
     let model_id = prepared.model_id.clone();
     let mut warnings = prepared.warnings;
 
@@ -930,6 +969,7 @@ pub fn execute_prompt_block(
     root_path: &Path,
     relative_path: &str,
     content: &str,
+    app_data_dir: &Path,
 ) -> StoreResult<PromptExecutionResult> {
     let api_key = load_execution_api_key()?;
     let (root_path, manifest) = validate_project(root_path)?;
@@ -945,21 +985,34 @@ pub fn execute_prompt_block(
         None,
         &api_key,
         &mut transport,
+        app_data_dir,
     )
 }
 
-pub fn execute_pipeline(root_path: &Path, pipeline_id: &str) -> StoreResult<PipelineExecutionResult> {
+pub fn execute_pipeline(
+    root_path: &Path,
+    pipeline_id: &str,
+    app_data_dir: &Path,
+) -> StoreResult<PipelineExecutionResult> {
     let api_key = load_execution_api_key()?;
     let (root_path, manifest) = validate_project(root_path)?;
     let mut transport = |api_key: &str, payload: Value| {
         post_openrouter_chat_completion(OPENROUTER_CHAT_COMPLETIONS_URL, api_key, &payload)
     };
 
-    execute_pipeline_with_transport(&root_path, &manifest, pipeline_id, &api_key, &mut transport)
+    execute_pipeline_with_transport(&root_path, &manifest, pipeline_id, &api_key, &mut transport, app_data_dir)
 }
 
 pub fn get_execution_credential_status() -> StoreResult<ExecutionCredentialStatus> {
-    let has_stored_key = load_stored_openrouter_api_key()?.is_some();
+    // Keychain access can fail in unsigned dev builds or sandboxed contexts.
+    // Treat errors as "no stored key" so the app can still load.
+    let has_stored_key = match load_stored_openrouter_api_key() {
+        Ok(key) => key.is_some(),
+        Err(error) => {
+            eprintln!("[diamond] keychain probe failed (non-fatal): {error}");
+            false
+        }
+    };
     Ok(build_execution_credential_status(
         has_stored_key,
         load_environment_api_key().is_some(),
@@ -1107,6 +1160,7 @@ fn execute_prompt_block_with_transport<F>(
     pipeline_context: Option<&PipelineExecutionContext>,
     api_key: &str,
     transport: &mut F,
+    app_data_dir: &Path,
 ) -> StoreResult<PromptExecutionResult>
 where
     F: FnMut(&str, Value) -> StoreResult<Value>,
@@ -1138,6 +1192,7 @@ where
         content,
         true,
         Some(model_id.clone()),
+        Some(app_data_dir),
     )?;
 
     if !prepared.errors.is_empty() {
@@ -1222,6 +1277,7 @@ fn execute_pipeline_with_transport<F>(
     pipeline_id: &str,
     api_key: &str,
     transport: &mut F,
+    app_data_dir: &Path,
 ) -> StoreResult<PipelineExecutionResult>
 where
     F: FnMut(&str, Value) -> StoreResult<Value>,
@@ -1286,6 +1342,7 @@ where
             Some(&pipeline_context),
             api_key,
             transport,
+            app_data_dir,
         ) {
             Ok(result) => steps.push(result),
             Err(step_error) => {
@@ -1415,6 +1472,12 @@ fn summarize_project(root_path: &Path, manifest: &ProjectManifest) -> StoreResul
         exports: count_files(root_path.join("exports"))?,
     };
 
+    let variables = manifest
+        .variables
+        .iter()
+        .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+        .collect();
+
     Ok(ProjectSummary {
         root_path: root_path.to_string_lossy().to_string(),
         project_id: manifest.project_id.clone(),
@@ -1422,6 +1485,7 @@ fn summarize_project(root_path: &Path, manifest: &ProjectManifest) -> StoreResul
         default_model_preset: manifest.default_model_preset.clone(),
         updated_at: manifest.updated_at.clone(),
         counts,
+        variables,
     })
 }
 
@@ -1604,6 +1668,25 @@ fn read_recents_store(app_data_dir: &Path) -> StoreResult<RecentsStore> {
 
     let content = fs::read_to_string(store_path)?;
     Ok(serde_json::from_str(&content)?)
+}
+
+fn read_global_variables_store(app_data_dir: &Path) -> BTreeMap<String, String> {
+    let store_path = app_data_dir.join(GLOBAL_VARIABLES_FILE_NAME);
+    if !store_path.exists() {
+        return BTreeMap::new();
+    }
+    fs::read_to_string(store_path)
+        .ok()
+        .and_then(|content| serde_json::from_str::<GlobalVariablesStore>(&content).ok())
+        .map(|store| store.variables)
+        .unwrap_or_default()
+}
+
+fn write_global_variables_store(app_data_dir: &Path, variables: &BTreeMap<String, String>) -> StoreResult<()> {
+    let store = GlobalVariablesStore { variables: variables.clone() };
+    let store_path = app_data_dir.join(GLOBAL_VARIABLES_FILE_NAME);
+    fs::write(store_path, serde_json::to_string_pretty(&store)?)?;
+    Ok(())
 }
 
 fn read_manifest(manifest_path: &Path) -> StoreResult<ProjectManifest> {
@@ -1849,6 +1932,7 @@ fn prepare_template_context(
     content: &str,
     strict_doc_references: bool,
     model_id_override: Option<String>,
+    app_data_dir: Option<&Path>,
 ) -> StoreResult<PreparedTemplateContext> {
     let model_id = model_id_override
         .or_else(|| default_model_id(root_path, manifest))
@@ -1865,11 +1949,23 @@ fn prepare_template_context(
             "updated_at": manifest.updated_at,
         }),
     );
-    context.insert("variables", &manifest.variables);
     context.insert("model_id", &model_id);
     context.insert("now_iso", &timestamp());
     context.insert("current_date", &Utc::now().format("%Y-%m-%d").to_string());
 
+    // Global variables — lowest priority; project variables override these.
+    if let Some(app_data_dir) = app_data_dir {
+        let global_vars = read_global_variables_store(app_data_dir);
+        context.insert("global_variables", &global_vars);
+        for (name, value) in &global_vars {
+            if is_identifier_like(name) {
+                context.insert(name, value);
+            }
+        }
+    }
+
+    // Project variables — override globals with the same name.
+    context.insert("variables", &manifest.variables);
     for (name, value) in &manifest.variables {
         if is_identifier_like(name) {
             context.insert(name, value);
@@ -2587,13 +2683,14 @@ mod tests {
             &root,
             "prompts/review.tera",
             "Context:\n{{ doc(\"context.md\") }}\nModel: {{ model_id }}",
+            &app_data,
         )
         .unwrap();
         assert_eq!(result.status, ValidationStatus::Valid);
         assert!(result.preview.unwrap().contains("Document body."));
 
         let warning_result =
-            validate_project_template(&root, "prompts/review.tera", "{{ doc(\"missing.md\") }}")
+            validate_project_template(&root, "prompts/review.tera", "{{ doc(\"missing.md\") }}", &app_data)
                 .unwrap();
         assert_eq!(warning_result.status, ValidationStatus::Warnings);
         assert!(warning_result.warnings[0].contains("missing.md"));
@@ -2610,6 +2707,7 @@ mod tests {
             &root,
             "prompts/broken.tera",
             "{% if unclosed_block %}Hello",
+            &app_data,
         )
         .unwrap();
 
@@ -2626,7 +2724,7 @@ mod tests {
         let root = PathBuf::from(&summary.root_path);
 
         let result =
-            validate_project_template(&root, "prompts/review.tera", "{{ my_custom_var }}")
+            validate_project_template(&root, "prompts/review.tera", "{{ my_custom_var }}", &app_data)
                 .unwrap();
 
         assert_eq!(result.status, ValidationStatus::Warnings);
@@ -2645,6 +2743,7 @@ mod tests {
             &root,
             "prompts/review.tera",
             "{{ doc(\"../../../etc/passwd\") }}",
+            &app_data,
         )
         .unwrap();
 
@@ -2726,6 +2825,7 @@ mod tests {
             None,
             "test-key",
             &mut transport,
+            &app_data,
         )
         .unwrap();
 
@@ -2787,6 +2887,7 @@ mod tests {
             None,
             "test-key",
             &mut transport,
+            &app_data,
         )
         .unwrap();
 
@@ -2853,6 +2954,7 @@ mod tests {
             None,
             "test-key",
             &mut transport,
+            &app_data,
         )
         .unwrap();
 
@@ -2895,6 +2997,7 @@ mod tests {
             None,
             "test-key",
             &mut transport,
+            &app_data,
         )
         .unwrap_err();
 
@@ -2920,6 +3023,7 @@ mod tests {
             None,
             "test-key",
             &mut transport,
+            &app_data,
         )
         .unwrap_err();
 
@@ -2960,6 +3064,7 @@ mod tests {
             None,
             "test-key",
             &mut transport,
+            &app_data,
         )
         .unwrap();
 
@@ -3012,6 +3117,7 @@ mod tests {
             None,
             "test-key",
             &mut transport,
+            &app_data,
         )
         .unwrap();
 
@@ -3402,6 +3508,7 @@ mod tests {
             "pipeline-1",
             "test-key",
             &mut transport,
+            &app_data,
         )
         .unwrap();
 
@@ -3441,5 +3548,99 @@ mod tests {
         assert_eq!(metrics.total_tokens, None);
         assert!(metrics.cost.is_none());
         assert!(metrics.output_word_count.is_none());
+    }
+
+    #[test]
+    fn reads_empty_global_variables_when_file_missing() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let vars = get_global_variables(&app_data).unwrap();
+        assert!(vars.is_empty());
+    }
+
+    #[test]
+    fn saves_and_reloads_global_variables() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        fs::create_dir_all(&app_data).unwrap();
+
+        let mut vars = BTreeMap::new();
+        vars.insert("tone".to_string(), "precise".to_string());
+        vars.insert("pov".to_string(), "third-limited".to_string());
+
+        let returned = set_global_variables(&app_data, vars.clone()).unwrap();
+        assert_eq!(returned, vars);
+
+        let reloaded = get_global_variables(&app_data).unwrap();
+        assert_eq!(reloaded["tone"], "precise");
+        assert_eq!(reloaded["pov"], "third-limited");
+    }
+
+    #[test]
+    fn global_variables_are_available_in_template_context() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "GlobalVarTest", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let mut global_vars = BTreeMap::new();
+        global_vars.insert("tone".to_string(), "lyrical".to_string());
+        set_global_variables(&app_data, global_vars).unwrap();
+
+        let result = validate_project_template(
+            &root,
+            "prompts/test.tera",
+            "Tone: {{ tone }}",
+            &app_data,
+        )
+        .unwrap();
+
+        assert_eq!(result.status, ValidationStatus::Valid);
+        assert!(result.preview.unwrap().contains("lyrical"));
+    }
+
+    #[test]
+    fn project_variables_override_globals_with_same_name() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "OverrideTest", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let mut global_vars = BTreeMap::new();
+        global_vars.insert("tone".to_string(), "global-tone".to_string());
+        set_global_variables(&app_data, global_vars).unwrap();
+
+        let mut project_vars = BTreeMap::new();
+        project_vars.insert("tone".to_string(), "project-tone".to_string());
+        set_project_variables(&root, project_vars, &app_data).unwrap();
+
+        let result = validate_project_template(
+            &root,
+            "prompts/test.tera",
+            "Tone: {{ tone }}",
+            &app_data,
+        )
+        .unwrap();
+
+        assert_eq!(result.status, ValidationStatus::Valid);
+        assert!(result.preview.unwrap().contains("project-tone"));
+    }
+
+    #[test]
+    fn set_project_variables_persists_to_manifest() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "PersistVars", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let mut vars = BTreeMap::new();
+        vars.insert("chapter".to_string(), "12".to_string());
+        vars.insert("word_target".to_string(), "5000".to_string());
+
+        set_project_variables(&root, vars, &app_data).unwrap();
+
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        assert_eq!(manifest.variables["chapter"], Value::String("12".to_string()));
+        assert_eq!(manifest.variables["word_target"], Value::String("5000".to_string()));
     }
 }

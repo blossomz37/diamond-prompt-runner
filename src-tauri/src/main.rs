@@ -8,6 +8,7 @@ use project_store::{
     ProjectRunHistoryEntry, ProjectSummary, ProjectUsageSummary, PromptExecutionResult,
     PromptRunHistoryEntry, RecentProjectEntry, SavedPipelineResult, TemplateValidationResult,
 };
+use std::collections::BTreeMap;
 use tauri::Manager;
 
 fn app_data_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -161,32 +162,81 @@ fn write_project_asset(
 
 #[tauri::command]
 fn validate_project_template(
+    app: tauri::AppHandle,
     root_path: String,
     relative_path: String,
     content: String,
 ) -> Result<TemplateValidationResult, String> {
+    let app_data_dir = app_data_dir(&app)?;
     project_store::validate_project_template(
         PathBuf::from(root_path).as_path(),
         &relative_path,
         &content,
+        &app_data_dir,
     )
     .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
 fn execute_prompt_block(
+    app: tauri::AppHandle,
     root_path: String,
     relative_path: String,
     content: String,
 ) -> Result<PromptExecutionResult, String> {
-    project_store::execute_prompt_block(PathBuf::from(root_path).as_path(), &relative_path, &content)
-        .map_err(|error| error.to_string())
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::execute_prompt_block(
+        PathBuf::from(root_path).as_path(),
+        &relative_path,
+        &content,
+        &app_data_dir,
+    )
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-fn execute_pipeline(root_path: String, pipeline_id: String) -> Result<PipelineExecutionResult, String> {
-    project_store::execute_pipeline(PathBuf::from(root_path).as_path(), &pipeline_id)
-        .map_err(|error| error.to_string())
+fn execute_pipeline(
+    app: tauri::AppHandle,
+    root_path: String,
+    pipeline_id: String,
+) -> Result<PipelineExecutionResult, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::execute_pipeline(
+        PathBuf::from(root_path).as_path(),
+        &pipeline_id,
+        &app_data_dir,
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn get_global_variables(app: tauri::AppHandle) -> Result<BTreeMap<String, String>, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::get_global_variables(&app_data_dir).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn set_global_variables(
+    app: tauri::AppHandle,
+    variables: BTreeMap<String, String>,
+) -> Result<BTreeMap<String, String>, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::set_global_variables(&app_data_dir, variables).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn set_project_variables(
+    app: tauri::AppHandle,
+    root_path: String,
+    variables: BTreeMap<String, String>,
+) -> Result<ProjectSummary, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::set_project_variables(
+        PathBuf::from(root_path).as_path(),
+        variables,
+        &app_data_dir,
+    )
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -252,7 +302,10 @@ pub fn run() {
             clear_execution_api_key,
             list_prompt_run_history,
             list_project_run_history,
-            get_project_usage_summary
+            get_project_usage_summary,
+            get_global_variables,
+            set_global_variables,
+            set_project_variables
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

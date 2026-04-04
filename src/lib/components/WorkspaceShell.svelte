@@ -1,7 +1,19 @@
 <script lang="ts">
+  // ──────────────────────────────────────────────
+  // File:        WorkspaceShell.svelte
+  // Description: IDE shell layout with collapsible sidebar sections and center-pane editing
+  // Version:     2.0.0
+  // Created:     2026-04-03
+  // Modified:    2026-04-04
+  // Author:      Diamond Runner
+  // ──────────────────────────────────────────────
   import AssetViewer from '$lib/components/AssetViewer.svelte';
   import ExplorerTree from '$lib/components/ExplorerTree.svelte';
   import InspectorPanel from '$lib/components/InspectorPanel.svelte';
+  import PipelineEditorTab from '$lib/components/PipelineEditorTab.svelte';
+  import SidebarExports from '$lib/components/SidebarExports.svelte';
+  import SidebarPipelines from '$lib/components/SidebarPipelines.svelte';
+  import SidebarVariables from '$lib/components/SidebarVariables.svelte';
   import ValidationPanel from '$lib/components/ValidationPanel.svelte';
   import type {
     ExportBundleResult,
@@ -35,6 +47,9 @@
     projectRunHistory: ProjectRunHistoryEntry[];
     projectRunHistoryLoading: boolean;
     projectUsageSummary: ProjectUsageSummary | null;
+    globalVariables: Record<string, string>;
+    onSetGlobalVariables: (variables: Record<string, string>) => Promise<void>;
+    onSetProjectVariables: (variables: Record<string, string>) => Promise<void>;
     onSelectAsset: (node: ProjectAssetNode) => void | Promise<void>;
     onSelectTab: (path: string) => void;
     onCloseTab: (path: string) => void;
@@ -84,6 +99,9 @@
     projectRunHistory,
     projectRunHistoryLoading,
     projectUsageSummary,
+    globalVariables,
+    onSetGlobalVariables,
+    onSetProjectVariables,
     onSelectAsset,
     onSelectTab,
     onCloseTab,
@@ -119,15 +137,30 @@
     activeTab && executionResult?.path === activeTab.path ? executionResult : null
   );
 
+  // Sidebar section collapse states
+  let explorerOpen = $state(true);
+  let pipelinesOpen = $state(false);
+  let variablesOpen = $state(false);
+  let exportsOpen = $state(false);
+
+  // Bottom panel
   let bottomOpen = $state(true);
+
+  // Explorer prompt creation
   let createPromptOpen = $state(false);
   let newPromptName = $state('');
 
+  // Pipeline editor virtual tab state
+  let pipelineEditorActive = $state(false);
+  let pipelineEditorTarget = $state<ProjectPipeline | null>(null);
+
+  const pipelineEditorTitle = $derived(
+    pipelineEditorTarget ? `Pipeline: ${pipelineEditorTarget.name}` : 'New Pipeline'
+  );
+
   async function handleCreatePromptSubmit(): Promise<void> {
     const trimmed = newPromptName.trim();
-    if (!trimmed) {
-      return;
-    }
+    if (!trimmed) return;
 
     try {
       await onCreatePrompt(trimmed);
@@ -136,6 +169,31 @@
     } catch {
       // Keep the form open so the user can correct and retry.
     }
+  }
+
+  function openPipelineEditor(pipeline: ProjectPipeline | null): void {
+    pipelineEditorTarget = pipeline;
+    pipelineEditorActive = true;
+  }
+
+  function closePipelineEditor(): void {
+    pipelineEditorActive = false;
+    pipelineEditorTarget = null;
+  }
+
+  async function handlePipelineSave(
+    name: string,
+    orderedBlockIds: string[],
+    existingPipelineId: string | null
+  ): Promise<SavedPipelineResult> {
+    let result: SavedPipelineResult;
+    if (existingPipelineId) {
+      result = await onUpdatePipeline(existingPipelineId, name, orderedBlockIds);
+    } else {
+      result = await onCreatePipeline(name, orderedBlockIds);
+    }
+    closePipelineEditor();
+    return result;
   }
 </script>
 
@@ -161,41 +219,109 @@
   {/if}
 
   <div class="shell-grid" class:bottom-closed={!bottomOpen}>
-    <aside class="explorer panel">
-      <div class="pane-head">
-        <p class="eyebrow">Explorer</p>
-        <div class="pane-actions">
-          <span>{nodes.length} root nodes</span>
-          <button type="button" class="mini-action" onclick={() => (createPromptOpen = !createPromptOpen)}>
-            {createPromptOpen ? 'Close' : 'New Prompt'}
-          </button>
-        </div>
+    <aside class="sidebar panel">
+      <!-- Explorer section -->
+      <div class="sidebar-section" class:collapsed={!explorerOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (explorerOpen = !explorerOpen)}>
+          <span>Explorer</span>
+          <span class="toggle">{explorerOpen ? '▾' : '▸'}</span>
+        </button>
+        {#if explorerOpen}
+          <div class="sidebar-body">
+            <div class="pane-head">
+              <div class="pane-actions">
+                <span>{nodes.length} root nodes</span>
+                <button type="button" class="mini-action" onclick={() => (createPromptOpen = !createPromptOpen)}>
+                  {createPromptOpen ? 'Close' : 'New Prompt'}
+                </button>
+              </div>
+            </div>
+            {#if createPromptOpen}
+              <form class="create-form" onsubmit={(event) => { event.preventDefault(); void handleCreatePromptSubmit(); }}>
+                <input
+                  type="text"
+                  bind:value={newPromptName}
+                  placeholder="Prompt name"
+                  aria-label="Prompt name"
+                  disabled={promptCreationLoading}
+                />
+                <button type="submit" class="mini-action primary" disabled={promptCreationLoading || !newPromptName.trim()}>
+                  {promptCreationLoading ? 'Creating…' : 'Create'}
+                </button>
+              </form>
+            {/if}
+            <ExplorerTree nodes={nodes} activePath={pipelineEditorActive ? null : activePath} onSelectPath={onSelectAsset} />
+          </div>
+        {/if}
       </div>
-      {#if createPromptOpen}
-        <form class="create-form" onsubmit={(event) => { event.preventDefault(); void handleCreatePromptSubmit(); }}>
-          <input
-            type="text"
-            bind:value={newPromptName}
-            placeholder="Prompt name"
-            aria-label="Prompt name"
-            disabled={promptCreationLoading}
-          />
-          <button type="submit" class="mini-action primary" disabled={promptCreationLoading || !newPromptName.trim()}>
-            {promptCreationLoading ? 'Creating…' : 'Create'}
-          </button>
-        </form>
-      {/if}
-      <ExplorerTree nodes={nodes} activePath={activePath} onSelectPath={onSelectAsset} />
+
+      <!-- Pipelines section -->
+      <div class="sidebar-section" class:collapsed={!pipelinesOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (pipelinesOpen = !pipelinesOpen)}>
+          <span>Pipelines</span>
+          <span class="toggle">{pipelinesOpen ? '▾' : '▸'}</span>
+        </button>
+        {#if pipelinesOpen}
+          <div class="sidebar-body">
+            <SidebarPipelines
+              {pipelines}
+              {promptBlocks}
+              {pipelineExecution}
+              {pipelineLoading}
+              {pipelineAuthoringLoading}
+              onRunPipeline={onRunPipeline}
+              onEditPipeline={(pipeline) => openPipelineEditor(pipeline)}
+              onNewPipeline={() => openPipelineEditor(null)}
+            />
+          </div>
+        {/if}
+      </div>
+
+      <!-- Variables section -->
+      <div class="sidebar-section" class:collapsed={!variablesOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (variablesOpen = !variablesOpen)}>
+          <span>Variables</span>
+          <span class="toggle">{variablesOpen ? '▾' : '▸'}</span>
+        </button>
+        {#if variablesOpen}
+          <div class="sidebar-body">
+            <SidebarVariables
+              {summary}
+              {globalVariables}
+              {onSetGlobalVariables}
+              {onSetProjectVariables}
+            />
+          </div>
+        {/if}
+      </div>
+
+      <!-- Exports section -->
+      <div class="sidebar-section" class:collapsed={!exportsOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (exportsOpen = !exportsOpen)}>
+          <span>Exports</span>
+          <span class="toggle">{exportsOpen ? '▾' : '▸'}</span>
+        </button>
+        {#if exportsOpen}
+          <div class="sidebar-body">
+            <SidebarExports
+              openTabs={tabs}
+              {activePath}
+              {onExportAssets}
+              {exportLoading}
+            />
+          </div>
+        {/if}
+      </div>
     </aside>
 
     <main class="editor panel">
       <div class="tabs" data-testid="workspace-tabs">
-        {#if tabs.length === 0}
+        {#if tabs.length === 0 && !pipelineEditorActive}
           <div class="empty-tab">No tabs open</div>
         {:else}
           {#each tabs as tab (tab.path)}
-            <div class:active={tab.path === activePath} class="tab">
-              <button type="button" onclick={() => onSelectTab(tab.path)}>
+            <div class:active={tab.path === activePath && !pipelineEditorActive} class="tab">
+              <button type="button" onclick={() => { pipelineEditorActive = false; onSelectTab(tab.path); }}>
                 {tab.title}{tab.draftContent !== tab.savedContent ? ' *' : ''}
               </button>
               <button
@@ -208,6 +334,19 @@
               </button>
             </div>
           {/each}
+          {#if pipelineEditorActive}
+            <div class="tab active">
+              <button type="button">{pipelineEditorTitle}</button>
+              <button
+                class="close"
+                type="button"
+                aria-label="Close pipeline editor"
+                onclick={closePipelineEditor}
+              >
+                ×
+              </button>
+            </div>
+          {/if}
         {/if}
       </div>
 
@@ -216,15 +355,25 @@
       {/if}
 
       <div class="viewer-wrap">
-        <AssetViewer
-          tab={activeTab}
-          onDraftChange={onDraftChange}
-          onSave={onSaveTab}
-          onReload={onReloadTab}
-          onExecute={onRunTab}
-          execution={activeExecution}
-          executionLoading={executionLoading && activeTab?.kind === 'tera'}
-        />
+        {#if pipelineEditorActive}
+          <PipelineEditorTab
+            existingPipeline={pipelineEditorTarget}
+            {promptBlocks}
+            loading={pipelineAuthoringLoading}
+            onSave={handlePipelineSave}
+            onCancel={closePipelineEditor}
+          />
+        {:else}
+          <AssetViewer
+            tab={activeTab}
+            onDraftChange={onDraftChange}
+            onSave={onSaveTab}
+            onReload={onReloadTab}
+            onExecute={onRunTab}
+            execution={activeExecution}
+            executionLoading={executionLoading && activeTab?.kind === 'tera'}
+          />
+        {/if}
       </div>
     </main>
 
@@ -232,18 +381,6 @@
       <InspectorPanel
         summary={summary}
         metadata={activeTab?.metadata ?? null}
-        {pipelines}
-        {promptBlocks}
-        pipelineExecution={pipelineExecution}
-        pipelineLoading={pipelineLoading}
-        pipelineAuthoringLoading={pipelineAuthoringLoading}
-        onRunPipeline={onRunPipeline}
-        onCreatePipeline={onCreatePipeline}
-        onUpdatePipeline={onUpdatePipeline}
-        openTabs={tabs}
-        activePath={activePath}
-        onExportAssets={onExportAssets}
-        {exportLoading}
         runHistory={projectRunHistory}
         runHistoryLoading={projectRunHistoryLoading}
         usageSummary={projectUsageSummary}
@@ -374,17 +511,66 @@
     grid-template-rows: minmax(0, 1fr) auto;
   }
 
-  .explorer,
+  .sidebar,
   .inspector,
   .editor,
   .bottom {
     min-height: 0;
   }
 
-  .explorer {
-    padding: 0.75rem;
-    overflow: auto;
+  /* ── Sidebar collapsible sections ── */
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 0;
   }
+
+  .sidebar-section {
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  .sidebar-section:last-child {
+    border-bottom: none;
+  }
+
+  .sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0.65rem 0.75rem;
+    cursor: pointer;
+    border-radius: 0;
+    user-select: none;
+  }
+
+  .sidebar-header:hover {
+    background: rgba(139, 177, 255, 0.06);
+  }
+
+  .toggle {
+    color: var(--text-soft);
+    font-size: 0.82rem;
+  }
+
+  .sidebar-body {
+    padding: 0 0.75rem 0.75rem;
+  }
+
+  .sidebar-section.collapsed .sidebar-body {
+    display: none;
+  }
+
+  /* ── Explorer innards ── */
 
   .pane-head {
     display: flex;
@@ -455,6 +641,8 @@
     color: var(--text);
   }
 
+  /* ── Editor ── */
+
   .editor {
     display: grid;
     grid-template-rows: auto minmax(0, auto) minmax(0, 1fr);
@@ -513,6 +701,8 @@
     min-height: 0;
     overflow: hidden;
   }
+
+  /* ── Bottom panel ── */
 
   .bottom {
     grid-column: 1 / span 3;

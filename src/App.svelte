@@ -11,6 +11,7 @@
     executePromptBlock,
     exportProjectAssets,
     getExecutionCredentialStatus,
+    getGlobalVariables,
     getRecentProjects,
     getProjectUsageSummary,
     listProjectPromptBlocks,
@@ -24,6 +25,8 @@
     removeRecentProject,
     readProjectAsset,
     saveExecutionApiKey,
+    setGlobalVariables,
+    setProjectVariables,
     updatePipeline,
     validateProjectTemplate,
     writeProjectAsset
@@ -69,6 +72,7 @@
   let projectRunHistory = $state<ProjectRunHistoryEntry[]>([]);
   let projectRunHistoryLoading = $state(false);
   let projectUsageSummary = $state<ProjectUsageSummary | null>(null);
+  let globalVariables = $state<Record<string, string>>({});
   let pipelineExecutionResult = $state<PipelineExecutionResult | null>(null);
   let pipelineExecutionLoading = $state(false);
   let pipelineAuthoringLoading = $state(false);
@@ -86,14 +90,16 @@
 
   onMount(async () => {
     try {
-      const [projects, credentialStatus] = await Promise.all([
+      const [projects, credentialStatus, globals] = await Promise.all([
         getRecentProjects(),
-        getExecutionCredentialStatus()
+        getExecutionCredentialStatus(),
+        getGlobalVariables()
       ]);
       recentProjects = projects;
       executionCredentialStatus = credentialStatus;
+      globalVariables = globals;
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Failed to load app state.';
+      errorMessage = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Failed to load app state.';
     }
   });
 
@@ -662,6 +668,15 @@
     }
   }
 
+  async function handleSetGlobalVariables(variables: Record<string, string>): Promise<void> {
+    globalVariables = await setGlobalVariables(variables);
+  }
+
+  async function handleSetProjectVariables(variables: Record<string, string>): Promise<void> {
+    if (!workspace) return;
+    workspace = await setProjectVariables(workspace.rootPath, variables);
+  }
+
   async function refreshPipelineAuthoringState(rootPath: string): Promise<void> {
     const [pipelines, promptBlocks] = await Promise.all([
       listProjectPipelines(rootPath),
@@ -806,6 +821,9 @@
     {projectRunHistory}
     {projectRunHistoryLoading}
     {projectUsageSummary}
+    {globalVariables}
+    onSetGlobalVariables={handleSetGlobalVariables}
+    onSetProjectVariables={handleSetProjectVariables}
     onSelectAsset={handleSelectAsset}
     onSelectTab={handleSelectTab}
     onCloseTab={handleCloseTab}

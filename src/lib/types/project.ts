@@ -23,6 +23,7 @@ export interface ProjectSummary {
   defaultModelPreset: string;
   updatedAt: string;
   counts: ProjectCounts;
+  variables: Record<string, string>;
 }
 
 export interface RecentProjectEntry extends ProjectSummary {
