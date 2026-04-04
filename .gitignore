@@ -24,3 +24,4 @@ src-tauri/target/
 00-diamond-user-obsidian/
 .env
 .vscode/tasks.json
+fixtures/sample-project/runs/
