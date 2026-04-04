@@ -1,5 +1,6 @@
 use std::{
     collections::BTreeMap,
+    env,
     fs,
     path::{Component, Path, PathBuf},
 };
@@ -15,6 +16,8 @@ use uuid::Uuid;
 const PROJECT_DIRS: [&str; 5] = ["documents", "prompts", "models", "runs", "exports"];
 const RECENTS_FILE_NAME: &str = "recent-projects.json";
 const DEFAULT_MODEL_PRESET_CONTENT: &str = "# Default fallback model used when no stronger override applies.\nmodel: openai/gpt-5.4\ntemperature: 0.7\nmax_completion_tokens: 12000\n";
+const OPENROUTER_CHAT_COMPLETIONS_URL: &str = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_API_KEY_ENV: &str = "OPENROUTER_API_KEY";
 
 #[derive(Debug, Error)]
 pub enum ProjectStoreError {
@@ -26,6 +29,8 @@ pub enum ProjectStoreError {
     Json(#[from] serde_json::Error),
     #[error(transparent)]
     Yaml(#[from] serde_yaml::Error),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
 }
 
 impl ProjectStoreError {
@@ -115,6 +120,31 @@ pub struct TemplateValidationResult {
     pub warnings: Vec<String>,
     pub errors: Vec<String>,
     pub context_summary: Vec<MetadataField>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PromptExecutionResult {
+    pub run_id: String,
+    pub path: String,
+    pub block_id: Option<String>,
+    pub block_name: String,
+    pub model_preset: String,
+    pub model_id: String,
+    pub status: ExecutionStatus,
+    pub rendered_prompt: String,
+    pub output: Option<String>,
+    pub error: Option<String>,
+    pub run_path: String,
+    pub started_at: String,
+    pub completed_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ExecutionStatus {
+    Success,
+    Failed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -383,40 +413,14 @@ pub fn validate_project_template(
         ));
     }
 
-    let model_id = default_model_id(&root_path, &manifest).unwrap_or_else(|| "Unknown".to_string());
-    let (prepared_content, mut warnings, document_bindings) =
-        preprocess_doc_references(&root_path, content)?;
-
-    let mut context = Context::new();
-    context.insert(
-        "project",
-        &json!({
-            "id": manifest.project_id,
-            "name": manifest.project_name,
-            "default_model_preset": manifest.default_model_preset,
-            "updated_at": manifest.updated_at,
-        }),
-    );
-    context.insert("variables", &manifest.variables);
-    context.insert("model_id", &model_id);
-    context.insert("now_iso", &timestamp());
-    context.insert("current_date", &Utc::now().format("%Y-%m-%d").to_string());
-
-    for (name, value) in &manifest.variables {
-        if is_identifier_like(name) {
-            context.insert(name, value);
-        }
-    }
-
-    for (name, value) in document_bindings {
-        context.insert(&name, &value);
-    }
-
-    let mut tera = Tera::default();
-    tera.autoescape_on(Vec::new());
+    let prepared = prepare_template_context(&root_path, &manifest, content, false, None)?;
+    let model_id = prepared.model_id.clone();
+    let mut warnings = prepared.warnings;
 
     let mut errors = Vec::new();
-    if let Err(error) = tera.add_raw_template("active", &prepared_content) {
+    let mut tera = Tera::default();
+    tera.autoescape_on(Vec::new());
+    if let Err(error) = tera.add_raw_template("active", &prepared.content) {
         errors.push(error.to_string());
         return Ok(build_validation_result(
             safe_relative_string,
@@ -428,16 +432,10 @@ pub fn validate_project_template(
         ));
     }
 
-    let preview = match tera.render("active", &context) {
+    let preview = match tera.render("active", &prepared.context) {
         Ok(rendered) => Some(rendered),
         Err(error) => {
-            let mut message = error.to_string();
-            let mut cause = std::error::Error::source(&error);
-            while let Some(e) = cause {
-                message.push('\n');
-                message.push_str(&e.to_string());
-                cause = e.source();
-            }
+            let message = flatten_error_chain(&error);
             if is_missing_context_warning(&message) {
                 warnings.push(message);
             } else {
@@ -455,6 +453,110 @@ pub fn validate_project_template(
         &manifest,
         &model_id,
     ))
+}
+
+pub fn execute_prompt_block(
+    root_path: &Path,
+    relative_path: &str,
+    content: &str,
+) -> StoreResult<PromptExecutionResult> {
+    let api_key = env::var(OPENROUTER_API_KEY_ENV).map_err(|_| {
+        ProjectStoreError::message(format!(
+            "Missing API key in environment variable: {OPENROUTER_API_KEY_ENV}"
+        ))
+    })?;
+
+    execute_prompt_block_with_transport(root_path, relative_path, content, &api_key, |api_key, payload| {
+        post_openrouter_chat_completion(OPENROUTER_CHAT_COMPLETIONS_URL, api_key, &payload)
+    })
+}
+
+fn execute_prompt_block_with_transport<F>(
+    root_path: &Path,
+    relative_path: &str,
+    content: &str,
+    api_key: &str,
+    transport: F,
+) -> StoreResult<PromptExecutionResult>
+where
+    F: FnOnce(&str, Value) -> StoreResult<Value>,
+{
+    let started_at = timestamp();
+    let (root_path, manifest) = validate_project(root_path)?;
+    let safe_relative = sanitize_relative_path(relative_path)?;
+    let safe_relative_string = safe_relative.to_string_lossy().replace('\\', "/");
+
+    if classify_asset(&safe_relative_string, false) != AssetKind::Tera {
+        return Err(ProjectStoreError::message(
+            "Prompt execution is only available for `.tera` prompt files.",
+        ));
+    }
+
+    let linked_block = manifest
+        .prompt_blocks
+        .iter()
+        .find(|block| block.template_source == safe_relative_string);
+    let model_preset = linked_block
+        .and_then(|block| block.model_preset.clone())
+        .unwrap_or_else(|| manifest.default_model_preset.clone());
+    let model_id = load_model_id_from_preset(&root_path, &model_preset)?;
+
+    let prepared = prepare_template_context(
+        &root_path,
+        &manifest,
+        content,
+        true,
+        Some(model_id.clone()),
+    )?;
+
+    if !prepared.errors.is_empty() {
+        return Err(ProjectStoreError::message(prepared.errors.join("\n")));
+    }
+
+    let rendered_prompt = render_template_strict(&prepared.content, &prepared.context)?;
+    let model_config = load_model_preset_config(&root_path, &model_preset)?;
+    let payload = build_openrouter_payload(model_config, &rendered_prompt);
+    let response = transport(api_key, payload)?;
+    let output = extract_completion_text(&response);
+
+    if output.trim().is_empty() {
+        return Err(ProjectStoreError::message(
+            "OpenRouter returned an empty response body.",
+        ));
+    }
+
+    let run_id = format!("run-{}", Uuid::new_v4());
+    let run_path = format!("runs/{run_id}.json");
+    let completed_at = timestamp();
+    let block_id = linked_block.as_ref().map(|block| block.block_id.clone());
+    let block_name = linked_block
+        .as_ref()
+        .map(|block| block.name.clone())
+        .unwrap_or_else(|| {
+            Path::new(&safe_relative_string)
+                .file_stem()
+                .and_then(|name| name.to_str())
+                .unwrap_or("Prompt")
+                .to_string()
+        });
+    let result = PromptExecutionResult {
+        run_id: run_id.clone(),
+        path: safe_relative_string.clone(),
+        block_id,
+        block_name,
+        model_preset,
+        model_id,
+        status: ExecutionStatus::Success,
+        rendered_prompt,
+        output: Some(output.trim().to_string()),
+        error: None,
+        run_path: run_path.clone(),
+        started_at,
+        completed_at,
+    };
+
+    persist_run_record(&root_path, &result, &response)?;
+    Ok(result)
 }
 
 fn build_tree_node(root_path: &Path, full_path: &Path, relative_path: String) -> StoreResult<ProjectAssetNode> {
@@ -800,13 +902,85 @@ fn build_validation_result(
     }
 }
 
+#[derive(Debug)]
+struct PreparedTemplateContext {
+    content: String,
+    context: Context,
+    model_id: String,
+    warnings: Vec<String>,
+    errors: Vec<String>,
+}
+
+fn prepare_template_context(
+    root_path: &Path,
+    manifest: &ProjectManifest,
+    content: &str,
+    strict_doc_references: bool,
+    model_id_override: Option<String>,
+) -> StoreResult<PreparedTemplateContext> {
+    let model_id = model_id_override
+        .or_else(|| default_model_id(root_path, manifest))
+        .unwrap_or_else(|| "Unknown".to_string());
+    let doc_refs = preprocess_doc_references(root_path, content, strict_doc_references)?;
+
+    let mut context = Context::new();
+    context.insert(
+        "project",
+        &json!({
+            "id": manifest.project_id,
+            "name": manifest.project_name,
+            "default_model_preset": manifest.default_model_preset,
+            "updated_at": manifest.updated_at,
+        }),
+    );
+    context.insert("variables", &manifest.variables);
+    context.insert("model_id", &model_id);
+    context.insert("now_iso", &timestamp());
+    context.insert("current_date", &Utc::now().format("%Y-%m-%d").to_string());
+
+    for (name, value) in &manifest.variables {
+        if is_identifier_like(name) {
+            context.insert(name, value);
+        }
+    }
+
+    let PreparedDocReferences {
+        content,
+        warnings,
+        errors,
+        bindings,
+    } = doc_refs;
+
+    for (name, value) in bindings {
+        context.insert(&name, &value);
+    }
+
+    Ok(PreparedTemplateContext {
+        content,
+        context,
+        model_id,
+        warnings,
+        errors,
+    })
+}
+
+#[derive(Debug)]
+struct PreparedDocReferences {
+    content: String,
+    warnings: Vec<String>,
+    errors: Vec<String>,
+    bindings: BTreeMap<String, String>,
+}
+
 fn preprocess_doc_references(
     root_path: &Path,
     content: &str,
-) -> StoreResult<(String, Vec<String>, BTreeMap<String, String>)> {
+    strict: bool,
+) -> StoreResult<PreparedDocReferences> {
     let regex = Regex::new(r#"\{\{\s*doc\(\s*"([^"]+)"\s*\)\s*\}\}"#)
         .map_err(|error| ProjectStoreError::message(error.to_string()))?;
     let mut warnings = Vec::new();
+    let mut errors = Vec::new();
     let mut bindings = BTreeMap::new();
     let mut index = 0usize;
 
@@ -822,17 +996,27 @@ fn preprocess_doc_references(
                     match fs::read_to_string(&document_path) {
                         Ok(document_content) => document_content,
                         Err(_) => {
-                            warnings.push(format!(
+                            let message = format!(
                                 "Document reference `{requested_path}` could not be resolved from `documents/`."
-                            ));
+                            );
+                            if strict {
+                                errors.push(message);
+                            } else {
+                                warnings.push(message);
+                            }
                             format!("[Missing document: {requested_path}]")
                         }
                     }
                 }
                 Err(_) => {
-                    warnings.push(format!(
+                    let message = format!(
                         "Document reference `{requested_path}` is invalid and could not be resolved."
-                    ));
+                    );
+                    if strict {
+                        errors.push(message);
+                    } else {
+                        warnings.push(message);
+                    }
                     format!("[Invalid document reference: {requested_path}]")
                 }
             };
@@ -842,7 +1026,140 @@ fn preprocess_doc_references(
         })
         .to_string();
 
-    Ok((rendered, warnings, bindings))
+    Ok(PreparedDocReferences {
+        content: rendered,
+        warnings,
+        errors,
+        bindings,
+    })
+}
+
+fn render_template_strict(content: &str, context: &Context) -> StoreResult<String> {
+    let mut tera = Tera::default();
+    tera.autoescape_on(Vec::new());
+    tera.add_raw_template("active", content)
+        .map_err(|error| ProjectStoreError::message(error.to_string()))?;
+
+    tera.render("active", context)
+        .map_err(|error| ProjectStoreError::message(flatten_error_chain(&error)))
+}
+
+fn flatten_error_chain(error: &dyn std::error::Error) -> String {
+    let mut message = error.to_string();
+    let mut cause = error.source();
+    while let Some(e) = cause {
+        message.push('\n');
+        message.push_str(&e.to_string());
+        cause = e.source();
+    }
+    message
+}
+
+fn load_model_preset_config(root_path: &Path, preset_path: &str) -> StoreResult<serde_json::Map<String, Value>> {
+    let content = fs::read_to_string(root_path.join(preset_path))?;
+    let yaml: serde_yaml::Value = serde_yaml::from_str(&content)?;
+    let json_value = serde_json::to_value(yaml)?;
+    match json_value {
+        Value::Object(object) => Ok(object),
+        _ => Err(ProjectStoreError::message("Model preset must be a YAML mapping.")),
+    }
+}
+
+fn load_model_id_from_preset(root_path: &Path, preset_path: &str) -> StoreResult<String> {
+    let content = fs::read_to_string(root_path.join(preset_path))?;
+    let yaml: serde_yaml::Value = serde_yaml::from_str(&content)?;
+    yaml.get("model")
+        .and_then(|value| value.as_str())
+        .map(|value| value.to_string())
+        .ok_or_else(|| ProjectStoreError::message("Model preset is missing `model`."))
+}
+
+fn build_openrouter_payload(
+    mut model_config: serde_json::Map<String, Value>,
+    prompt: &str,
+) -> Value {
+    model_config.insert(
+        "messages".to_string(),
+        json!([
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ]),
+    );
+    Value::Object(model_config)
+}
+
+fn post_openrouter_chat_completion(url: &str, api_key: &str, payload: &Value) -> StoreResult<Value> {
+    let response = reqwest::blocking::Client::new()
+        .post(url)
+        .header("Authorization", format!("Bearer {api_key}"))
+        .header("Content-Type", "application/json")
+        .json(payload)
+        .send()?;
+
+    let status = response.status();
+    let body = response.text()?;
+    let json_body: Value = serde_json::from_str(&body).map_err(|_| {
+        ProjectStoreError::message(format!("OpenRouter returned non-JSON response: {body}"))
+    })?;
+
+    if !status.is_success() {
+        let message = json_body
+            .get("error")
+            .and_then(|error| error.get("message"))
+            .and_then(|value| value.as_str())
+            .unwrap_or(&body);
+        return Err(ProjectStoreError::message(format!(
+            "OpenRouter error {}: {message}",
+            status.as_u16()
+        )));
+    }
+
+    Ok(json_body)
+}
+
+fn extract_completion_text(response: &Value) -> String {
+    response
+        .get("choices")
+        .and_then(|choices| choices.as_array())
+        .and_then(|choices| choices.first())
+        .and_then(|choice| choice.get("message"))
+        .and_then(|message| message.get("content"))
+        .map(|content| match content {
+            Value::String(text) => text.clone(),
+            Value::Array(parts) => parts
+                .iter()
+                .filter_map(|part| {
+                    part.get("text")
+                        .and_then(|value| value.as_str())
+                        .map(|text| text.to_string())
+                })
+                .collect::<Vec<_>>()
+                .join("\n"),
+            other => other.to_string(),
+        })
+        .unwrap_or_default()
+}
+
+fn persist_run_record(root_path: &Path, result: &PromptExecutionResult, raw_response: &Value) -> StoreResult<()> {
+    let run_record = json!({
+        "runId": result.run_id,
+        "path": result.path,
+        "blockId": result.block_id,
+        "blockName": result.block_name,
+        "modelPreset": result.model_preset,
+        "modelId": result.model_id,
+        "status": result.status,
+        "renderedPrompt": result.rendered_prompt,
+        "output": result.output,
+        "error": result.error,
+        "startedAt": result.started_at,
+        "completedAt": result.completed_at,
+        "response": raw_response,
+    });
+    fs::write(root_path.join(&result.run_path), serde_json::to_string_pretty(&run_record)?)?;
+    Ok(())
 }
 
 fn default_model_id(root_path: &Path, manifest: &ProjectManifest) -> Option<String> {
@@ -1082,5 +1399,125 @@ mod tests {
 
         let asset = result.unwrap();
         assert!(asset.metadata.details.iter().any(|d| d.value == "Invalid YAML"));
+    }
+
+    #[test]
+    fn executes_prompt_block_and_persists_run_record() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "Execute", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        fs::write(root.join("documents").join("context.md"), "Doc body.").unwrap();
+        fs::write(
+            root.join("prompts").join("review.tera"),
+            "Context:\n{{ doc(\"context.md\") }}\nTone: {{ tone }}\nModel: {{ model_id }}",
+        )
+        .unwrap();
+
+        let mut manifest = read_manifest(&root.join("project.json")).unwrap();
+        manifest.variables.insert("tone".to_string(), json!("precise"));
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "block-1".to_string(),
+            name: "Review".to_string(),
+            template_source: "prompts/review.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+        });
+        write_manifest(&root, &manifest).unwrap();
+
+        let result = execute_prompt_block_with_transport(
+            &root,
+            "prompts/review.tera",
+            "Context:\n{{ doc(\"context.md\") }}\nTone: {{ tone }}\nModel: {{ model_id }}",
+            "test-key",
+            |_api_key, payload| {
+                assert_eq!(payload["model"], json!("openai/gpt-5.4"));
+                Ok(json!({
+                    "choices": [
+                        {
+                            "message": {
+                                "content": "Execution output."
+                            }
+                        }
+                    ]
+                }))
+            },
+        )
+        .unwrap();
+
+        assert_eq!(result.status, ExecutionStatus::Success);
+        assert_eq!(result.block_id.as_deref(), Some("block-1"));
+        assert_eq!(result.output.as_deref(), Some("Execution output."));
+        assert!(result.rendered_prompt.contains("Doc body."));
+        assert!(root.join(&result.run_path).is_file());
+    }
+
+    #[test]
+    fn execution_fails_on_missing_document_reference() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "ExecuteFail", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let error = execute_prompt_block_with_transport(
+            &root,
+            "prompts/review.tera",
+            "{{ doc(\"missing.md\") }}",
+            "test-key",
+            |_api_key, _payload| unreachable!("transport should not run for invalid execution input"),
+        )
+        .unwrap_err();
+
+        assert!(error.to_string().contains("could not be resolved"));
+    }
+
+    #[test]
+    fn execution_uses_block_model_override_when_present() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "Override", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        fs::write(
+            root.join("models").join("review.yaml"),
+            "model: openai/gpt-5.4-nano\ntemperature: 0.2\nmax_completion_tokens: 4000\n",
+        )
+        .unwrap();
+
+        let mut manifest = read_manifest(&root.join("project.json")).unwrap();
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "block-1".to_string(),
+            name: "Review".to_string(),
+            template_source: "prompts/review.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: Some("models/review.yaml".to_string()),
+            output_target: "run_artifact".to_string(),
+        });
+        write_manifest(&root, &manifest).unwrap();
+
+        let result = execute_prompt_block_with_transport(
+            &root,
+            "prompts/review.tera",
+            "Hello world",
+            "test-key",
+            |_api_key, payload| {
+                assert_eq!(payload["model"], json!("openai/gpt-5.4-nano"));
+                Ok(json!({
+                    "choices": [
+                        {
+                            "message": {
+                                "content": "Override output."
+                            }
+                        }
+                    ]
+                }))
+            },
+        )
+        .unwrap();
+
+        assert_eq!(result.model_preset, "models/review.yaml");
+        assert_eq!(result.model_id, "openai/gpt-5.4-nano");
     }
 }

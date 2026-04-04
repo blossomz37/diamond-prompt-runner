@@ -3,7 +3,8 @@ mod project_store;
 use std::path::PathBuf;
 
 use project_store::{
-    AssetContent, ProjectAssetNode, ProjectSummary, RecentProjectEntry, TemplateValidationResult,
+    AssetContent, ProjectAssetNode, ProjectSummary, PromptExecutionResult, RecentProjectEntry,
+    TemplateValidationResult,
 };
 use tauri::Manager;
 
@@ -79,6 +80,16 @@ fn validate_project_template(
     .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn execute_prompt_block(
+    root_path: String,
+    relative_path: String,
+    content: String,
+) -> Result<PromptExecutionResult, String> {
+    project_store::execute_prompt_block(PathBuf::from(root_path).as_path(), &relative_path, &content)
+        .map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -91,7 +102,8 @@ pub fn run() {
             list_project_assets,
             read_project_asset,
             write_project_asset,
-            validate_project_template
+            validate_project_template,
+            execute_prompt_block
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

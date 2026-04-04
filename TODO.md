@@ -1,13 +1,13 @@
 ---
 created: 2026-04-03 12:57 PM
-modified: 2026-04-03 5:05 PM
+modified: 2026-04-03 8:35 PM
 ---
 
 # Rolling TODO List
 Oldest to Newest
 
 ## 2026-04-03
-- [ ] Implementation Plans. `implementation-plans/`
+- [ ] ONGOING: Implementation Plans. `implementation-plans/`
 - [x] Spare parts files from YFD Runner. `workshop-parts/`
 - [ ] MVP Specifications. `specifications/`
 - [x] Figma Prototype. Selected `Diamond Runner v2 - IDE Pass`.
@@ -31,10 +31,12 @@ Oldest to Newest
 - [x] Fix: explorer directory nodes now expand/collapse on click; carets update state correctly.
 - [x] Fix: bottom validation panel is now contained within its grid row; summary and preview columns are both scrollable within bounds.
 - [x] Fix: bottom panel preview now expands to accommodate full preview text instead of clipping at a fixed row height.
-- [ ] Rendering and Validation Slice: add a slice sign-off checklist and manual validation notes.
-- [ ] Execution Slice: evaluate local desktop API-key storage pattern for OpenRouter settings.
-- [ ] Execution Slice: evaluate official OpenRouter TypeScript SDK fit without changing milestone-1 architecture assumptions.
-- [ ] Execution Slice: review curated OpenRouter model defaults from sibling repos and decide what should seed Diamond presets.
+- [x] Rendering and Validation Slice: add a slice sign-off checklist and manual validation notes.
+- [x] Single-Block Execution Slice: create active implementation plan and lock first-pass execution scope.
+- [x] Single-Block Execution Slice: add backend-only execution foundation with strict render, direct OpenRouter HTTP, and persisted run artifacts.
+- [ ] Single-Block Execution Slice: finalize local desktop API-key storage beyond the current `OPENROUTER_API_KEY` env-var default.
+- [ ] Single-Block Execution Slice: decide whether to keep direct Rust HTTP or replace it with the official SDK before frontend wiring.
+- [ ] Single-Block Execution Slice: review curated model preset defaults and decide what should seed Diamond presets.
 - [ ] Post-MVP online extension: support scoped `:online` behavior for prompts that require live web research.
 - [ ] Post-MVP online extension: add tests for scoped online-research prompt behavior.
 - [ ] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.

@@ -11,7 +11,7 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 - Product spec: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
 - Approved prototype: `Diamond Runner v2 - IDE Pass`
 - App direction: Tauri + Svelte desktop app with an IDE-like shell
-- Current implementation status: Milestone 1 and the Editing Slice are complete, and the active milestone is the Rendering and Validation Slice
+- Current implementation status: Milestone 1, the Editing Slice, and the Rendering and Validation Slice are complete; the Single-Block Execution Slice has started with a backend-only execution foundation
 - Current Rendering and Validation behavior:
 	- markdown, text, `.tera`, and model YAML assets are editable in the workspace
 	- `project.json` remains read-only
@@ -20,9 +20,14 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 	- the bottom panel shows validation status, warnings or errors, context summary, and preview for `.tera` tabs
 	- the bottom panel is toggleable via a chevron button in the pane header and auto-sizes to fit preview content
 	- explorer directory nodes expand and collapse on click
-- OpenRouter integration remains deferred to the later execution slice; provider calls, API-key storage, and SDK wiring are not yet in scope
+- Current execution-slice status:
+	- backend-only `execute_prompt_block` support exists in the Tauri layer
+	- first-pass execution uses direct Rust HTTP to OpenRouter
+	- the current temporary credential source is `OPENROUTER_API_KEY`
+	- run artifacts are persisted under `runs/` as JSON records
+	- frontend run controls and execution-result UI are not wired yet
 
-Active implementation plan: `implementation-plans/08-PLAN-rendering-and-validation-slice.md`
+Active implementation plan: `implementation-plans/09-PLAN-single-block-execution-slice.md`
 
 ## Recommended Agent Setup
 

@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 5:05 PM
-modified: 2026-04-03 5:05 PM
+modified: 2026-04-03 8:00 PM
 ---
 # Plan To Reach The Rendering And Validation Slice
 
@@ -48,9 +48,9 @@ Sequence around this milestone:
 - Bottom panel auto-sizes to fit full preview content rather than clipping at a fixed row height.
 - Explorer directory nodes expand and collapse on click; caret icon reflects open/closed state.
 
-## Remaining Checklist
+## Follow-Up Checklist
 
-### Backend coverage and behavior
+### Refinements Deferred Out Of Slice Close
 
 - [x] Add tests for invalid Tera syntax so parser failures stay distinct from render-time failures.
 - [x] Add tests for missing context variables and confirm they stay warnings in preview mode.
@@ -58,19 +58,34 @@ Sequence around this milestone:
 - [x] Fix YAML metadata parsing to tolerate malformed model preset files on asset read instead of propagating a hard error.
 - [ ] Decide whether validation responses need more structured issue data than plain strings before execution work begins.
 
-### Frontend behavior and UX
-
 - [x] Add tests for validation state reset when switching away from `.tera` tabs.
 - [x] Add tests for loading states and validation refresh after draft edits.
 - [x] Reconcile the current always-visible bottom-panel presentation with the spec requirement that preview and warning panes be toggleable by default.
 - [ ] Confirm whether the bottom panel should preserve the last good preview while a refreshed validation request is in flight.
 - [ ] Confirm whether context summary should include referenced documents or warning counts, not only project-level fields.
 
-### Slice sign-off
+### Slice Close Notes
 
-- [ ] Add manual validation notes for the rendering and validation slice.
-- [ ] Confirm the authority docs and roadmap stay aligned when the slice is considered complete.
-- [ ] Keep execution-specific strict blocking semantics out of this slice; document them in the later execution plan instead.
+- [x] Add manual validation notes for the rendering and validation slice.
+- [x] Confirm the authority docs and roadmap stay aligned when the slice is considered complete.
+- [x] Keep execution-specific strict blocking semantics out of this slice; document them in the later execution plan instead.
+
+## Slice Sign-Off
+
+Rendering and Validation is complete.
+
+Shipped behavior confirmed at slice close:
+- `.tera` tabs validate from the current draft buffer rather than disk-only state
+- preview validation resolves Diamond `doc("...")` references from `documents/`
+- parser failures, unresolved variables, missing documents, and traversal-style document references are handled without crashing validation
+- markdown, text, `.tera`, and model YAML assets are editable while `project.json` remains read-only
+- explorer directories expand and collapse in the workspace shell
+- the bottom panel is toggleable and grows to fit preview content instead of clipping at a fixed height
+
+Manual validation notes:
+- current automated gates remain green for this slice: `npm run typecheck`, `npm run lint`, `npm run test`, and `cargo test --manifest-path src-tauri/Cargo.toml`
+- no execution-time strict blocking rules were introduced in this slice; preview validation remains intentionally more permissive than future execution behavior
+- remaining unchecked items in this file are refinement decisions for future UX and data-shape work, not blockers for moving into the execution milestone
 
 ## Review Notes From Current Audit
 

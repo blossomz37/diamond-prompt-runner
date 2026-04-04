@@ -77,3 +77,19 @@ export interface TemplateValidationResult {
   errors: string[];
   contextSummary: MetadataField[];
 }
+
+export interface PromptExecutionResult {
+  runId: string;
+  path: string;
+  blockId: string | null;
+  blockName: string;
+  modelPreset: string;
+  modelId: string;
+  status: 'success' | 'failed';
+  renderedPrompt: string;
+  output: string | null;
+  error: string | null;
+  runPath: string;
+  startedAt: string;
+  completedAt: string;
+}

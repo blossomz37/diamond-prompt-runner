@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 2:16 PM
-modified: 2026-04-03 3:34 PM
+modified: 2026-04-03 8:00 PM
 ---
 # Diamond Runner: Planning, Setup, and Engineering Roadmap
 
@@ -13,16 +13,17 @@ This is the next active implementation plan for the workspace.
 Current slice status:
 - Milestone 1 is complete
 - the Editing Slice is complete
-- the active milestone is the Rendering and Validation Slice
+- the Rendering and Validation Slice is complete
+- the active milestone is the Single-Block Execution Slice
 
-Next active milestone plan after the Editing Slice:
-- `implementation-plans/08-PLAN-rendering-and-validation-slice.md`
+Next active milestone plan after the Rendering and Validation Slice:
+- `implementation-plans/09-PLAN-single-block-execution-slice.md`
 
 Sequence after Milestone 1:
 - small follow-up: unavailable-recents `Locate` flow
 - completed milestone: Editing Slice
-- active milestone: Rendering and Validation Slice
-- then Single-Block Execution Slice
+- completed milestone: Rendering and Validation Slice
+- active milestone: Single-Block Execution Slice
 - later Pipelines, History, and Exports
 - later scoped online-research extension
 

@@ -4,6 +4,7 @@ import type {
   AssetContent,
   ProjectAssetNode,
   ProjectSummary,
+  PromptExecutionResult,
   RecentProjectEntry,
   TemplateValidationResult
 } from './types/project';
@@ -60,6 +61,18 @@ export async function validateProjectTemplate(
   content: string
 ): Promise<TemplateValidationResult> {
   return invoke<TemplateValidationResult>('validate_project_template', {
+    rootPath,
+    relativePath,
+    content
+  });
+}
+
+export async function executePromptBlock(
+  rootPath: string,
+  relativePath: string,
+  content: string
+): Promise<PromptExecutionResult> {
+  return invoke<PromptExecutionResult>('execute_prompt_block', {
     rootPath,
     relativePath,
     content
