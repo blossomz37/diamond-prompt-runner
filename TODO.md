@@ -49,8 +49,8 @@ Oldest to Newest
 - [x] Pipeline Authoring Slice: add an active implementation plan and replace manual `project.json` edits with structured in-app pipeline editing.
 - [x] Export Bundle Slice: export selected open tabs into derived bundles under `exports/` and block unsaved editable drafts from being exported.
 - [x] Post-MVP online extension: add the active implementation plan and require the standalone OpenRouter probe to pass before app behavior is hardcoded.
-- [ ] Post-MVP online extension: support scoped `:online` behavior for prompts that require live web research.
-- [ ] Post-MVP online extension: add tests for scoped online-research prompt behavior.
+- [x] Post-MVP online extension: support scoped `:online` behavior for prompts that require live web research.
+- [x] Post-MVP online extension: add tests for scoped online-research prompt behavior.
 - [ ] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.
 - [ ] Post-MVP online extension: decide whether `:online` support belongs in the MVP spec or as a later extension.
 - [ ] Test GitHub app tools directly for repo workflows in this workspace.

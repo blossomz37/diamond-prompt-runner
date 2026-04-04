@@ -459,7 +459,12 @@
         error: message,
         runPath: '',
         startedAt: new Date().toISOString(),
-        completedAt: new Date().toISOString()
+        completedAt: new Date().toISOString(),
+        online: {
+          enabled: false,
+          webSearchRequests: 0,
+          citationCount: 0
+        }
       };
     } finally {
       executionLoading = false;

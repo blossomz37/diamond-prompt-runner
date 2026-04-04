@@ -40,6 +40,8 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 	- pipeline-originated block runs now retain pipeline metadata in their persisted artifacts so project history can group and inspect them later
 	- the inspector can export selected open tabs into a derived bundle under `exports/` and writes bundle metadata alongside the copied artifacts
 	- export bundles are derived from saved files on disk and block attempts to export unsaved editable drafts
+	- prompts whose first non-empty line is `{# diamond:online #}` now opt into OpenRouter web-backed execution without changing standard prompt runs
+	- online-enabled runs now persist audit metadata for whether online mode was enabled, how many web-search requests were issued, and how many citations were returned
 
 Active implementation plan: `implementation-plans/14-PLAN-online-research-slice.md`
 

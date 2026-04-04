@@ -78,6 +78,12 @@ export interface TemplateValidationResult {
   contextSummary: MetadataField[];
 }
 
+export interface OnlineRunMetadata {
+  enabled: boolean;
+  webSearchRequests: number;
+  citationCount: number;
+}
+
 export interface PromptExecutionResult {
   runId: string;
   path: string;
@@ -94,6 +100,7 @@ export interface PromptExecutionResult {
   runPath: string;
   startedAt: string;
   completedAt: string;
+  online: OnlineRunMetadata;
 }
 
 export interface ProjectRunHistoryEntry {
@@ -110,6 +117,7 @@ export interface ProjectRunHistoryEntry {
   completedAt: string;
   outputPreview: string | null;
   error: string | null;
+  online: OnlineRunMetadata;
 }
 
 export type PromptRunHistoryEntry = ProjectRunHistoryEntry;

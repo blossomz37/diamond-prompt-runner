@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ONLINE_PROMPT_DIRECTIVE, promptUsesOnlineResearch } from '$lib/promptExecution';
   import type { PromptExecutionResult, WorkspaceTab } from '$lib/types/project';
 
   interface Props {
@@ -12,6 +13,10 @@
   }
 
   let { tab, onDraftChange, onSave, onReload, onExecute, execution, executionLoading }: Props = $props();
+
+  const onlineEnabled = $derived(
+    tab?.kind === 'tera' ? promptUsesOnlineResearch(tab.draftContent) : false
+  );
 </script>
 
 {#if !tab}
@@ -37,6 +42,11 @@
       </div>
       <div class="actions">
         {#if tab.kind === 'tera'}
+          {#if onlineEnabled}
+            <span class="online-chip" title={`Opted into online research via ${ONLINE_PROMPT_DIRECTIVE}`}>
+              Online enabled
+            </span>
+          {/if}
           <span class:failed={execution?.status === 'failed'} class="run-status">
             {#if executionLoading}
               Running…
@@ -137,6 +147,15 @@
   .run-status {
     color: var(--text-soft);
     font-size: 0.82rem;
+  }
+
+  .online-chip {
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid rgba(153, 227, 190, 0.3);
+    background: rgba(153, 227, 190, 0.12);
+    color: var(--success);
+    font-size: 0.78rem;
   }
 
   .run-status.failed {

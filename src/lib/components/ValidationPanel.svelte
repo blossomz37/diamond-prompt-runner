@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ONLINE_PROMPT_DIRECTIVE, promptUsesOnlineResearch } from '$lib/promptExecution';
   import type {
     ExecutionCredentialStatus,
     PromptExecutionResult,
@@ -88,6 +89,10 @@
         return 'No OpenRouter key is available yet. Save one here or set OPENROUTER_API_KEY.';
     }
   }
+
+  const onlineDraftEnabled = $derived(
+    tab?.kind === 'tera' ? promptUsesOnlineResearch(tab.draftContent) : false
+  );
 </script>
 
 {#if !tab}
@@ -110,6 +115,13 @@
       {#if loading}
         <p class="empty">Refreshing validation from the current draft…</p>
       {:else if validation}
+        {#if onlineDraftEnabled}
+          <div class="messages info">
+            <h4>Online Research</h4>
+            <p>This prompt will use web-backed execution because its first non-empty line is {ONLINE_PROMPT_DIRECTIVE}.</p>
+          </div>
+        {/if}
+
         {#if validation.errors.length > 0}
           <div class="messages">
             <h4>Errors</h4>
@@ -207,6 +219,20 @@
               <dd>{execution.modelId || 'Unknown'}</dd>
             </div>
             <div>
+              <dt>Online</dt>
+              <dd>{execution.online.enabled ? 'Enabled' : 'Disabled'}</dd>
+            </div>
+            {#if execution.online.enabled}
+              <div>
+                <dt>Web Search Requests</dt>
+                <dd>{execution.online.webSearchRequests}</dd>
+              </div>
+              <div>
+                <dt>Citations</dt>
+                <dd>{execution.online.citationCount}</dd>
+              </div>
+            {/if}
+            <div>
               <dt>Run File</dt>
               <dd>{execution.runPath || 'Not persisted'}</dd>
             </div>
@@ -263,6 +289,11 @@
                     <span class={`badge ${executionTone(item.status)}`}>{item.status}</span>
                   </div>
                   <p class="empty">{item.modelId}</p>
+                  {#if item.online.enabled}
+                    <p class="empty">
+                      Online research: {item.online.webSearchRequests} web request{item.online.webSearchRequests === 1 ? '' : 's'} / {item.online.citationCount} citation{item.online.citationCount === 1 ? '' : 's'}
+                    </p>
+                  {/if}
                   {#if item.outputPreview}
                     <p>{item.outputPreview}</p>
                   {:else if item.error}
@@ -407,6 +438,11 @@
   .messages.warnings {
     background: rgba(255, 213, 127, 0.08);
     border-color: rgba(255, 213, 127, 0.16);
+  }
+
+  .messages.info {
+    background: rgba(153, 227, 190, 0.08);
+    border-color: rgba(153, 227, 190, 0.16);
   }
 
   .context-list {

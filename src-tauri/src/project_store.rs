@@ -41,7 +41,10 @@ const OPENROUTER_CHAT_COMPLETIONS_URL: &str = "https://openrouter.ai/api/v1/chat
 const OPENROUTER_API_KEY_ENV: &str = "OPENROUTER_API_KEY";
 const OPENROUTER_KEYCHAIN_SERVICE: &str = "com.blossomz37.diamondrunner";
 const OPENROUTER_KEYCHAIN_ACCOUNT: &str = "openrouter-api-key";
-const PERSISTED_RUN_RECORD_VERSION: u32 = 1;
+const PERSISTED_RUN_RECORD_VERSION: u32 = 2;
+const ONLINE_PROMPT_DIRECTIVE: &str = "diamond:online";
+const DEFAULT_ONLINE_WEB_MAX_RESULTS: u32 = 3;
+const DEFAULT_ONLINE_SEARCH_CONTEXT_SIZE: &str = "medium";
 const DEFAULT_PROMPT_TEMPLATE: &str = "Project: {{ project.name }}\nDate: {{ current_date }}\n\nWrite the instructions for this prompt block here.\n";
 
 #[derive(Debug, Error)]
@@ -170,6 +173,24 @@ pub struct TemplateValidationResult {
     pub context_summary: Vec<MetadataField>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct OnlineRunMetadata {
+    pub enabled: bool,
+    pub web_search_requests: u32,
+    pub citation_count: u32,
+}
+
+impl Default for OnlineRunMetadata {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            web_search_requests: 0,
+            citation_count: 0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PromptExecutionResult {
@@ -190,6 +211,8 @@ pub struct PromptExecutionResult {
     pub run_path: String,
     pub started_at: String,
     pub completed_at: String,
+    #[serde(default)]
+    pub online: OnlineRunMetadata,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -208,6 +231,8 @@ pub struct PromptRunHistoryEntry {
     pub completed_at: String,
     pub output_preview: Option<String>,
     pub error: Option<String>,
+    #[serde(default)]
+    pub online: OnlineRunMetadata,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -226,6 +251,8 @@ pub struct ProjectRunHistoryEntry {
     pub completed_at: String,
     pub output_preview: Option<String>,
     pub error: Option<String>,
+    #[serde(default)]
+    pub online: OnlineRunMetadata,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -934,6 +961,7 @@ pub fn list_prompt_run_history(root_path: &Path, relative_path: &str) -> StoreRe
             completed_at: entry.completed_at,
             output_preview: entry.output_preview,
             error: entry.error,
+            online: entry.online,
         })
         .collect())
 }
@@ -985,6 +1013,7 @@ fn read_run_history_entries(
             completed_at: record.completed_at,
             output_preview: record.output.as_deref().map(|value| preview_text(value, 180)),
             error: record.error,
+            online: record.online,
         });
     }
 
@@ -1021,7 +1050,9 @@ where
     let model_preset = linked_block
         .and_then(|block| block.model_preset.clone())
         .unwrap_or_else(|| manifest.default_model_preset.clone());
-    let model_id = load_model_id_from_preset(&root_path, &model_preset)?;
+    let base_model_id = load_model_id_from_preset(&root_path, &model_preset)?;
+    let online_enabled = prompt_uses_online_research(content);
+    let model_id = execution_model_id(&base_model_id, online_enabled);
 
     let prepared = prepare_template_context(
         &root_path,
@@ -1037,7 +1068,7 @@ where
 
     let rendered_prompt = render_template_for_execution(&prepared.content, &prepared.context)?;
     let model_config = load_model_preset_config(&root_path, &model_preset)?;
-    let payload = build_openrouter_payload(model_config, &rendered_prompt);
+    let payload = build_openrouter_payload(model_config, &rendered_prompt, &model_id, online_enabled);
     let response = transport(api_key, payload)?;
     let output = extract_completion_text(&response);
 
@@ -1077,6 +1108,7 @@ where
         run_path: run_path.clone(),
         started_at,
         completed_at,
+        online: extract_online_run_metadata(&response, online_enabled),
     };
 
     persist_run_record(&root_path, &result, &response)?;
@@ -1883,10 +1915,43 @@ fn load_model_id_from_preset(root_path: &Path, preset_path: &str) -> StoreResult
         .ok_or_else(|| ProjectStoreError::message("Model preset is missing `model`."))
 }
 
+fn prompt_uses_online_research(content: &str) -> bool {
+    content
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .map(is_online_directive_line)
+        .unwrap_or(false)
+}
+
+fn is_online_directive_line(line: &str) -> bool {
+    let trimmed = line.trim();
+    if !trimmed.starts_with("{#") || !trimmed.ends_with("#}") {
+        return false;
+    }
+
+    let inner = trimmed
+        .trim_start_matches("{#")
+        .trim_end_matches("#}")
+        .trim();
+    inner.eq_ignore_ascii_case(ONLINE_PROMPT_DIRECTIVE)
+}
+
+fn execution_model_id(base_model_id: &str, online_enabled: bool) -> String {
+    if !online_enabled || base_model_id.ends_with(":online") {
+        return base_model_id.to_string();
+    }
+
+    format!("{base_model_id}:online")
+}
+
 fn build_openrouter_payload(
     mut model_config: serde_json::Map<String, Value>,
     prompt: &str,
+    model_id: &str,
+    online_enabled: bool,
 ) -> Value {
+    model_config.insert("model".to_string(), Value::String(model_id.to_string()));
     model_config.insert(
         "messages".to_string(),
         json!([
@@ -1896,7 +1961,51 @@ fn build_openrouter_payload(
             }
         ]),
     );
+
+    if online_enabled {
+        model_config.insert(
+            "plugins".to_string(),
+            json!([
+                {
+                    "id": "web",
+                    "max_results": DEFAULT_ONLINE_WEB_MAX_RESULTS,
+                }
+            ]),
+        );
+        model_config.insert(
+            "web_search_options".to_string(),
+            json!({
+                "search_context_size": DEFAULT_ONLINE_SEARCH_CONTEXT_SIZE,
+            }),
+        );
+    }
+
     Value::Object(model_config)
+}
+
+fn extract_online_run_metadata(response: &Value, online_enabled: bool) -> OnlineRunMetadata {
+    let web_search_requests = response
+        .get("usage")
+        .and_then(|usage| usage.get("server_tool_use"))
+        .and_then(|tools| tools.get("web_search_requests"))
+        .and_then(|value| value.as_u64())
+        .and_then(|value| u32::try_from(value).ok())
+        .unwrap_or(0);
+    let citation_count = response
+        .get("choices")
+        .and_then(|choices| choices.as_array())
+        .and_then(|choices| choices.first())
+        .and_then(|choice| choice.get("message"))
+        .and_then(|message| message.get("annotations"))
+        .and_then(|annotations| annotations.as_array())
+        .map(|annotations| annotations.len() as u32)
+        .unwrap_or(0);
+
+    OnlineRunMetadata {
+        enabled: online_enabled,
+        web_search_requests,
+        citation_count,
+    }
 }
 
 fn post_openrouter_chat_completion(url: &str, api_key: &str, payload: &Value) -> StoreResult<Value> {
@@ -1982,6 +2091,8 @@ struct PersistedRunRecord {
     started_at: String,
     completed_at: String,
     #[serde(default)]
+    online: OnlineRunMetadata,
+    #[serde(default)]
     response: Value,
 }
 
@@ -2003,6 +2114,7 @@ impl PersistedRunRecord {
             error: result.error.clone(),
             started_at: result.started_at.clone(),
             completed_at: result.completed_at.clone(),
+            online: result.online.clone(),
             response,
         }
     }
@@ -2488,11 +2600,93 @@ mod tests {
             &fs::read_to_string(root.join(&result.run_path)).unwrap(),
         )
         .unwrap();
-        assert_eq!(persisted.artifact_version, 1);
+        assert_eq!(persisted.artifact_version, 2);
         assert_eq!(persisted.block_id.as_deref(), Some("block-1"));
         assert_eq!(persisted.model_preset, "models/default.yaml");
         assert!(persisted.rendered_prompt.contains("Doc body."));
+        assert!(!persisted.online.enabled);
         assert!(persisted.response.get("choices").is_some());
+    }
+
+    #[test]
+    fn execution_enables_online_payload_and_persists_online_metadata() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "OnlineResearch", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        fs::write(
+            root.join("prompts").join("research.tera"),
+            "{# diamond:online #}\nResearch the current market for {{ project.name }}.",
+        )
+        .unwrap();
+
+        let mut manifest = read_manifest(&root.join("project.json")).unwrap();
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "research-block".to_string(),
+            name: "Research".to_string(),
+            template_source: "prompts/research.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+        });
+        write_manifest(&root, &manifest).unwrap();
+
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        let mut transport = |_api_key: &str, payload: Value| {
+            assert_eq!(payload["model"], json!("openai/gpt-5.4:online"));
+            assert_eq!(payload["plugins"][0]["id"], json!("web"));
+            assert_eq!(payload["plugins"][0]["max_results"], json!(3));
+            assert_eq!(payload["web_search_options"]["search_context_size"], json!("medium"));
+            Ok(json!({
+                "choices": [
+                    {
+                        "message": {
+                            "content": "Online output.",
+                            "annotations": [
+                                { "type": "url_citation" },
+                                { "type": "url_citation" }
+                            ]
+                        }
+                    }
+                ],
+                "usage": {
+                    "server_tool_use": {
+                        "web_search_requests": 2
+                    }
+                }
+            }))
+        };
+
+        let result = execute_prompt_block_with_transport(
+            &root,
+            &manifest,
+            "prompts/research.tera",
+            "{# diamond:online #}\nResearch the current market for {{ project.name }}.",
+            None,
+            "test-key",
+            &mut transport,
+        )
+        .unwrap();
+
+        assert_eq!(result.model_id, "openai/gpt-5.4:online");
+        assert!(result.online.enabled);
+        assert_eq!(result.online.web_search_requests, 2);
+        assert_eq!(result.online.citation_count, 2);
+
+        let persisted = serde_json::from_str::<PersistedRunRecord>(
+            &fs::read_to_string(root.join(&result.run_path)).unwrap(),
+        )
+        .unwrap();
+        assert!(persisted.online.enabled);
+        assert_eq!(persisted.online.web_search_requests, 2);
+        assert_eq!(persisted.online.citation_count, 2);
+
+        let history = list_prompt_run_history(&root, "prompts/research.tera").unwrap();
+        assert_eq!(history.len(), 1);
+        assert!(history[0].online.enabled);
+        assert_eq!(history[0].online.web_search_requests, 2);
+        assert_eq!(history[0].online.citation_count, 2);
     }
 
     #[test]

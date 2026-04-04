@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ONLINE_PROMPT_DIRECTIVE } from '$lib/promptExecution';
 import App from './App.svelte';
 import type {
   AssetContent,
@@ -46,6 +47,12 @@ const tauri = vi.hoisted(() => ({
 }));
 
 vi.mock('$lib/tauri', () => tauri);
+
+const offlineRunMetadata = {
+  enabled: false,
+  webSearchRequests: 0,
+  citationCount: 0
+};
 
 const summary: ProjectSummary = {
   rootPath: '/tmp/story-lab',
@@ -215,7 +222,8 @@ const executionResult: PromptExecutionResult = {
   error: null,
   runPath: 'runs/run-1.json',
   startedAt: '2026-04-03T20:13:00Z',
-  completedAt: '2026-04-03T20:13:05Z'
+  completedAt: '2026-04-03T20:13:05Z',
+  online: offlineRunMetadata
 };
 
 const missingCredentialStatus: ExecutionCredentialStatus = {
@@ -242,7 +250,8 @@ const runHistory: PromptRunHistoryEntry[] = [
     startedAt: '2026-04-03T20:20:00Z',
     completedAt: '2026-04-03T20:20:04Z',
     outputPreview: 'Earlier persisted output.',
-    error: null
+    error: null,
+    online: offlineRunMetadata
   }
 ];
 
@@ -260,7 +269,8 @@ const projectRunHistory: ProjectRunHistoryEntry[] = [
     startedAt: '2026-04-03T20:21:00Z',
     completedAt: '2026-04-03T20:21:08Z',
     outputPreview: 'Pipeline output preview.',
-    error: null
+    error: null,
+    online: offlineRunMetadata
   },
   {
     runId: 'run-standalone',
@@ -275,7 +285,8 @@ const projectRunHistory: ProjectRunHistoryEntry[] = [
     startedAt: '2026-04-03T20:10:00Z',
     completedAt: '2026-04-03T20:10:02Z',
     outputPreview: null,
-    error: 'Provider timeout'
+    error: 'Provider timeout',
+    online: offlineRunMetadata
   }
 ];
 
@@ -1026,6 +1037,28 @@ describe('App', () => {
         updatedContent
       )
     );
+  });
+
+  it('shows the online research affordance when the prompt opts in locally', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    await openExplorerAsset('prompts', 'brief-review.tera');
+
+    const editor = await screen.findByTestId('asset-editor');
+    await fireEvent.input(editor, {
+      target: { value: `${ONLINE_PROMPT_DIRECTIVE}\n${teraAssetContent.content}` }
+    });
+
+    expect(await screen.findByText('Online enabled')).toBeInTheDocument();
+    expect(
+      await screen.findByText(/This prompt will use web-backed execution because its first non-empty line is/)
+    ).toBeInTheDocument();
   });
 
   it('runs the active tera prompt and shows the latest execution output', async () => {
