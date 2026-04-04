@@ -30,6 +30,47 @@ Rules:
 - Prototype docs inform UX direction, not architecture.
 - If docs conflict, surface the conflict explicitly before inventing behavior.
 
+Use these docs by question type:
+- Current product direction, approved prototype, and shipped milestone status: `README.md`
+- MVP behavior, data model, and public product scope: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
+- Current implementation sequence and active slice details: `implementation-plans/09-PLAN-single-block-execution-slice.md`
+- Rolling task inventory and follow-ups: `TODO.md`
+- Historical planning context or milestone references: other files under `implementation-plans/`
+
+## Current Active Slice
+- The active implementation plan is `implementation-plans/09-PLAN-single-block-execution-slice.md`.
+- Single-Block Execution is in progress.
+- Rendering and Validation is complete and should be treated as closed work unless a regression is introduced.
+
+## Build And Test Commands
+
+Use these commands as the default validation baseline for this repo:
+- `npm run tauri:dev` for the full desktop app in development
+- `npm run dev` for the frontend-only Vite server
+- `npm run build` for the production frontend build
+- `npm run typecheck` for Svelte and TypeScript validation
+- `npm run lint` for ESLint
+- `npm run test` for frontend Vitest coverage
+- `cargo test --manifest-path src-tauri/Cargo.toml` for Rust backend tests
+
+Default validation rule:
+- For implementation work, run the relevant frontend and backend checks that cover the changed surface before closing the task.
+
+## Architecture
+
+The app is split into a narrow frontend-to-backend boundary:
+- `src/App.svelte` orchestrates workspace state and routes actions into the shell
+- `src/lib/components/` contains the IDE shell UI pieces such as explorer, asset viewer, inspector, and validation panel
+- `src/lib/types/project.ts` is the shared frontend domain-type source
+- `src/lib/tauri.ts` is the frontend bridge for all Tauri commands
+- `src-tauri/src/main.rs` registers the Tauri command surface
+- `src-tauri/src/project_store.rs` is the current backend core for project IO, validation, execution, credential lookup, and run history
+
+Boundary rules:
+- Keep filesystem access, credential handling, and provider HTTP calls in Rust
+- Keep the frontend focused on state orchestration and presentation
+- When adding backend functionality, wire it through `main.rs` and `src/lib/tauri.ts` rather than bypassing the bridge
+
 ## Scope Control
 Scope discipline is mandatory.
 
@@ -54,6 +95,23 @@ Engineering defaults for this repo:
 - Keep the first implementation milestone focused on create or open project plus read-and-navigate shell behavior.
 - Keep Diamond file-first. Do not import database-first patterns from sibling repos unless the repo docs explicitly adopt them.
 - Treat `workshop-parts/` as source material for adaptation, not as runtime architecture.
+
+## Conventions
+
+- Diamond is file-first. Project truth lives on disk in `project.json`, `documents/`, `prompts/`, `models/`, `runs/`, and `exports/`.
+- `project.json` remains read-only in the current UI unless the spec or plans explicitly change that behavior.
+- `.tera` preview validation is permissive enough to surface warnings; execution is stricter and should fail on unresolved required context such as invalid or missing `doc("...")` references.
+- Model presets are YAML files under `models/`; prompt blocks may override the manifest default preset.
+- The first full execution slice stays on direct Rust HTTP to OpenRouter. Do not add an SDK swap as incidental scope.
+- OpenRouter credentials are app-level state, not project-file state. Native keychain storage is primary, with `OPENROUTER_API_KEY` as fallback.
+- Persisted runs under `runs/` are product artifacts. Prompt-scoped history browsing should reuse those artifacts rather than inventing a parallel store.
+
+## Testing Patterns
+
+- Frontend tests live in `src/App.test.ts` today and use Vitest with Testing Library.
+- Backend tests live beside the Rust code in `src-tauri/src/project_store.rs` and use `tempfile` to create disposable project fixtures.
+- `fixtures/sample-project/` is the canonical sample workspace for manual validation and should remain consistent with the current slice behavior.
+- When a change crosses the frontend-backend boundary, prefer covering both the Tauri command behavior and the shell-level UI flow.
 
 ## Validation Rules
 Validation depends on the task type.
