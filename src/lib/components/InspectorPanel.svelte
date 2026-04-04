@@ -566,7 +566,7 @@
             {#if item.pipelineName}
               <p class="meta">Pipeline: {item.pipelineName}</p>
             {/if}
-            <p class="meta">{item.modelId}</p>
+            <p class="meta">{item.modelId}{item.usage.retryCount != null && item.usage.retryCount > 0 ? ` · ${item.usage.retryCount} retr${item.usage.retryCount === 1 ? 'y' : 'ies'}` : ''}</p>
             {#if item.outputPreview}
               <p>{item.outputPreview}</p>
             {:else if item.error}

@@ -123,6 +123,11 @@
     mode = 'workspace';
   }
 
+  function handleCloseProject(): void {
+    mode = 'browser';
+    workspace = null;
+  }
+
   $effect(() => {
     const currentTab = tabs.find((tab) => tab.path === activePath) ?? null;
     const rootPath = workspace?.rootPath ?? null;
@@ -470,7 +475,8 @@
           completionTokens: null,
           totalTokens: null,
           cost: null,
-          outputWordCount: null
+          outputWordCount: null,
+          retryCount: null
         }
       };
     } finally {
@@ -813,6 +819,7 @@
     historyItems={executionHistory}
     historyLoading={executionHistoryLoading}
     onOpenRunPath={handleOpenRunPath}
+    onCloseProject={handleCloseProject}
     {validationResult}
     {validationLoading}
     {executionResult}

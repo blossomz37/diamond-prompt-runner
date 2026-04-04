@@ -41,7 +41,8 @@ const OPENROUTER_CHAT_COMPLETIONS_URL: &str = "https://openrouter.ai/api/v1/chat
 const OPENROUTER_API_KEY_ENV: &str = "OPENROUTER_API_KEY";
 const OPENROUTER_KEYCHAIN_SERVICE: &str = "com.blossomz37.diamondrunner";
 const OPENROUTER_KEYCHAIN_ACCOUNT: &str = "openrouter-api-key";
-const PERSISTED_RUN_RECORD_VERSION: u32 = 3;
+const PERSISTED_RUN_RECORD_VERSION: u32 = 4;
+const MAX_EXECUTION_RETRIES: u32 = 2;
 const ONLINE_PROMPT_DIRECTIVE: &str = "diamond:online";
 const DEFAULT_ONLINE_WEB_MAX_RESULTS: u32 = 3;
 const DEFAULT_ONLINE_SEARCH_CONTEXT_SIZE: &str = "medium";
@@ -199,6 +200,8 @@ pub struct UsageMetrics {
     pub total_tokens: Option<u32>,
     pub cost: Option<f64>,
     pub output_word_count: Option<u32>,
+    #[serde(default)]
+    pub retry_count: Option<u32>,
 }
 
 impl Default for UsageMetrics {
@@ -209,6 +212,7 @@ impl Default for UsageMetrics {
             total_tokens: None,
             cost: None,
             output_word_count: None,
+            retry_count: None,
         }
     }
 }
@@ -1099,14 +1103,32 @@ where
     let rendered_prompt = render_template_for_execution(&prepared.content, &prepared.context)?;
     let model_config = load_model_preset_config(&root_path, &model_preset)?;
     let payload = build_openrouter_payload(model_config, &rendered_prompt, &model_id, online_enabled);
-    let response = transport(api_key, payload)?;
-    let output = extract_completion_text(&response);
 
-    if output.trim().is_empty() {
-        return Err(ProjectStoreError::message(
-            "OpenRouter returned an empty response body.",
-        ));
-    }
+    let mut retry_count = 0u32;
+    let (response, output) = loop {
+        match transport(api_key, payload.clone()) {
+            Ok(response) => {
+                let output = extract_completion_text(&response);
+                if !output.trim().is_empty() {
+                    break (response, output);
+                }
+                if retry_count < MAX_EXECUTION_RETRIES {
+                    retry_count += 1;
+                    continue;
+                }
+                return Err(ProjectStoreError::message(
+                    "OpenRouter returned an empty response body.",
+                ));
+            }
+            Err(err) => {
+                if retry_count < MAX_EXECUTION_RETRIES {
+                    retry_count += 1;
+                    continue;
+                }
+                return Err(err);
+            }
+        }
+    };
 
     let run_id = format!("run-{}", Uuid::new_v4());
     let run_path = format!("runs/{run_id}.json");
@@ -1139,7 +1161,11 @@ where
         started_at,
         completed_at,
         online: extract_online_run_metadata(&response, online_enabled),
-        usage: extract_usage_metrics(&response, Some(output.trim())),
+        usage: {
+            let mut metrics = extract_usage_metrics(&response, Some(output.trim()));
+            metrics.retry_count = if retry_count > 0 { Some(retry_count) } else { None };
+            metrics
+        },
     };
 
     persist_run_record(&root_path, &result, &response)?;
@@ -2064,6 +2090,7 @@ fn extract_usage_metrics(response: &Value, output: Option<&str>) -> UsageMetrics
         total_tokens,
         cost,
         output_word_count,
+        retry_count: None,
     }
 }
 
@@ -2668,7 +2695,7 @@ mod tests {
             &fs::read_to_string(root.join(&result.run_path)).unwrap(),
         )
         .unwrap();
-        assert_eq!(persisted.artifact_version, 3);
+        assert_eq!(persisted.artifact_version, 4);
         assert_eq!(persisted.block_id.as_deref(), Some("block-1"));
         assert_eq!(persisted.model_preset, "models/default.yaml");
         assert!(persisted.rendered_prompt.contains("Doc body."));
@@ -2680,8 +2707,48 @@ mod tests {
         assert_eq!(result.usage.total_tokens, Some(52));
         assert!((result.usage.cost.unwrap() - 0.00123).abs() < f64::EPSILON);
         assert_eq!(result.usage.output_word_count, Some(2));
+        assert_eq!(result.usage.retry_count, None);
         assert_eq!(persisted.usage.prompt_tokens, Some(42));
         assert_eq!(persisted.usage.completion_tokens, Some(10));
+        assert_eq!(persisted.usage.retry_count, None);
+    }
+
+    #[test]
+    fn retries_on_empty_response_and_records_retry_count() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "Retry", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+
+        let mut call_count = 0u32;
+        let mut transport = |_api_key: &str, _payload: Value| {
+            call_count += 1;
+            if call_count < 3 {
+                // Return empty content for the first two calls.
+                Ok(json!({ "choices": [{ "message": { "content": "" } }] }))
+            } else {
+                Ok(json!({
+                    "choices": [{ "message": { "content": "Retry success." } }],
+                    "usage": { "prompt_tokens": 5, "completion_tokens": 2, "total_tokens": 7 }
+                }))
+            }
+        };
+
+        let result = execute_prompt_block_with_transport(
+            &root,
+            &manifest,
+            "prompts/review.tera",
+            "Hello world",
+            None,
+            "test-key",
+            &mut transport,
+        )
+        .unwrap();
+
+        assert_eq!(result.output.as_deref(), Some("Retry success."));
+        assert_eq!(result.usage.retry_count, Some(2));
+        assert_eq!(call_count, 3);
     }
 
     #[test]

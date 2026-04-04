@@ -90,6 +90,7 @@ export interface UsageMetrics {
   totalTokens: number | null;
   cost: number | null;
   outputWordCount: number | null;
+  retryCount: number | null;
 }
 
 export interface PromptExecutionResult {

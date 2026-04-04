@@ -251,6 +251,12 @@
                 <dd>{execution.usage.outputWordCount.toLocaleString()}</dd>
               </div>
             {/if}
+            {#if execution.usage.retryCount != null && execution.usage.retryCount > 0}
+              <div>
+                <dt>Retries</dt>
+                <dd>{execution.usage.retryCount}</dd>
+              </div>
+            {/if}
             <div>
               <dt>Online</dt>
               <dd>{execution.online.enabled ? 'Enabled' : 'Disabled'}</dd>

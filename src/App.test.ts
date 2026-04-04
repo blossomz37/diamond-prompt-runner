@@ -59,7 +59,8 @@ const emptyUsageMetrics = {
   completionTokens: null,
   totalTokens: null,
   cost: null,
-  outputWordCount: null
+  outputWordCount: null,
+  retryCount: null
 };
 
 const summary: ProjectSummary = {
@@ -1068,9 +1069,7 @@ describe('App', () => {
     });
 
     expect(await screen.findByText('Online enabled')).toBeInTheDocument();
-    expect(
-      await screen.findByText(/This prompt will use web-backed execution because its first non-empty line is/)
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Online Research Mode')).toBeInTheDocument();
   });
 
   it('runs the active tera prompt and shows the latest execution output', async () => {
