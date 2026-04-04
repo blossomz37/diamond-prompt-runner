@@ -214,7 +214,7 @@
       const asset = await readProjectAsset(workspace.rootPath, path);
       const nextTab: WorkspaceTab = {
         ...asset,
-        title: title ?? path.split('/').pop() ?? path,
+        title: title ?? asset.metadata.name ?? path.split('/').pop() ?? path,
         savedContent: asset.content,
         draftContent: asset.content,
         isSaving: false

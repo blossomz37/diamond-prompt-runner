@@ -662,6 +662,7 @@ where
 fn build_tree_node(root_path: &Path, full_path: &Path, relative_path: String) -> StoreResult<ProjectAssetNode> {
     let metadata = fs::metadata(full_path)?;
     let is_directory = metadata.is_dir();
+    let name = display_name_for_asset(full_path, &relative_path, is_directory);
     let mut children = Vec::new();
 
     if is_directory {
@@ -679,16 +680,41 @@ fn build_tree_node(root_path: &Path, full_path: &Path, relative_path: String) ->
     }
 
     Ok(ProjectAssetNode {
-        name: full_path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or_default()
-            .to_string(),
+        name,
         path: relative_path.clone(),
         kind: classify_asset(&relative_path, is_directory),
         is_directory,
         children,
     })
+}
+
+fn display_name_for_asset(full_path: &Path, relative_path: &str, is_directory: bool) -> String {
+    if !is_directory {
+        if let Some(name) = display_name_for_run_record(full_path, relative_path) {
+            return name;
+        }
+    }
+
+    full_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default()
+        .to_string()
+}
+
+fn display_name_for_run_record(full_path: &Path, relative_path: &str) -> Option<String> {
+    if !relative_path.starts_with("runs/") || !relative_path.ends_with(".json") {
+        return None;
+    }
+
+    let content = fs::read_to_string(full_path).ok()?;
+    let record = serde_json::from_str::<PersistedRunRecord>(&content).ok()?;
+    let block_name = record.block_name.trim();
+    if block_name.is_empty() {
+        None
+    } else {
+        Some(block_name.to_string())
+    }
 }
 
 fn is_hidden_ui_entry(path: &Path) -> bool {
@@ -836,11 +862,7 @@ fn build_metadata(
     Ok(AssetMetadata {
         kind: kind.clone(),
         path: relative_path.to_string(),
-        name: full_path
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or_default()
-            .to_string(),
+        name: display_name_for_asset(full_path, relative_path, false),
         size_bytes: Some(metadata.len()),
         modified_at,
         details,
@@ -1449,6 +1471,34 @@ mod tests {
             .children
             .is_empty());
 
+        fs::write(
+            root.join("runs").join("run-1.json"),
+            serde_json::to_string_pretty(&json!({
+                "runId": "run-1",
+                "path": "prompts/review.tera",
+                "blockName": "Review",
+                "modelId": "openai/gpt-5.4",
+                "status": "success",
+                "output": "Execution output.",
+                "error": null,
+                "startedAt": "2026-04-03T20:00:00Z",
+                "completedAt": "2026-04-03T20:00:01Z"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let assets = list_project_assets(&root).unwrap();
+        let run_node = assets
+            .iter()
+            .find(|node| node.path == "runs")
+            .unwrap()
+            .children
+            .iter()
+            .find(|child| child.path == "runs/run-1.json")
+            .unwrap();
+        assert_eq!(run_node.name, "Review");
+
         let content = read_project_asset(&root, "prompts/review.tera").unwrap();
         assert_eq!(content.kind, AssetKind::Tera);
         assert_eq!(content.view, AssetView::Text);
@@ -1458,6 +1508,9 @@ mod tests {
             .details
             .iter()
             .any(|detail| detail.value.contains("Review")));
+
+        let run_content = read_project_asset(&root, "runs/run-1.json").unwrap();
+        assert_eq!(run_content.metadata.name, "Review");
     }
 
     #[test]
