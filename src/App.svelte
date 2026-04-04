@@ -8,6 +8,7 @@
     executePromptBlock,
     getExecutionCredentialStatus,
     getRecentProjects,
+    listPromptRunHistory,
     listProjectAssets,
     openProject,
     pickDirectory,
@@ -21,6 +22,7 @@
     ExecutionCredentialStatus,
     ProjectAssetNode,
     PromptExecutionResult,
+    PromptRunHistoryEntry,
     ProjectSummary,
     RecentProjectEntry,
     TemplateValidationResult,
@@ -42,6 +44,8 @@
   let validationLoading = $state(false);
   let executionResult = $state<PromptExecutionResult | null>(null);
   let executionLoading = $state(false);
+  let executionHistory = $state<PromptRunHistoryEntry[]>([]);
+  let executionHistoryLoading = $state(false);
   let executionCredentialStatus = $state<ExecutionCredentialStatus>({
     source: 'missing',
     hasStoredKey: false
@@ -50,6 +54,7 @@
   let executionCredentialLoading = $state(false);
   let validationTimer: ReturnType<typeof setTimeout> | null = null;
   let validationRequestId = 0;
+  let executionHistoryRequestId = 0;
 
   onMount(async () => {
     try {
@@ -74,6 +79,8 @@
     validationLoading = false;
     executionResult = null;
     executionLoading = false;
+    executionHistory = [];
+    executionHistoryLoading = false;
     mode = 'workspace';
   }
 
@@ -107,6 +114,22 @@
         validationTimer = null;
       }
     };
+  });
+
+  $effect(() => {
+    const currentTab = tabs.find((tab) => tab.path === activePath) ?? null;
+    const rootPath = workspace?.rootPath ?? null;
+
+    if (!rootPath || !currentTab || currentTab.kind !== 'tera') {
+      executionHistoryRequestId += 1;
+      executionHistoryLoading = false;
+      executionHistory = [];
+      return;
+    }
+
+    const requestId = ++executionHistoryRequestId;
+    executionHistoryLoading = true;
+    void loadExecutionHistory(rootPath, currentTab.path, requestId);
   });
 
   async function withBusy(work: () => Promise<void>): Promise<void> {
@@ -170,29 +193,37 @@
       return;
     }
 
-    const existing = tabs.find((tab) => tab.path === node.path);
+    await openAssetPath(node.path, node.name);
+  }
+
+  async function openAssetPath(path: string, title?: string): Promise<void> {
+    if (!workspace) {
+      return;
+    }
+
+    const existing = tabs.find((tab) => tab.path === path);
     if (existing) {
       activePath = existing.path;
       return;
     }
 
-    loadingPath = node.path;
+    loadingPath = path;
     errorMessage = null;
 
     try {
-      const asset = await readProjectAsset(workspace.rootPath, node.path);
+      const asset = await readProjectAsset(workspace.rootPath, path);
       const nextTab: WorkspaceTab = {
         ...asset,
-        title: node.name,
+        title: title ?? path.split('/').pop() ?? path,
         savedContent: asset.content,
         draftContent: asset.content,
         isSaving: false
       };
 
       tabs = [...tabs, nextTab];
-      activePath = node.path;
+      activePath = path;
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : `Failed to open ${node.path}.`;
+      errorMessage = error instanceof Error ? error.message : `Failed to open ${path}.`;
     } finally {
       loadingPath = null;
     }
@@ -320,6 +351,14 @@
 
     try {
       executionResult = await executePromptBlock(workspace.rootPath, path, tab.draftContent);
+      await refreshExecutionHistory(workspace.rootPath, path);
+      workspace = {
+        ...workspace,
+        counts: {
+          ...workspace.counts,
+          runs: workspace.counts.runs + 1
+        }
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Prompt execution failed.';
       executionResult = {
@@ -340,6 +379,41 @@
     } finally {
       executionLoading = false;
     }
+  }
+
+  async function loadExecutionHistory(
+    rootPath: string,
+    path: string,
+    requestId: number
+  ): Promise<void> {
+    try {
+      const history = await listPromptRunHistory(rootPath, path);
+      if (requestId !== executionHistoryRequestId) {
+        return;
+      }
+
+      executionHistory = history;
+    } catch {
+      if (requestId !== executionHistoryRequestId) {
+        return;
+      }
+
+      executionHistory = [];
+    } finally {
+      if (requestId === executionHistoryRequestId) {
+        executionHistoryLoading = false;
+      }
+    }
+  }
+
+  async function refreshExecutionHistory(rootPath: string, path: string): Promise<void> {
+    const requestId = ++executionHistoryRequestId;
+    executionHistoryLoading = true;
+    await loadExecutionHistory(rootPath, path, requestId);
+  }
+
+  async function handleOpenRunPath(path: string): Promise<void> {
+    await openAssetPath(path);
   }
 
   async function handleSaveExecutionCredential(): Promise<void> {
@@ -436,6 +510,9 @@
     onExecutionCredentialInput={(value: string) => (executionCredentialDraft = value)}
     onSaveExecutionCredential={handleSaveExecutionCredential}
     onClearExecutionCredential={handleClearExecutionCredential}
+    historyItems={executionHistory}
+    historyLoading={executionHistoryLoading}
+    onOpenRunPath={handleOpenRunPath}
     {validationResult}
     {validationLoading}
     {executionResult}

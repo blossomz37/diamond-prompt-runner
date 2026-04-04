@@ -6,6 +6,7 @@ import type {
   ProjectAssetNode,
   ProjectSummary,
   PromptExecutionResult,
+  PromptRunHistoryEntry,
   RecentProjectEntry,
   TemplateValidationResult
 } from './types/project';
@@ -90,4 +91,14 @@ export async function saveExecutionApiKey(apiKey: string): Promise<ExecutionCred
 
 export async function clearExecutionApiKey(): Promise<ExecutionCredentialStatus> {
   return invoke<ExecutionCredentialStatus>('clear_execution_api_key');
+}
+
+export async function listPromptRunHistory(
+  rootPath: string,
+  relativePath: string
+): Promise<PromptRunHistoryEntry[]> {
+  return invoke<PromptRunHistoryEntry[]>('list_prompt_run_history', {
+    rootPath,
+    relativePath
+  });
 }

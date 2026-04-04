@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 12:57 PM
-modified: 2026-04-03 10:15 PM
+modified: 2026-04-03 10:30 PM
 ---
 
 # Rolling TODO List
@@ -36,7 +36,8 @@ Oldest to Newest
 - [x] Single-Block Execution Slice: add backend-only execution foundation with strict render, direct OpenRouter HTTP, and persisted run artifacts.
 - [x] Single-Block Execution Slice: wire frontend run controls and bottom-panel execution output for active `.tera` tabs.
 - [x] Single-Block Execution Slice: add app-level OpenRouter key storage via native keychain with env-var fallback.
-- [ ] Single-Block Execution Slice: decide whether to keep direct Rust HTTP or replace it with the official SDK before frontend wiring.
+- [x] Single-Block Execution Slice: keep direct Rust HTTP for the first full execution slice instead of switching to the SDK mid-slice.
+- [x] Single-Block Execution Slice: add prompt-scoped browsing for persisted run artifacts and open the run JSON in a tab.
 - [ ] Single-Block Execution Slice: review curated model preset defaults and decide what should seed Diamond presets.
 - [ ] Post-MVP online extension: support scoped `:online` behavior for prompts that require live web research.
 - [ ] Post-MVP online extension: add tests for scoped online-research prompt behavior.

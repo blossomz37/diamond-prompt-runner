@@ -7,6 +7,7 @@
     ExecutionCredentialStatus,
     ProjectAssetNode,
     PromptExecutionResult,
+    PromptRunHistoryEntry,
     ProjectSummary,
     TemplateValidationResult,
     WorkspaceTab
@@ -32,6 +33,9 @@
     onExecutionCredentialInput: (value: string) => void;
     onSaveExecutionCredential: () => void | Promise<void>;
     onClearExecutionCredential: () => void | Promise<void>;
+    historyItems: PromptRunHistoryEntry[];
+    historyLoading: boolean;
+    onOpenRunPath: (path: string) => void | Promise<void>;
     validationResult: TemplateValidationResult | null;
     validationLoading: boolean;
     executionResult: PromptExecutionResult | null;
@@ -58,6 +62,9 @@
     onExecutionCredentialInput,
     onSaveExecutionCredential,
     onClearExecutionCredential,
+    historyItems,
+    historyLoading,
+    onOpenRunPath,
     validationResult,
     validationLoading,
     executionResult,
@@ -169,6 +176,9 @@
           onCredentialInput={onExecutionCredentialInput}
           onSaveCredential={onSaveExecutionCredential}
           onClearCredential={onClearExecutionCredential}
+          recentRuns={historyItems}
+          recentRunsLoading={historyLoading}
+          onOpenRunPath={onOpenRunPath}
         />
       {/if}
     </section>

@@ -6,6 +6,7 @@ import type {
   ExecutionCredentialStatus,
   ProjectAssetNode,
   PromptExecutionResult,
+  PromptRunHistoryEntry,
   ProjectSummary,
   RecentProjectEntry,
   TemplateValidationResult
@@ -16,6 +17,7 @@ const tauri = vi.hoisted(() => ({
   createProject: vi.fn(),
   getRecentProjects: vi.fn(),
   getExecutionCredentialStatus: vi.fn(),
+  listPromptRunHistory: vi.fn(),
   listProjectAssets: vi.fn(),
   openProject: vi.fn(),
   pickDirectory: vi.fn(),
@@ -208,11 +210,47 @@ const keychainCredentialStatus: ExecutionCredentialStatus = {
   hasStoredKey: true
 };
 
+const runHistory: PromptRunHistoryEntry[] = [
+  {
+    runId: 'run-2',
+    path: 'prompts/brief-review.tera',
+    blockName: 'Brief Review',
+    modelId: 'openai/gpt-5.4-nano',
+    status: 'success',
+    runPath: 'runs/run-2.json',
+    startedAt: '2026-04-03T20:20:00Z',
+    completedAt: '2026-04-03T20:20:04Z',
+    outputPreview: 'Earlier persisted output.',
+    error: null
+  }
+];
+
+const runAssetContent: AssetContent = {
+  path: 'runs/run-2.json',
+  kind: 'json',
+  view: 'json',
+  content: JSON.stringify({ runId: 'run-2', output: 'Earlier persisted output.' }, null, 2),
+  isEditable: false,
+  metadata: {
+    kind: 'json',
+    path: 'runs/run-2.json',
+    name: 'run-2.json',
+    sizeBytes: 64,
+    modifiedAt: '2026-04-03T20:20:05Z',
+    details: [{ label: 'Status', value: 'success' }]
+  },
+  parsedJson: {
+    runId: 'run-2',
+    output: 'Earlier persisted output.'
+  }
+};
+
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     tauri.getRecentProjects.mockResolvedValue(recents);
     tauri.getExecutionCredentialStatus.mockResolvedValue(missingCredentialStatus);
+    tauri.listPromptRunHistory.mockResolvedValue(runHistory);
     tauri.pickDirectory.mockResolvedValue('/tmp');
     tauri.createProject.mockResolvedValue(summary);
     tauri.openProject.mockResolvedValue(summary);
@@ -225,6 +263,10 @@ describe('App', () => {
 
       if (relativePath === 'prompts/brief-review.tera') {
         return teraAssetContent;
+      }
+
+      if (relativePath === 'runs/run-2.json') {
+        return runAssetContent;
       }
 
       return assetContent;
@@ -546,5 +588,29 @@ describe('App', () => {
 
     expect(await screen.findByText('Stored in the native keychain for this app.')).toBeInTheDocument();
     expect(input).toHaveValue('');
+  });
+
+  it('shows prompt run history and opens a persisted run artifact', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('prompts'));
+    await fireEvent.click(within(explorer).getByText('brief-review.tera'));
+
+    expect(await screen.findByText('Earlier persisted output.')).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('button', { name: 'Open artifact' }));
+
+    await waitFor(() =>
+      expect(tauri.readProjectAsset).toHaveBeenCalledWith('/tmp/story-lab', 'runs/run-2.json')
+    );
+
+    expect(await screen.findByText('Structured View')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'run-2.json', level: 2 })).toBeInTheDocument();
   });
 });

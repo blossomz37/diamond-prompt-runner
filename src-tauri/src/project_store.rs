@@ -144,6 +144,21 @@ pub struct PromptExecutionResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct PromptRunHistoryEntry {
+    pub run_id: String,
+    pub path: String,
+    pub block_name: String,
+    pub model_id: String,
+    pub status: ExecutionStatus,
+    pub run_path: String,
+    pub started_at: String,
+    pub completed_at: String,
+    pub output_preview: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct ExecutionCredentialStatus {
     pub source: CredentialSource,
     pub has_stored_key: bool,
@@ -509,6 +524,51 @@ pub fn clear_execution_api_key() -> StoreResult<ExecutionCredentialStatus> {
         Ok(()) | Err(keyring::Error::NoEntry) => get_execution_credential_status(),
         Err(error) => Err(keyring_error(error)),
     }
+}
+
+pub fn list_prompt_run_history(root_path: &Path, relative_path: &str) -> StoreResult<Vec<PromptRunHistoryEntry>> {
+    let (root_path, _) = validate_project(root_path)?;
+    let safe_relative = sanitize_relative_path(relative_path)?;
+    let safe_relative_string = safe_relative.to_string_lossy().replace('\\', "/");
+
+    let mut entries = Vec::new();
+    for entry in fs::read_dir(root_path.join("runs"))?.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|value| value.to_str()) != Some("json") {
+            continue;
+        }
+
+        let content = match fs::read_to_string(&path) {
+            Ok(content) => content,
+            Err(_) => continue,
+        };
+
+        let record = match serde_json::from_str::<PersistedRunRecord>(&content) {
+            Ok(record) => record,
+            Err(_) => continue,
+        };
+
+        if record.path != safe_relative_string {
+            continue;
+        }
+
+        let run_path = diff_path(&root_path, &path)?;
+        entries.push(PromptRunHistoryEntry {
+            run_id: record.run_id,
+            path: record.path,
+            block_name: record.block_name,
+            model_id: record.model_id,
+            status: record.status,
+            run_path,
+            started_at: record.started_at,
+            completed_at: record.completed_at,
+            output_preview: record.output.as_deref().map(|value| preview_text(value, 180)),
+            error: record.error,
+        });
+    }
+
+    entries.sort_by(|left, right| right.completed_at.cmp(&left.completed_at));
+    Ok(entries)
 }
 
 fn execute_prompt_block_with_transport<F>(
@@ -1202,6 +1262,30 @@ fn persist_run_record(root_path: &Path, result: &PromptExecutionResult, raw_resp
     Ok(())
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PersistedRunRecord {
+    run_id: String,
+    path: String,
+    block_name: String,
+    model_id: String,
+    status: ExecutionStatus,
+    output: Option<String>,
+    error: Option<String>,
+    started_at: String,
+    completed_at: String,
+}
+
+fn preview_text(value: &str, max_chars: usize) -> String {
+    let trimmed = value.trim();
+    if trimmed.chars().count() <= max_chars {
+        return trimmed.to_string();
+    }
+
+    let preview = trimmed.chars().take(max_chars).collect::<String>();
+    format!("{}...", preview.trim_end())
+}
+
 fn load_execution_api_key() -> StoreResult<String> {
     let stored_key = load_stored_openrouter_api_key()?;
     let environment_key = load_environment_api_key();
@@ -1647,5 +1731,71 @@ mod tests {
 
         assert_eq!(status.source, CredentialSource::Missing);
         assert!(!status.has_stored_key);
+    }
+
+    #[test]
+    fn lists_prompt_run_history_for_matching_prompt() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "History", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        fs::write(
+            root.join("runs").join("run-old.json"),
+            serde_json::to_string_pretty(&json!({
+                "runId": "run-old",
+                "path": "prompts/review.tera",
+                "blockName": "Review",
+                "modelId": "openai/gpt-5.4",
+                "status": "success",
+                "output": "Earlier output",
+                "error": null,
+                "startedAt": "2026-04-03T20:00:00Z",
+                "completedAt": "2026-04-03T20:00:01Z"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        fs::write(
+            root.join("runs").join("run-new.json"),
+            serde_json::to_string_pretty(&json!({
+                "runId": "run-new",
+                "path": "prompts/review.tera",
+                "blockName": "Review",
+                "modelId": "openai/gpt-5.4-nano",
+                "status": "failed",
+                "output": null,
+                "error": "Provider timeout",
+                "startedAt": "2026-04-03T21:00:00Z",
+                "completedAt": "2026-04-03T21:00:02Z"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        fs::write(
+            root.join("runs").join("run-other.json"),
+            serde_json::to_string_pretty(&json!({
+                "runId": "run-other",
+                "path": "prompts/other.tera",
+                "blockName": "Other",
+                "modelId": "openai/gpt-5.4",
+                "status": "success",
+                "output": "Other output",
+                "error": null,
+                "startedAt": "2026-04-03T22:00:00Z",
+                "completedAt": "2026-04-03T22:00:03Z"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let history = list_prompt_run_history(&root, "prompts/review.tera").unwrap();
+
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].run_id, "run-new");
+        assert_eq!(history[1].run_id, "run-old");
+        assert_eq!(history[0].run_path, "runs/run-new.json");
     }
 }

@@ -2,6 +2,7 @@
   import type {
     ExecutionCredentialStatus,
     PromptExecutionResult,
+    PromptRunHistoryEntry,
     TemplateValidationResult,
     WorkspaceTab
   } from '$lib/types/project';
@@ -18,6 +19,9 @@
     onCredentialInput: (value: string) => void;
     onSaveCredential: () => void | Promise<void>;
     onClearCredential: () => void | Promise<void>;
+    recentRuns: PromptRunHistoryEntry[];
+    recentRunsLoading: boolean;
+    onOpenRunPath: (path: string) => void | Promise<void>;
   }
 
   let {
@@ -31,7 +35,10 @@
     credentialLoading,
     onCredentialInput,
     onSaveCredential,
-    onClearCredential
+    onClearCredential,
+    recentRuns,
+    recentRunsLoading,
+    onOpenRunPath
   }: Props = $props();
 
   function tone(status: TemplateValidationResult['status']): string {
@@ -233,6 +240,42 @@
         {:else}
           <p class="empty">Run the active `.tera` prompt to inspect output here.</p>
         {/if}
+
+        <div class="history-card">
+          <div class="heading">
+            <div>
+              <p class="eyebrow">Recent Runs</p>
+              <h3>{tab.title}</h3>
+            </div>
+          </div>
+
+          {#if recentRunsLoading}
+            <p class="empty">Loading persisted runs…</p>
+          {:else if recentRuns.length > 0}
+            <div class="history-list">
+              {#each recentRuns as item (item.runId)}
+                <article class="history-item">
+                  <div class="history-head">
+                    <div>
+                      <strong>{item.runId}</strong>
+                      <p class="empty">{item.completedAt}</p>
+                    </div>
+                    <span class={`badge ${executionTone(item.status)}`}>{item.status}</span>
+                  </div>
+                  <p class="empty">{item.modelId}</p>
+                  {#if item.outputPreview}
+                    <p>{item.outputPreview}</p>
+                  {:else if item.error}
+                    <p>{item.error}</p>
+                  {/if}
+                  <button type="button" onclick={() => onOpenRunPath(item.runPath)}>Open artifact</button>
+                </article>
+              {/each}
+            </div>
+          {:else}
+            <p class="empty">No persisted runs yet for this prompt.</p>
+          {/if}
+        </div>
       </div>
     </div>
   </div>
@@ -261,6 +304,13 @@
     gap: 0.75rem;
   }
 
+  .history-card,
+  .history-list,
+  .history-item {
+    display: grid;
+    gap: 0.75rem;
+  }
+
   .credential-card {
     display: grid;
     gap: 0.75rem;
@@ -268,6 +318,24 @@
     border-radius: 14px;
     border: 1px solid rgba(157, 180, 255, 0.12);
     background: rgba(255, 255, 255, 0.03);
+  }
+
+  .history-item {
+    padding: 0.8rem;
+    border-radius: 14px;
+    border: 1px solid rgba(157, 180, 255, 0.12);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .history-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  strong {
+    font-size: 0.92rem;
   }
 
   .heading {

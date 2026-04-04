@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use project_store::{
     AssetContent, ExecutionCredentialStatus, ProjectAssetNode, ProjectSummary,
-    PromptExecutionResult, RecentProjectEntry, TemplateValidationResult,
+    PromptExecutionResult, PromptRunHistoryEntry, RecentProjectEntry, TemplateValidationResult,
 };
 use tauri::Manager;
 
@@ -105,6 +105,15 @@ fn clear_execution_api_key() -> Result<ExecutionCredentialStatus, String> {
     project_store::clear_execution_api_key().map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn list_prompt_run_history(
+    root_path: String,
+    relative_path: String,
+) -> Result<Vec<PromptRunHistoryEntry>, String> {
+    project_store::list_prompt_run_history(PathBuf::from(root_path).as_path(), &relative_path)
+        .map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -121,7 +130,8 @@ pub fn run() {
             execute_prompt_block,
             get_execution_credential_status,
             save_execution_api_key,
-            clear_execution_api_key
+            clear_execution_api_key,
+            list_prompt_run_history
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

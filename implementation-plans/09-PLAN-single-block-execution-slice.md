@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 8:00 PM
-modified: 2026-04-03 10:15 PM
+modified: 2026-04-03 10:30 PM
 ---
 # Plan To Reach The Single-Block Execution Slice
 
@@ -51,6 +51,13 @@ Sequence around this milestone:
 - Expose minimal key save or clear controls in the bottom-panel execution area for active `.tera` tabs.
 - Add backend unit coverage for credential selection priority and frontend tests for saving the key from the UI.
 
+### Prompt-scoped run history browsing
+
+- List persisted run artifacts from `runs/` for the active `.tera` prompt.
+- Surface recent run summaries in the bottom panel without introducing a separate history screen.
+- Open a selected run artifact JSON in a regular editor tab.
+- Add backend coverage for prompt-scoped run listing and frontend coverage for opening a persisted run artifact.
+
 ## Scope
 
 Included in this slice:
@@ -62,7 +69,7 @@ Included in this slice:
 
 Explicitly out of scope for this slice:
 - pipeline execution
-- run-history browser UX
+- broad run-history workspace UX beyond prompt-scoped browsing in the bottom panel
 - prompt-pack-specific execution logic
 - broad settings UI beyond what is required to prove a single-block run
 - scoped `:online` behavior
@@ -94,6 +101,9 @@ Current recommendation:
 
 Current first-pass implementation default:
 - use direct HTTP from the Rust backend for OpenRouter chat completions
+
+Locked decision:
+- keep direct Rust HTTP for the first full execution slice and defer SDK evaluation until after the slice is complete
 
 Implementation implication:
 - the first slice should optimize for a stable single-provider path rather than a generalized provider framework
@@ -160,7 +170,8 @@ Likely integration points:
 - [x] Implement the first backend-only execution foundation for a single `.tera` prompt tab.
 - [x] Wire frontend run controls and bottom-panel execution output for active `.tera` tabs.
 - [x] Finalize API-key storage approach for local desktop execution with native keychain storage and env-var fallback.
-- [ ] Decide whether to keep direct HTTP for the first full slice or replace it with the official SDK before frontend wiring.
+- [x] Decide to keep direct HTTP for the first full slice instead of switching to the SDK mid-slice.
+- [x] Add prompt-scoped run history browsing and open-artifact support in the bottom panel.
 - [ ] Define exact strict-failure rules for unresolved variables and document references during execution.
 - [ ] Define the on-disk structure for first-pass run artifacts under `runs/`.
 - [ ] Add the execution-slice implementation plan to the umbrella roadmap once decisions are locked.

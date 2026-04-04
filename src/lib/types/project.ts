@@ -94,6 +94,19 @@ export interface PromptExecutionResult {
   completedAt: string;
 }
 
+export interface PromptRunHistoryEntry {
+  runId: string;
+  path: string;
+  blockName: string;
+  modelId: string;
+  status: 'success' | 'failed';
+  runPath: string;
+  startedAt: string;
+  completedAt: string;
+  outputPreview: string | null;
+  error: string | null;
+}
+
 export type ExecutionCredentialSource = 'keychain' | 'environment' | 'missing';
 
 export interface ExecutionCredentialStatus {
