@@ -2,7 +2,7 @@
   "projectId": "sample-project-001",
   "projectName": "Sample Project",
   "createdAt": "2026-04-03T20:00:00Z",
-  "updatedAt": "2026-04-03T20:00:00Z",
+  "updatedAt": "2026-04-04T02:36:11Z",
   "defaultModelPreset": "models/default.yaml",
   "variables": {
     "tone": "precise"
@@ -15,18 +15,84 @@
       "inputBindings": [],
       "modelPreset": null,
       "outputTarget": "run_artifact"
+    },
+    {
+      "blockId": "cascade-worksheet",
+      "name": "Cascade Worksheet",
+      "templateSource": "prompts/cascade-worksheet.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "run_artifact"
+    },
+    {
+      "blockId": "plan-chapter",
+      "name": "Plan Chapter",
+      "templateSource": "prompts/plan-chapter.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "run_artifact"
+    },
+    {
+      "blockId": "draft-chapter",
+      "name": "draft chapter",
+      "templateSource": "prompts/draft-chapter.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "run_artifact"
+    },
+    {
+      "blockId": "repetition-audit",
+      "name": "repetition audit",
+      "templateSource": "prompts/repetition-audit.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "run_artifact"
+    },
+    {
+      "blockId": "edit-style",
+      "name": "edit style",
+      "templateSource": "prompts/edit-style.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "run_artifact"
+    },
+    {
+      "blockId": "edit-craft",
+      "name": "edit craft",
+      "templateSource": "prompts/edit-craft.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "run_artifact"
+    },
+    {
+      "blockId": "final",
+      "name": "final",
+      "templateSource": "prompts/final.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "run_artifact"
+    },
+    {
+      "blockId": "summary",
+      "name": "summary",
+      "templateSource": "prompts/summary.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "run_artifact"
     }
   ],
   "pipelines": [
     {
       "pipelineId": "review-pipeline",
       "name": "Review Pipeline",
-      "orderedBlocks": ["brief-review"],
+      "orderedBlocks": [
+        "brief-review"
+      ],
       "executionMode": "sequential"
     }
   ],
   "uiPreferences": {
-    "theme": "ide-pass",
-    "density": "dense"
+    "density": "dense",
+    "theme": "ide-pass"
   }
 }
