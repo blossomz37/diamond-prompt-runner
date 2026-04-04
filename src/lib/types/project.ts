@@ -84,6 +84,18 @@ export interface OnlineRunMetadata {
   citationCount: number;
 }
 
+export interface ProjectUsageSummary {
+  totalRuns: number;
+  successfulRuns: number;
+  failedRuns: number;
+  totalPromptTokens: number;
+  totalCompletionTokens: number;
+  totalTokens: number;
+  totalCost: number;
+  totalOutputWords: number;
+  totalRetries: number;
+}
+
 export interface UsageMetrics {
   promptTokens: number | null;
   completionTokens: number | null;

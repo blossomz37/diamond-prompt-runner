@@ -11,6 +11,7 @@ import type {
   ProjectPromptBlock,
   ProjectRunHistoryEntry,
   ProjectSummary,
+  ProjectUsageSummary,
   PromptExecutionResult,
   PromptRunHistoryEntry,
   RecentProjectEntry,
@@ -187,4 +188,8 @@ export async function listProjectRunHistory(rootPath: string): Promise<ProjectRu
   return invoke<ProjectRunHistoryEntry[]>('list_project_run_history', {
     rootPath
   });
+}
+
+export async function getProjectUsageSummary(rootPath: string): Promise<ProjectUsageSummary> {
+  return invoke<ProjectUsageSummary>('get_project_usage_summary', { rootPath });
 }

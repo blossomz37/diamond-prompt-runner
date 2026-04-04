@@ -29,6 +29,7 @@ const tauri = vi.hoisted(() => ({
   exportProjectAssets: vi.fn(),
   getRecentProjects: vi.fn(),
   getExecutionCredentialStatus: vi.fn(),
+  getProjectUsageSummary: vi.fn(),
   listProjectPipelines: vi.fn(),
   listProjectPromptBlocks: vi.fn(),
   listProjectRunHistory: vi.fn(),
@@ -76,6 +77,18 @@ const summary: ProjectSummary = {
     runs: 0,
     exports: 0
   }
+};
+
+const emptyUsageSummary = {
+  totalRuns: 0,
+  successfulRuns: 0,
+  failedRuns: 0,
+  totalPromptTokens: 0,
+  totalCompletionTokens: 0,
+  totalTokens: 0,
+  totalCost: 0,
+  totalOutputWords: 0,
+  totalRetries: 0
 };
 
 const recents: RecentProjectEntry[] = [
@@ -458,6 +471,7 @@ describe('App', () => {
     tauri.listProjectPipelines.mockResolvedValue(pipelines);
     tauri.listProjectPromptBlocks.mockResolvedValue(promptBlocks);
     tauri.listProjectRunHistory.mockResolvedValue(projectRunHistory);
+    tauri.getProjectUsageSummary.mockResolvedValue(emptyUsageSummary);
     tauri.listPromptRunHistory.mockResolvedValue(runHistory);
     tauri.pickDirectory.mockResolvedValue('/tmp');
     tauri.createPipeline.mockResolvedValue(createdPipelineResult);

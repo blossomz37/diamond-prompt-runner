@@ -12,6 +12,7 @@
     exportProjectAssets,
     getExecutionCredentialStatus,
     getRecentProjects,
+    getProjectUsageSummary,
     listProjectPromptBlocks,
     listProjectRunHistory,
     listProjectPipelines,
@@ -36,6 +37,7 @@
     ProjectPipeline,
     ProjectPromptBlock,
     ProjectRunHistoryEntry,
+    ProjectUsageSummary,
     PromptExecutionResult,
     PromptRunHistoryEntry,
     ProjectSummary,
@@ -66,6 +68,7 @@
   let executionHistoryLoading = $state(false);
   let projectRunHistory = $state<ProjectRunHistoryEntry[]>([]);
   let projectRunHistoryLoading = $state(false);
+  let projectUsageSummary = $state<ProjectUsageSummary | null>(null);
   let pipelineExecutionResult = $state<PipelineExecutionResult | null>(null);
   let pipelineExecutionLoading = $state(false);
   let pipelineAuthoringLoading = $state(false);
@@ -96,16 +99,18 @@
 
   async function enterWorkspace(summary: ProjectSummary): Promise<void> {
     workspace = summary;
-    const [nodes, pipelines, promptBlocks, runHistory] = await Promise.all([
+    const [nodes, pipelines, promptBlocks, runHistory, usageSummary] = await Promise.all([
       listProjectAssets(summary.rootPath),
       listProjectPipelines(summary.rootPath),
       listProjectPromptBlocks(summary.rootPath),
-      listProjectRunHistory(summary.rootPath)
+      listProjectRunHistory(summary.rootPath),
+      getProjectUsageSummary(summary.rootPath)
     ]);
     assetNodes = nodes;
     projectPipelines = pipelines;
     projectPromptBlocks = promptBlocks;
     projectRunHistory = runHistory;
+    projectUsageSummary = usageSummary;
     tabs = [];
     activePath = null;
     loadingPath = null;
@@ -645,9 +650,13 @@
     projectRunHistoryLoading = true;
 
     try {
-      projectRunHistory = await listProjectRunHistory(rootPath);
+      [projectRunHistory, projectUsageSummary] = await Promise.all([
+        listProjectRunHistory(rootPath),
+        getProjectUsageSummary(rootPath)
+      ]);
     } catch {
       projectRunHistory = [];
+      projectUsageSummary = null;
     } finally {
       projectRunHistoryLoading = false;
     }
@@ -796,6 +805,7 @@
     {pipelineAuthoringLoading}
     {projectRunHistory}
     {projectRunHistoryLoading}
+    {projectUsageSummary}
     onSelectAsset={handleSelectAsset}
     onSelectTab={handleSelectTab}
     onCloseTab={handleCloseTab}

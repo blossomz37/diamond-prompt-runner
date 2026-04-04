@@ -116,6 +116,20 @@ pub struct ExportBundleResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ProjectUsageSummary {
+    pub total_runs: u32,
+    pub successful_runs: u32,
+    pub failed_runs: u32,
+    pub total_prompt_tokens: u64,
+    pub total_completion_tokens: u64,
+    pub total_tokens: u64,
+    pub total_cost: f64,
+    pub total_output_words: u64,
+    pub total_retries: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RecentProjectEntry {
     #[serde(flatten)]
     pub summary: ProjectSummary,
@@ -1002,6 +1016,36 @@ pub fn list_prompt_run_history(root_path: &Path, relative_path: &str) -> StoreRe
 pub fn list_project_run_history(root_path: &Path) -> StoreResult<Vec<ProjectRunHistoryEntry>> {
     let (root_path, _) = validate_project(root_path)?;
     read_run_history_entries(&root_path, None)
+}
+
+pub fn get_project_usage_summary(root_path: &Path) -> StoreResult<ProjectUsageSummary> {
+    let (root_path, _) = validate_project(root_path)?;
+    let entries = read_run_history_entries(&root_path, None)?;
+    let mut summary = ProjectUsageSummary {
+        total_runs: 0,
+        successful_runs: 0,
+        failed_runs: 0,
+        total_prompt_tokens: 0,
+        total_completion_tokens: 0,
+        total_tokens: 0,
+        total_cost: 0.0,
+        total_output_words: 0,
+        total_retries: 0,
+    };
+    for entry in &entries {
+        summary.total_runs += 1;
+        match entry.status {
+            ExecutionStatus::Success => summary.successful_runs += 1,
+            ExecutionStatus::Failed => summary.failed_runs += 1,
+        }
+        summary.total_prompt_tokens += entry.usage.prompt_tokens.unwrap_or(0) as u64;
+        summary.total_completion_tokens += entry.usage.completion_tokens.unwrap_or(0) as u64;
+        summary.total_tokens += entry.usage.total_tokens.unwrap_or(0) as u64;
+        summary.total_cost += entry.usage.cost.unwrap_or(0.0);
+        summary.total_output_words += entry.usage.output_word_count.unwrap_or(0) as u64;
+        summary.total_retries += entry.usage.retry_count.unwrap_or(0);
+    }
+    Ok(summary)
 }
 
 fn read_run_history_entries(

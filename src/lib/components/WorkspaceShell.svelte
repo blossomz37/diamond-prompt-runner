@@ -11,6 +11,7 @@
     ProjectPipeline,
     ProjectPromptBlock,
     ProjectRunHistoryEntry,
+    ProjectUsageSummary,
     PromptExecutionResult,
     PromptRunHistoryEntry,
     SavedPipelineResult,
@@ -33,6 +34,7 @@
     pipelineAuthoringLoading: boolean;
     projectRunHistory: ProjectRunHistoryEntry[];
     projectRunHistoryLoading: boolean;
+    projectUsageSummary: ProjectUsageSummary | null;
     onSelectAsset: (node: ProjectAssetNode) => void | Promise<void>;
     onSelectTab: (path: string) => void;
     onCloseTab: (path: string) => void;
@@ -60,6 +62,7 @@
     historyItems: PromptRunHistoryEntry[];
     historyLoading: boolean;
     onOpenRunPath: (path: string) => void | Promise<void>;
+    onCloseProject: () => void;
     validationResult: TemplateValidationResult | null;
     validationLoading: boolean;
     executionResult: PromptExecutionResult | null;
@@ -80,6 +83,7 @@
     pipelineAuthoringLoading,
     projectRunHistory,
     projectRunHistoryLoading,
+    projectUsageSummary,
     onSelectAsset,
     onSelectTab,
     onCloseTab,
@@ -103,6 +107,7 @@
     historyItems,
     historyLoading,
     onOpenRunPath,
+    onCloseProject,
     validationResult,
     validationLoading,
     executionResult,
@@ -136,9 +141,12 @@
 
 <section class="workspace-shell">
   <header class="topbar panel">
-    <div>
-      <p class="eyebrow">Workspace</p>
-      <h1>{summary.projectName}</h1>
+    <div class="topbar-left">
+      <button type="button" class="back-btn" onclick={onCloseProject} aria-label="Back to projects">←</button>
+      <div>
+        <p class="eyebrow">Workspace</p>
+        <h1>{summary.projectName}</h1>
+      </div>
     </div>
     <div class="counts">
       <span>{summary.counts.documents} docs</span>
@@ -238,6 +246,7 @@
         {exportLoading}
         runHistory={projectRunHistory}
         runHistoryLoading={projectRunHistoryLoading}
+        usageSummary={projectUsageSummary}
         onOpenRunPath={onOpenRunPath}
       />
     </aside>
@@ -297,8 +306,30 @@
   .topbar {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     gap: 1rem;
     padding: 0.95rem 1.1rem;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .back-btn {
+    background: none;
+    border: 1px solid var(--border, #444);
+    border-radius: 4px;
+    color: inherit;
+    font-size: 1.1rem;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .back-btn:hover {
+    background: var(--hover-bg, rgba(255, 255, 255, 0.08));
   }
 
   .eyebrow {

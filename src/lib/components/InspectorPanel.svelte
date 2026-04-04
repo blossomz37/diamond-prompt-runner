@@ -7,6 +7,7 @@
     ProjectPromptBlock,
     ProjectRunHistoryEntry,
     ProjectSummary,
+    ProjectUsageSummary,
     SavedPipelineResult,
     WorkspaceTab
   } from '$lib/types/project';
@@ -32,6 +33,7 @@
     exportLoading: boolean;
     runHistory: ProjectRunHistoryEntry[];
     runHistoryLoading: boolean;
+    usageSummary: ProjectUsageSummary | null;
     onOpenRunPath: (path: string) => void | Promise<void>;
   }
 
@@ -52,6 +54,7 @@
     exportLoading,
     runHistory,
     runHistoryLoading,
+    usageSummary,
     onOpenRunPath
   }: Props = $props();
 
@@ -275,6 +278,40 @@
       </div>
     </dl>
   </section>
+
+  {#if usageSummary && usageSummary.totalRuns > 0}
+    <section class="section">
+      <p class="eyebrow">Usage</p>
+      <dl>
+        <div>
+          <dt>Runs</dt>
+          <dd>{usageSummary.successfulRuns} succeeded · {usageSummary.failedRuns} failed</dd>
+        </div>
+        <div>
+          <dt>Total Tokens</dt>
+          <dd>{usageSummary.totalTokens.toLocaleString()}</dd>
+        </div>
+        {#if usageSummary.totalCost > 0}
+          <div>
+            <dt>Total Cost</dt>
+            <dd>${usageSummary.totalCost.toFixed(4)}</dd>
+          </div>
+        {/if}
+        {#if usageSummary.totalOutputWords > 0}
+          <div>
+            <dt>Output Words</dt>
+            <dd>{usageSummary.totalOutputWords.toLocaleString()}</dd>
+          </div>
+        {/if}
+        {#if usageSummary.totalRetries > 0}
+          <div>
+            <dt>Total Retries</dt>
+            <dd>{usageSummary.totalRetries}</dd>
+          </div>
+        {/if}
+      </dl>
+    </section>
+  {/if}
 
   <section class="section">
     <p class="eyebrow">Inspector</p>

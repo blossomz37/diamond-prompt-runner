@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use project_store::{
     AssetContent, CreatedPromptBlockResult, ExecutionCredentialStatus, ExportBundleResult,
     PipelineExecutionResult, ProjectAssetNode, ProjectPipelineSummary, ProjectPromptBlockSummary,
-    ProjectRunHistoryEntry, ProjectSummary, PromptExecutionResult, PromptRunHistoryEntry,
-    RecentProjectEntry, SavedPipelineResult, TemplateValidationResult,
+    ProjectRunHistoryEntry, ProjectSummary, ProjectUsageSummary, PromptExecutionResult,
+    PromptRunHistoryEntry, RecentProjectEntry, SavedPipelineResult, TemplateValidationResult,
 };
 use tauri::Manager;
 
@@ -219,6 +219,12 @@ fn list_project_run_history(root_path: String) -> Result<Vec<ProjectRunHistoryEn
         .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn get_project_usage_summary(root_path: String) -> Result<ProjectUsageSummary, String> {
+    project_store::get_project_usage_summary(PathBuf::from(root_path).as_path())
+        .map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -245,7 +251,8 @@ pub fn run() {
             save_execution_api_key,
             clear_execution_api_key,
             list_prompt_run_history,
-            list_project_run_history
+            list_project_run_history,
+            get_project_usage_summary
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
