@@ -27,3 +27,12 @@ src-tauri/target/
 fixtures/sample-project/runs/
 workshop-parts/openrouter/OpenRouter Quickstart.md
 .gitignore
+CLAUDE.md
+.gitignore
+.antigravity/settings.json
+.antigravity/tasks.json
+.gitignore
+.gitignore
+dev-mockups/variables-panel.html
+.claude/settings.json
+GEMINI.md
