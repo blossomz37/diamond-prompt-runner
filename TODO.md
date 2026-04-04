@@ -8,8 +8,8 @@ Oldest to Newest
 
 
 ## 2026-04-03
-- [ ] ONGOING: Implementation Plans. `implementation-plans/`
-- [ ] ONGOING: Keep README and AGENTS aligned with the approved tool and commit workflow recommendations.
+- [x] ONGOING: Implementation Plans. `implementation-plans/`
+- [x] ONGOING: Keep README and AGENTS aligned with the approved tool and commit workflow recommendations.
 - [x] Spare parts files from YFD Runner. `workshop-parts/`
 - [x] MVP Specifications. `specifications/`
 - [x] Figma Prototype. Selected `Diamond Runner v2 - IDE Pass`.
@@ -54,6 +54,8 @@ Oldest to Newest
 - [x] Usage Metrics Slice: persist usage metrics in run artifacts and surface them in execution metadata and run history UI.
 - [x] Variable Assignment UI: add global and project variable editing with in-app UI, backend persistence, and template context injection.
 - [x] Workspace Shell Restructure: move Pipelines, Variables, Exports to collapsible left sidebar sections; pipeline authoring opens in center pane; strip Inspector to read-only.
+- [x] Settings and Model Presets Slice: add project settings UI, automatic model preset generator, and enable inline dynamic overrides for model choices.
+- [x] Output Target & JSON Slimdown Slice: implement document artifact extraction loop (`outputTarget: 'document'`); purge payload bloat, extract `variables`, and map `document_path` on JSON records.
 
 
 ## Post-MVP

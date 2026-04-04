@@ -11,7 +11,7 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 - Product spec: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
 - Approved prototype: `Diamond Runner v2 - IDE Pass`
 - App direction: Tauri + Svelte desktop app with an IDE-like shell
-- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, the Single-Block Execution Slice, the Pipeline Runner Slice, the Run History Slice, the Pipeline Authoring Slice, the Export Bundle Slice, the Usage Metrics Slice, the Variable Assignment UI, and the Workspace Shell Restructure are complete
+- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, the Single-Block Execution Slice, the Pipeline Runner Slice, the Run History Slice, the Pipeline Authoring Slice, the Export Bundle Slice, the Usage Metrics Slice, the Variable Assignment UI, the Workspace Shell Restructure, the Settings and Model Presets Slice, and the Output Target & JSON Slimdown Slice are complete
 - Current Rendering and Validation behavior:
 	- markdown, text, `.tera`, and model YAML assets are editable in the workspace
 	- new prompt blocks can be created directly from the explorer without hand-editing `project.json`
@@ -26,8 +26,8 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 	- the first full execution slice stays on direct Rust HTTP to OpenRouter
 	- execution now resolves the OpenRouter API key from native app keychain storage first, then falls back to `OPENROUTER_API_KEY`
 	- execution fails strictly on invalid or missing `doc("...")` references and on unresolved variables unless the template guards them explicitly
-	- run artifacts are persisted under `runs/` as typed JSON records with `artifactVersion`, prompt and model metadata, rendered prompt snapshot, output or error fields, timestamps, and raw provider response payload
-	- new projects now seed a small curated preset set inferred from `workshop-parts/openrouter/models/`: `default`, `gpt-5.4`, `gpt-5.4-nano`, `claude-sonnet-4.6`, and `gpt-5.2-think`
+	- run artifacts are persisted under `runs/` as typed JSON records with `artifactVersion`, prompt and model metadata, a `document_path` reference if writing to the `documents/` pool directly, timestamps, and full `variables` injection tracking
+	- new projects now seed a small curated preset set inferred from `workshop-parts/openrouter/models/` and model presets can now dynamically generate YAML skeletons purely from entering a known model string ID in settings
 	- active editable `.tera` tabs now expose a `Run` action in the editor
 	- the bottom panel shows latest execution metadata and output alongside validation and preview
 	- the bottom panel also exposes minimal save or clear controls for the app-level OpenRouter key
@@ -52,7 +52,7 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 	- pipeline create and edit open in the center pane as virtual tabs
 	- the right inspector is read-only: Project summary, Usage, File Metadata, and Run History
 
-Active implementation plan: `implementation-plans/17-PLAN-workspace-shell-restructure.md`
+Active implementation plan: `implementation-plans/19-PLAN-output-target-and-json-slimdown.md`
 
 ## Recommended Agent Setup
 
