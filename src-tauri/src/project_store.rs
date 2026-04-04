@@ -103,6 +103,15 @@ pub struct SavedPipelineResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ExportBundleResult {
+    pub summary: ProjectSummary,
+    pub bundle_name: String,
+    pub bundle_path: String,
+    pub exported_paths: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RecentProjectEntry {
     #[serde(flatten)]
     pub summary: ProjectSummary,
@@ -624,6 +633,82 @@ pub fn update_pipeline(
     Ok(SavedPipelineResult {
         summary,
         pipeline_id: pipeline_id.to_string(),
+    })
+}
+
+pub fn export_project_assets(
+    root_path: &Path,
+    bundle_name: &str,
+    relative_paths: &[String],
+    app_data_dir: &Path,
+) -> StoreResult<ExportBundleResult> {
+    let trimmed_name = bundle_name.trim();
+    if trimmed_name.is_empty() {
+        return Err(ProjectStoreError::message("Export name cannot be empty."));
+    }
+
+    if relative_paths.is_empty() {
+        return Err(ProjectStoreError::message(
+            "Select at least one project asset to export.",
+        ));
+    }
+
+    let (root_path, manifest) = validate_project(root_path)?;
+    let bundle_slug = unique_export_slug(&root_path, trimmed_name);
+    let bundle_path = format!("exports/{bundle_slug}");
+    let bundle_root = root_path.join(&bundle_path);
+    fs::create_dir_all(&bundle_root)?;
+
+    let mut exported_paths = Vec::new();
+    for relative_path in relative_paths {
+        let safe_relative = sanitize_relative_path(relative_path)?;
+        let safe_relative_string = safe_relative.to_string_lossy().replace('\\', "/");
+        let kind = classify_asset(&safe_relative_string, false);
+
+        if !is_exportable_kind(&kind) {
+            return Err(ProjectStoreError::message(format!(
+                "Asset `{safe_relative_string}` cannot be exported in this slice."
+            )));
+        }
+
+        let source_path = root_path.join(&safe_relative);
+        if !source_path.is_file() {
+            return Err(ProjectStoreError::message(format!(
+                "Asset `{safe_relative_string}` was not found on disk."
+            )));
+        }
+
+        let destination_path = bundle_root.join(&safe_relative);
+        if let Some(parent) = destination_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::copy(&source_path, &destination_path)?;
+        exported_paths.push(safe_relative_string);
+    }
+
+    let export_manifest = json!({
+        "bundleName": trimmed_name,
+        "bundlePath": bundle_path,
+        "exportedAt": timestamp(),
+        "projectName": manifest.project_name,
+        "paths": exported_paths,
+    });
+    fs::write(
+        bundle_root.join("export.json"),
+        serde_json::to_string_pretty(&export_manifest)?,
+    )?;
+
+    let summary = summarize_project(&root_path, &manifest)?;
+    update_recent_projects(app_data_dir, &summary)?;
+
+    Ok(ExportBundleResult {
+        summary,
+        bundle_name: trimmed_name.to_string(),
+        bundle_path,
+        exported_paths: relative_paths
+            .iter()
+            .map(|path| path.replace('\\', "/"))
+            .collect(),
     })
 }
 
@@ -1452,6 +1537,22 @@ fn unique_pipeline_slug(manifest: &ProjectManifest, pipeline_name: &str) -> Stri
     }
 }
 
+fn unique_export_slug(root_path: &Path, export_name: &str) -> String {
+    let base_slug = slugify_prompt_name(export_name);
+    let mut candidate = base_slug.clone();
+    let mut suffix = 2usize;
+
+    loop {
+        let export_root = root_path.join("exports").join(&candidate);
+        if !export_root.exists() {
+            return candidate;
+        }
+
+        candidate = format!("{base_slug}-{suffix}");
+        suffix += 1;
+    }
+}
+
 fn validate_pipeline_block_ids(
     manifest: &ProjectManifest,
     ordered_block_ids: &[String],
@@ -1525,6 +1626,18 @@ fn classify_asset(relative_path: &str, is_directory: bool) -> AssetKind {
         "json" => AssetKind::Json,
         _ => AssetKind::Unknown,
     }
+}
+
+fn is_exportable_kind(kind: &AssetKind) -> bool {
+    matches!(
+        kind,
+        AssetKind::Manifest
+            | AssetKind::Markdown
+            | AssetKind::Text
+            | AssetKind::Tera
+            | AssetKind::Yaml
+            | AssetKind::Json
+    )
 }
 
 fn is_editable_kind(kind: &AssetKind) -> bool {
@@ -2812,6 +2925,42 @@ mod tests {
         .unwrap_err();
 
         assert!(error.to_string().contains("duplicated"));
+    }
+
+    #[test]
+    fn exports_selected_assets_into_a_bundle_directory() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "Exports", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        fs::write(root.join("documents").join("context.md"), "Doc body").unwrap();
+        fs::write(root.join("prompts").join("review.tera"), "Review doc").unwrap();
+
+        let result = export_project_assets(
+            &root,
+            "Session Export",
+            &["documents/context.md".to_string(), "prompts/review.tera".to_string()],
+            &app_data,
+        )
+        .unwrap();
+
+        assert_eq!(result.bundle_path, "exports/session-export");
+        assert!(root.join("exports").join("session-export").join("documents").join("context.md").is_file());
+        assert!(root.join("exports").join("session-export").join("prompts").join("review.tera").is_file());
+        assert!(root.join("exports").join("session-export").join("export.json").is_file());
+    }
+
+    #[test]
+    fn rejects_export_bundle_without_any_selected_assets() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "ExportsValidation", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let error = export_project_assets(&root, "Empty Export", &[], &app_data).unwrap_err();
+
+        assert!(error.to_string().contains("Select at least one project asset"));
     }
 
     #[test]

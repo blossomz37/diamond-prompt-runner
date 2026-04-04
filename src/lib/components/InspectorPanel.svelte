@@ -1,17 +1,21 @@
 <script lang="ts">
   import type {
     AssetMetadata,
+    ExportBundleResult,
     PipelineExecutionResult,
     ProjectPipeline,
     ProjectPromptBlock,
     ProjectRunHistoryEntry,
+    ProjectSummary,
     SavedPipelineResult,
-    ProjectSummary
+    WorkspaceTab
   } from '$lib/types/project';
 
   interface Props {
     summary: ProjectSummary;
     metadata: AssetMetadata | null;
+    openTabs: WorkspaceTab[];
+    activePath: string | null;
     pipelines: ProjectPipeline[];
     promptBlocks: ProjectPromptBlock[];
     pipelineExecution: PipelineExecutionResult | null;
@@ -24,6 +28,8 @@
       name: string,
       orderedBlockIds: string[]
     ) => Promise<SavedPipelineResult>;
+    onExportAssets: (bundleName: string, relativePaths: string[]) => Promise<ExportBundleResult>;
+    exportLoading: boolean;
     runHistory: ProjectRunHistoryEntry[];
     runHistoryLoading: boolean;
     onOpenRunPath: (path: string) => void | Promise<void>;
@@ -32,6 +38,8 @@
   let {
     summary,
     metadata,
+    openTabs,
+    activePath,
     pipelines,
     promptBlocks,
     pipelineExecution,
@@ -40,6 +48,8 @@
     onRunPipeline,
     onCreatePipeline,
     onUpdatePipeline,
+    onExportAssets,
+    exportLoading,
     runHistory,
     runHistoryLoading,
     onOpenRunPath
@@ -53,6 +63,9 @@
   let editingPipelineName = $state('');
   let editingPipelineBlocks = $state<string[]>([]);
   let editingBlockChoice = $state('');
+  let exportBundleName = $state('Export Bundle');
+  let selectedExportPaths = $state<string[]>([]);
+  let lastExportPath = $state<string | null>(null);
   let historyFilter = $state('all');
 
   const defaultPromptBlockChoice = $derived(promptBlocks[0]?.blockId ?? '');
@@ -68,6 +81,27 @@
     if (!editingBlockChoice || editingPipelineBlocks.includes(editingBlockChoice)) {
       editingBlockChoice =
         promptBlocks.find((block) => !editingPipelineBlocks.includes(block.blockId))?.blockId ?? '';
+    }
+  });
+
+  const exportableTabs = $derived.by(() =>
+    openTabs.filter((tab) => ['manifest', 'markdown', 'text', 'tera', 'yaml', 'json'].includes(tab.kind))
+  );
+
+  $effect(() => {
+    const available = exportableTabs.map((tab) => tab.path);
+    const nextSelectedPaths = selectedExportPaths.filter((path) => available.includes(path));
+
+    if (
+      nextSelectedPaths.length !== selectedExportPaths.length ||
+      nextSelectedPaths.some((path, index) => path !== selectedExportPaths[index])
+    ) {
+      selectedExportPaths = nextSelectedPaths;
+      return;
+    }
+
+    if (nextSelectedPaths.length === 0 && activePath && available.includes(activePath)) {
+      selectedExportPaths = [activePath];
     }
   });
 
@@ -205,6 +239,21 @@
     await onUpdatePipeline(editingPipelineId, editingPipelineName.trim(), editingPipelineBlocks);
     cancelEditPipeline();
   }
+
+  function toggleExportPath(path: string): void {
+    if (selectedExportPaths.includes(path)) {
+      selectedExportPaths = selectedExportPaths.filter((item) => item !== path);
+      return;
+    }
+
+    selectedExportPaths = [...selectedExportPaths, path];
+  }
+
+  async function handleExportSubmit(): Promise<void> {
+    const result = await onExportAssets(exportBundleName.trim(), selectedExportPaths);
+    exportBundleName = 'Export Bundle';
+    lastExportPath = result.bundlePath;
+  }
 </script>
 
 <aside class="inspector">
@@ -257,6 +306,49 @@
       </dl>
     {:else}
       <p class="empty">Open a file from the explorer to inspect file metadata here.</p>
+    {/if}
+  </section>
+
+  <section class="section">
+    <p class="eyebrow">Exports</p>
+    {#if exportableTabs.length === 0}
+      <p class="empty">Open one or more supported assets in tabs to export them as a derived bundle.</p>
+    {:else}
+      <form class="pipeline-form" onsubmit={(event) => { event.preventDefault(); void handleExportSubmit(); }}>
+        <input
+          type="text"
+          bind:value={exportBundleName}
+          aria-label="Export bundle name"
+          placeholder="Export bundle name"
+          disabled={exportLoading}
+        />
+        <div class="export-list">
+          {#each exportableTabs as tab (tab.path)}
+            <label class="export-item">
+              <input
+                type="checkbox"
+                checked={selectedExportPaths.includes(tab.path)}
+                onclick={() => toggleExportPath(tab.path)}
+                disabled={exportLoading}
+              />
+              <span>{tab.title}</span>
+              <small>{tab.path}</small>
+            </label>
+          {/each}
+        </div>
+        <div class="pipeline-form-actions">
+          <button
+            type="submit"
+            class="mini-action primary"
+            disabled={exportLoading || !exportBundleName.trim() || selectedExportPaths.length === 0}
+          >
+            {exportLoading ? 'Exporting…' : 'Export Bundle'}
+          </button>
+          {#if lastExportPath}
+            <p class="meta">Last export: {lastExportPath}</p>
+          {/if}
+        </div>
+      </form>
     {/if}
   </section>
 
@@ -626,6 +718,29 @@
     display: flex;
     gap: 0.35rem;
     flex-wrap: wrap;
+  }
+
+  .export-list {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .export-item {
+    display: grid;
+    gap: 0.15rem;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.55rem;
+    align-items: start;
+  }
+
+  .export-item span,
+  .export-item small {
+    grid-column: 2;
+  }
+
+  .export-item small {
+    color: var(--text-soft);
+    word-break: break-word;
   }
 
   .pipeline-steps {

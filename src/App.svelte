@@ -9,6 +9,7 @@
     createPromptBlock,
     executePipeline,
     executePromptBlock,
+    exportProjectAssets,
     getExecutionCredentialStatus,
     getRecentProjects,
     listProjectPromptBlocks,
@@ -29,6 +30,7 @@
   import type {
     ExecutionCredentialStatus,
     CreatedPromptBlockResult,
+    ExportBundleResult,
     PipelineExecutionResult,
     ProjectAssetNode,
     ProjectPipeline,
@@ -67,6 +69,7 @@
   let pipelineExecutionResult = $state<PipelineExecutionResult | null>(null);
   let pipelineExecutionLoading = $state(false);
   let pipelineAuthoringLoading = $state(false);
+  let exportLoading = $state(false);
   let promptCreationLoading = $state(false);
   let executionCredentialStatus = $state<ExecutionCredentialStatus>({
     source: 'missing',
@@ -116,6 +119,7 @@
     pipelineExecutionResult = null;
     pipelineExecutionLoading = false;
     pipelineAuthoringLoading = false;
+    exportLoading = false;
     mode = 'workspace';
   }
 
@@ -641,6 +645,46 @@
     projectPromptBlocks = promptBlocks;
   }
 
+  async function handleExportAssets(
+    bundleName: string,
+    relativePaths: string[]
+  ): Promise<ExportBundleResult> {
+    if (!workspace || exportLoading) {
+      throw new Error('Export is not available right now.');
+    }
+
+    const dirtyTab = tabs.find(
+      (tab) =>
+        relativePaths.includes(tab.path) &&
+        tab.isEditable &&
+        tab.draftContent !== tab.savedContent
+    );
+
+    if (dirtyTab) {
+      const error = new Error(
+        `Save changes to ${dirtyTab.title} before exporting. Export bundles use the saved files on disk.`
+      );
+      errorMessage = error.message;
+      throw error;
+    }
+
+    exportLoading = true;
+    errorMessage = null;
+
+    try {
+      const result = await exportProjectAssets(workspace.rootPath, bundleName, relativePaths);
+      workspace = result.summary;
+      recentProjects = await getRecentProjects();
+      assetNodes = await listProjectAssets(result.summary.rootPath);
+      return result;
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : 'Failed to export project assets.';
+      throw error;
+    } finally {
+      exportLoading = false;
+    }
+  }
+
   async function handleOpenRunPath(path: string): Promise<void> {
     await openAssetPath(path);
   }
@@ -744,6 +788,8 @@
     onRunPipeline={handleRunPipeline}
     onCreatePipeline={handleCreatePipeline}
     onUpdatePipeline={handleUpdatePipeline}
+    onExportAssets={handleExportAssets}
+    {exportLoading}
     onCreatePrompt={handleCreatePrompt}
     {promptCreationLoading}
     credentialState={executionCredentialStatus}

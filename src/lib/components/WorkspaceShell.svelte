@@ -4,6 +4,7 @@
   import InspectorPanel from '$lib/components/InspectorPanel.svelte';
   import ValidationPanel from '$lib/components/ValidationPanel.svelte';
   import type {
+    ExportBundleResult,
     ExecutionCredentialStatus,
     PipelineExecutionResult,
     ProjectAssetNode,
@@ -46,6 +47,8 @@
       name: string,
       orderedBlockIds: string[]
     ) => Promise<SavedPipelineResult>;
+    onExportAssets: (bundleName: string, relativePaths: string[]) => Promise<ExportBundleResult>;
+    exportLoading: boolean;
     onCreatePrompt: (name: string) => void | Promise<void>;
     promptCreationLoading: boolean;
     credentialState: ExecutionCredentialStatus;
@@ -87,6 +90,8 @@
     onRunPipeline,
     onCreatePipeline,
     onUpdatePipeline,
+    onExportAssets,
+    exportLoading,
     onCreatePrompt,
     promptCreationLoading,
     credentialState,
@@ -227,6 +232,10 @@
         onRunPipeline={onRunPipeline}
         onCreatePipeline={onCreatePipeline}
         onUpdatePipeline={onUpdatePipeline}
+        openTabs={tabs}
+        activePath={activePath}
+        onExportAssets={onExportAssets}
+        {exportLoading}
         runHistory={projectRunHistory}
         runHistoryLoading={projectRunHistoryLoading}
         onOpenRunPath={onOpenRunPath}

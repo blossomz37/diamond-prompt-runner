@@ -4,6 +4,7 @@ import type {
   AssetContent,
   CreatedPromptBlockResult,
   ExecutionCredentialStatus,
+  ExportBundleResult,
   PipelineExecutionResult,
   ProjectAssetNode,
   ProjectPipeline,
@@ -99,6 +100,18 @@ export async function updatePipeline(
     pipelineId,
     pipelineName,
     orderedBlockIds
+  });
+}
+
+export async function exportProjectAssets(
+  rootPath: string,
+  bundleName: string,
+  relativePaths: string[]
+): Promise<ExportBundleResult> {
+  return invoke<ExportBundleResult>('export_project_assets', {
+    rootPath,
+    bundleName,
+    relativePaths
   });
 }
 

@@ -3,10 +3,10 @@ mod project_store;
 use std::path::PathBuf;
 
 use project_store::{
-    AssetContent, CreatedPromptBlockResult, ExecutionCredentialStatus, PipelineExecutionResult,
-    ProjectAssetNode, ProjectPipelineSummary, ProjectPromptBlockSummary, ProjectRunHistoryEntry,
-    ProjectSummary, PromptExecutionResult, PromptRunHistoryEntry, RecentProjectEntry,
-    SavedPipelineResult, TemplateValidationResult,
+    AssetContent, CreatedPromptBlockResult, ExecutionCredentialStatus, ExportBundleResult,
+    PipelineExecutionResult, ProjectAssetNode, ProjectPipelineSummary, ProjectPromptBlockSummary,
+    ProjectRunHistoryEntry, ProjectSummary, PromptExecutionResult, PromptRunHistoryEntry,
+    RecentProjectEntry, SavedPipelineResult, TemplateValidationResult,
 };
 use tauri::Manager;
 
@@ -127,6 +127,23 @@ fn update_pipeline(
 }
 
 #[tauri::command]
+fn export_project_assets(
+    app: tauri::AppHandle,
+    root_path: String,
+    bundle_name: String,
+    relative_paths: Vec<String>,
+) -> Result<ExportBundleResult, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::export_project_assets(
+        PathBuf::from(root_path).as_path(),
+        &bundle_name,
+        &relative_paths,
+        &app_data_dir,
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn read_project_asset(root_path: String, relative_path: String) -> Result<AssetContent, String> {
     project_store::read_project_asset(PathBuf::from(root_path).as_path(), &relative_path)
         .map_err(|error| error.to_string())
@@ -218,6 +235,7 @@ pub fn run() {
             list_project_prompt_blocks,
             create_pipeline,
             update_pipeline,
+            export_project_assets,
             read_project_asset,
             write_project_asset,
             validate_project_template,

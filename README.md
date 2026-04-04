@@ -11,7 +11,7 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 - Product spec: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
 - Approved prototype: `Diamond Runner v2 - IDE Pass`
 - App direction: Tauri + Svelte desktop app with an IDE-like shell
-- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, the Single-Block Execution Slice, the Pipeline Runner Slice, the Run History Slice, and the Pipeline Authoring Slice are complete
+- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, the Single-Block Execution Slice, the Pipeline Runner Slice, the Run History Slice, the Pipeline Authoring Slice, and the Export Bundle Slice are complete
 - Current Rendering and Validation behavior:
 	- markdown, text, `.tera`, and model YAML assets are editable in the workspace
 	- new prompt blocks can be created directly from the explorer without hand-editing `project.json`
@@ -38,8 +38,10 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 	- pipeline runs are guarded against unsaved related `.tera` drafts so the user does not accidentally run stale saved prompt files
 	- the inspector now shows project-wide persisted run history sourced from `runs/` and can filter those artifacts by block or pipeline
 	- pipeline-originated block runs now retain pipeline metadata in their persisted artifacts so project history can group and inspect them later
+	- the inspector can export selected open tabs into a derived bundle under `exports/` and writes bundle metadata alongside the copied artifacts
+	- export bundles are derived from saved files on disk and block attempts to export unsaved editable drafts
 
-Active implementation plan: `implementation-plans/12-PLAN-pipeline-authoring-slice.md`
+Active implementation plan: `implementation-plans/13-PLAN-export-bundle-slice.md`
 
 ## Recommended Agent Setup
 

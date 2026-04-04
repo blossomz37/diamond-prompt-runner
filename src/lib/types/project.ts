@@ -135,6 +135,13 @@ export interface SavedPipelineResult {
   pipelineId: string;
 }
 
+export interface ExportBundleResult {
+  summary: ProjectSummary;
+  bundleName: string;
+  bundlePath: string;
+  exportedPaths: string[];
+}
+
 export interface PipelineExecutionResult {
   pipelineId: string;
   pipelineName: string;

@@ -18,9 +18,10 @@ Current slice status:
 - the Pipeline Runner Slice is complete
 - the Run History Slice is complete
 - the Pipeline Authoring Slice is complete
+- the Export Bundle Slice is complete
 
-Next active milestone plan after the Run History Slice:
-- `implementation-plans/12-PLAN-pipeline-authoring-slice.md`
+Latest completed milestone plan:
+- `implementation-plans/13-PLAN-export-bundle-slice.md`
 
 Sequence after Milestone 1:
 - completed small follow-up: unavailable-recents `Locate` flow
@@ -30,7 +31,7 @@ Sequence after Milestone 1:
 - completed milestone: Pipeline Runner Slice
 - completed milestone: Run History Slice
 - completed milestone: Pipeline Authoring Slice
-- later exports
+- completed milestone: Export Bundle Slice
 - later scoped online-research extension
 
 ## Implementation Plan

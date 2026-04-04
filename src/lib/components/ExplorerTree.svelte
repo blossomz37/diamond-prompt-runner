@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { SvelteSet } from 'svelte/reactivity';
   import type { ProjectAssetNode } from '$lib/types/project';
 
   interface Props {
@@ -10,19 +9,19 @@
 
   let { nodes, activePath, onSelectPath }: Props = $props();
 
-  let openDirs = new SvelteSet<string>();
+  let openDirs = $state<string[]>([]);
 
   function toggleDir(path: string): void {
-    if (openDirs.has(path)) {
-      openDirs.delete(path);
+    if (openDirs.includes(path)) {
+      openDirs = openDirs.filter((entry) => entry !== path);
     } else {
-      openDirs.add(path);
+      openDirs = [...openDirs, path];
     }
   }
 
   function iconFor(node: ProjectAssetNode): string {
     if (node.isDirectory) {
-      return openDirs.has(node.path) ? '▾' : '▸';
+      return openDirs.includes(node.path) ? '▾' : '▸';
     }
 
     switch (node.kind) {
@@ -55,7 +54,7 @@
       <span>{node.name}</span>
     </button>
 
-    {#if node.children.length > 0 && openDirs.has(node.path)}
+    {#if node.children.length > 0 && openDirs.includes(node.path)}
       <div class="children">
         {#each node.children as child (child.path)}
           {@render renderNode(child, depth + 1)}
