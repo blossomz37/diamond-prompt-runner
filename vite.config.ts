@@ -1,3 +1,4 @@
+// @ts-ignore - node types missing in DevEnvironment temporarily
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';

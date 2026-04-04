@@ -116,7 +116,9 @@ export interface PromptExecutionResult {
   modelPreset: string;
   modelId: string;
   status: 'success' | 'failed';
-  renderedPrompt: string;
+  outputTarget: string;
+  documentPath: string | null;
+  variables: Record<string, string>;
   output: string | null;
   error: string | null;
   runPath: string;

@@ -215,7 +215,7 @@
         {:else if execution}
           <div class="run-action state-done">
             <button
-              type="primary"
+              type="button"
               class="primary run-action-btn"
               onclick={() => onExecute(tab!.path)}
             >
@@ -286,6 +286,22 @@
                 <dd>{execution.online.citationCount}</dd>
               </div>
             {/if}
+            {#if execution.outputTarget === 'document' || execution.outputTarget === 'both'}
+              <div>
+                <dt>Output Document</dt>
+                <dd>{execution.documentPath || 'None'}</dd>
+              </div>
+            {/if}
+            <div>
+              <dt>Variables</dt>
+              <dd>
+                {#if Object.keys(execution.variables).length > 0}
+                  {Object.entries(execution.variables).map(([k, v]) => `${k}=${v}`).join(', ')}
+                {:else}
+                  None
+                {/if}
+              </dd>
+            </div>
             <div>
               <dt>Run File</dt>
               <dd>{execution.runPath || 'Not persisted'}</dd>
@@ -295,7 +311,7 @@
           <div class="run-action state-ready">
             <p class="empty">Context is ready. Assemble references and execute via OpenRouter.</p>
             <button
-              type="primary"
+              type="button"
               class="primary run-action-btn"
               onclick={() => onExecute(tab!.path)}
               disabled={!credentialState.hasStoredKey}
@@ -323,7 +339,18 @@
         <p class="eyebrow">Latest Run</p>
         {#if executionLoading}
           <p class="empty">Waiting for provider response…</p>
+        {:else if execution?.documentPath && execution?.output == null}
+          <div class="messages info">
+            <h4>Saved to Workspace</h4>
+            <p>The output was successfully generated and written directly to <code>{execution.documentPath}</code>.</p>
+          </div>
         {:else if execution?.output}
+          {#if execution?.documentPath}
+            <div class="messages info" style="margin-bottom: 0.8rem;">
+              <h4>Saved to Workspace</h4>
+              <p>The output below was also written to <code>{execution.documentPath}</code>.</p>
+            </div>
+          {/if}
           <pre>{execution.output}</pre>
         {:else if execution?.error}
           <p class="empty">The latest execution failed before producing output.</p>

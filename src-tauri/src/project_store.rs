@@ -257,7 +257,9 @@ pub struct PromptExecutionResult {
     pub model_preset: String,
     pub model_id: String,
     pub status: ExecutionStatus,
-    pub rendered_prompt: String,
+    pub output_target: String,
+    pub document_path: Option<String>,
+    pub variables: std::collections::BTreeMap<String, String>,
     pub output: Option<String>,
     pub error: Option<String>,
     pub run_path: String,
@@ -1412,6 +1414,35 @@ where
                 .unwrap_or("Prompt")
                 .to_string()
         });
+        
+    let output_target = linked_block
+        .map(|block| block.output_target.clone())
+        .unwrap_or_else(|| "run_artifact".to_string());
+
+    let trimmed_output = output.trim().to_string();
+    let mut document_path = None;
+    let mut final_output_for_json = Some(trimmed_output.clone());
+
+    if output_target == "document" || output_target == "both" {
+        let block_slug = slugify_prompt_name(&block_name);
+        let doc_filename = format!("{block_slug}.md");
+        let doc_relative_path = format!("documents/{doc_filename}");
+        let doc_absolute_path = root_path.join("documents").join(&doc_filename);
+        
+        if let Some(parent) = doc_absolute_path.parent() {
+            let _ = fs::create_dir_all(parent);
+        }
+        
+        if let Err(e) = fs::write(&doc_absolute_path, &trimmed_output) {
+            return Err(ProjectStoreError::message(format!("Failed to write document output: {e}")));
+        }
+        document_path = Some(doc_relative_path);
+        
+        if output_target == "document" {
+            final_output_for_json = None;
+        }
+    }
+
     let result = PromptExecutionResult {
         run_id: run_id.clone(),
         path: safe_relative_string.clone(),
@@ -1422,21 +1453,23 @@ where
         model_preset,
         model_id,
         status: ExecutionStatus::Success,
-        rendered_prompt,
-        output: Some(output.trim().to_string()),
+        output_target,
+        document_path,
+        variables: prepared.variables,
+        output: final_output_for_json,
         error: None,
         run_path: run_path.clone(),
         started_at,
         completed_at,
         online: extract_online_run_metadata(&response, online_enabled),
         usage: {
-            let mut metrics = extract_usage_metrics(&response, Some(output.trim()));
+            let mut metrics = extract_usage_metrics(&response, Some(&trimmed_output));
             metrics.retry_count = if retry_count > 0 { Some(retry_count) } else { None };
             metrics
         },
     };
 
-    persist_run_record(&root_path, &result, &response)?;
+    persist_run_record(&root_path, &result)?;
     Ok(result)
 }
 
@@ -2086,11 +2119,11 @@ fn build_validation_result(
     }
 }
 
-#[derive(Debug)]
 struct PreparedTemplateContext {
     content: String,
     context: Context,
     model_id: String,
+    variables: std::collections::BTreeMap<String, String>,
     warnings: Vec<String>,
     errors: Vec<String>,
 }
@@ -2122,6 +2155,8 @@ fn prepare_template_context(
     context.insert("now_iso", &timestamp());
     context.insert("current_date", &Utc::now().format("%Y-%m-%d").to_string());
 
+    let mut resolved_variables = std::collections::BTreeMap::new();
+
     // Global variables — lowest priority; project variables override these.
     if let Some(app_data_dir) = app_data_dir {
         let global_vars = read_global_variables_store(app_data_dir);
@@ -2129,6 +2164,7 @@ fn prepare_template_context(
         for (name, value) in &global_vars {
             if is_identifier_like(name) {
                 context.insert(name, value);
+                resolved_variables.insert(name.clone(), value.clone());
             }
         }
     }
@@ -2138,6 +2174,14 @@ fn prepare_template_context(
     for (name, value) in &manifest.variables {
         if is_identifier_like(name) {
             context.insert(name, value);
+            
+            let stringified = match value {
+                Value::String(s) => s.clone(),
+                Value::Number(n) => n.to_string(),
+                Value::Bool(b) => b.to_string(),
+                _ => value.to_string(),
+            };
+            resolved_variables.insert(name.clone(), stringified);
         }
     }
 
@@ -2156,6 +2200,7 @@ fn prepare_template_context(
         content,
         context,
         model_id,
+        variables: resolved_variables,
         warnings,
         errors,
     })
@@ -2455,8 +2500,8 @@ fn extract_completion_text(response: &Value) -> String {
         .unwrap_or_default()
 }
 
-fn persist_run_record(root_path: &Path, result: &PromptExecutionResult, raw_response: &Value) -> StoreResult<()> {
-    let run_record = PersistedRunRecord::from_result(result, raw_response.clone());
+fn persist_run_record(root_path: &Path, result: &PromptExecutionResult) -> StoreResult<()> {
+    let run_record = PersistedRunRecord::from_result(result);
     fs::write(root_path.join(&result.run_path), serde_json::to_string_pretty(&run_record)?)?;
     Ok(())
 }
@@ -2479,8 +2524,11 @@ struct PersistedRunRecord {
     model_preset: String,
     model_id: String,
     status: ExecutionStatus,
+    output_target: String,
     #[serde(default)]
-    rendered_prompt: String,
+    document_path: Option<String>,
+    #[serde(default)]
+    variables: std::collections::BTreeMap<String, String>,
     output: Option<String>,
     error: Option<String>,
     started_at: String,
@@ -2489,12 +2537,10 @@ struct PersistedRunRecord {
     online: OnlineRunMetadata,
     #[serde(default)]
     usage: UsageMetrics,
-    #[serde(default)]
-    response: Value,
 }
 
 impl PersistedRunRecord {
-    fn from_result(result: &PromptExecutionResult, response: Value) -> Self {
+    fn from_result(result: &PromptExecutionResult) -> Self {
         Self {
             artifact_version: PERSISTED_RUN_RECORD_VERSION,
             run_id: result.run_id.clone(),
@@ -2506,14 +2552,15 @@ impl PersistedRunRecord {
             model_preset: result.model_preset.clone(),
             model_id: result.model_id.clone(),
             status: result.status.clone(),
-            rendered_prompt: result.rendered_prompt.clone(),
+            output_target: result.output_target.clone(),
+            document_path: result.document_path.clone(),
+            variables: result.variables.clone(),
             output: result.output.clone(),
             error: result.error.clone(),
             started_at: result.started_at.clone(),
             completed_at: result.completed_at.clone(),
             online: result.online.clone(),
             usage: result.usage.clone(),
-            response,
         }
     }
 }
