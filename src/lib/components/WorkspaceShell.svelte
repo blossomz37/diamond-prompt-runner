@@ -5,6 +5,7 @@
   import ValidationPanel from '$lib/components/ValidationPanel.svelte';
   import type {
     ProjectAssetNode,
+    PromptExecutionResult,
     ProjectSummary,
     TemplateValidationResult,
     WorkspaceTab
@@ -23,8 +24,11 @@
     onDraftChange: (path: string, content: string) => void;
     onSaveTab: (path: string) => void | Promise<void>;
     onReloadTab: (path: string) => void | Promise<void>;
+    onRunTab: (path: string) => void | Promise<void>;
     validationResult: TemplateValidationResult | null;
     validationLoading: boolean;
+    executionResult: PromptExecutionResult | null;
+    executionLoading: boolean;
   }
 
   let {
@@ -40,11 +44,17 @@
     onDraftChange,
     onSaveTab,
     onReloadTab,
+    onRunTab,
     validationResult,
-    validationLoading
+    validationLoading,
+    executionResult,
+    executionLoading
   }: Props = $props();
 
   const activeTab = $derived(tabs.find((tab) => tab.path === activePath) ?? null);
+  const activeExecution = $derived(
+    activeTab && executionResult?.path === activeTab.path ? executionResult : null
+  );
 
   let bottomOpen = $state(true);
 </script>
@@ -109,6 +119,9 @@
           onDraftChange={onDraftChange}
           onSave={onSaveTab}
           onReload={onReloadTab}
+          onExecute={onRunTab}
+          execution={activeExecution}
+          executionLoading={executionLoading && activeTab?.kind === 'tera'}
         />
       </div>
     </main>
@@ -121,7 +134,7 @@
       <div class="pane-head">
         <p class="eyebrow">Bottom Panel</p>
         <div class="pane-controls">
-          <span>{activeTab?.kind === 'tera' ? 'Validation' : 'Preview'}</span>
+          <span>{activeTab?.kind === 'tera' ? 'Validation + Run' : 'Preview'}</span>
           <button
             type="button"
             class="pane-toggle"
@@ -131,7 +144,13 @@
         </div>
       </div>
       {#if bottomOpen}
-        <ValidationPanel tab={activeTab} validation={validationResult} loading={validationLoading} />
+        <ValidationPanel
+          tab={activeTab}
+          validation={validationResult}
+          loading={validationLoading}
+          execution={activeExecution}
+          executionLoading={executionLoading && activeTab?.kind === 'tera'}
+        />
       {/if}
     </section>
   </div>

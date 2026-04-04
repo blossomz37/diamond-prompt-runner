@@ -4,6 +4,7 @@ import App from './App.svelte';
 import type {
   AssetContent,
   ProjectAssetNode,
+  PromptExecutionResult,
   ProjectSummary,
   RecentProjectEntry,
   TemplateValidationResult
@@ -17,6 +18,7 @@ const tauri = vi.hoisted(() => ({
   pickDirectory: vi.fn(),
   removeRecentProject: vi.fn(),
   readProjectAsset: vi.fn(),
+  executePromptBlock: vi.fn(),
   validateProjectTemplate: vi.fn(),
   writeProjectAsset: vi.fn()
 }));
@@ -176,6 +178,22 @@ const validationResult: TemplateValidationResult = {
   ]
 };
 
+const executionResult: PromptExecutionResult = {
+  runId: 'run-1',
+  path: 'prompts/brief-review.tera',
+  blockId: 'brief-review',
+  blockName: 'Brief Review',
+  modelPreset: 'models/default.yaml',
+  modelId: 'openai/gpt-5.4-nano',
+  status: 'success',
+  renderedPrompt: 'Rendered prompt body',
+  output: 'Execution output from the provider.',
+  error: null,
+  runPath: 'runs/run-1.json',
+  startedAt: '2026-04-03T20:13:00Z',
+  completedAt: '2026-04-03T20:13:05Z'
+};
+
 describe('App', () => {
   beforeEach(() => {
     tauri.getRecentProjects.mockResolvedValue(recents);
@@ -196,6 +214,7 @@ describe('App', () => {
       return assetContent;
     });
     tauri.validateProjectTemplate.mockResolvedValue(validationResult);
+    tauri.executePromptBlock.mockResolvedValue(executionResult);
     tauri.writeProjectAsset.mockImplementation(async (_rootPath: string, relativePath: string, content: string) => {
       if (relativePath === 'models/default.yaml') {
         return {
@@ -434,5 +453,53 @@ describe('App', () => {
         updatedContent
       )
     );
+  });
+
+  it('runs the active tera prompt and shows the latest execution output', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('prompts'));
+    await fireEvent.click(within(explorer).getByText('brief-review.tera'));
+
+    await fireEvent.click(await screen.findByRole('button', { name: 'Run' }));
+
+    await waitFor(() =>
+      expect(tauri.executePromptBlock).toHaveBeenCalledWith(
+        '/tmp/story-lab',
+        'prompts/brief-review.tera',
+        teraAssetContent.content
+      )
+    );
+
+    expect(await screen.findByText('Execution output from the provider.')).toBeInTheDocument();
+    expect(screen.getByText('runs/run-1.json')).toBeInTheDocument();
+  });
+
+  it('shows execution failure in the bottom panel', async () => {
+    tauri.executePromptBlock.mockRejectedValueOnce(new Error('Missing API key in environment variable: OPENROUTER_API_KEY'));
+
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    const explorer = screen.getByTestId('explorer-tree');
+    await fireEvent.click(within(explorer).getByText('prompts'));
+    await fireEvent.click(within(explorer).getByText('brief-review.tera'));
+
+    await fireEvent.click(await screen.findByRole('button', { name: 'Run' }));
+
+    expect(await screen.findByText('Run failed')).toBeInTheDocument();
+    expect(screen.getByText('Missing API key in environment variable: OPENROUTER_API_KEY')).toBeInTheDocument();
   });
 });

@@ -1,13 +1,15 @@
 <script lang="ts">
-  import type { TemplateValidationResult, WorkspaceTab } from '$lib/types/project';
+  import type { PromptExecutionResult, TemplateValidationResult, WorkspaceTab } from '$lib/types/project';
 
   interface Props {
     tab: WorkspaceTab | null;
     validation: TemplateValidationResult | null;
     loading: boolean;
+    execution: PromptExecutionResult | null;
+    executionLoading: boolean;
   }
 
-  let { tab, validation, loading }: Props = $props();
+  let { tab, validation, loading, execution, executionLoading }: Props = $props();
 
   function tone(status: TemplateValidationResult['status']): string {
     switch (status) {
@@ -18,6 +20,10 @@
       default:
         return 'bad';
     }
+  }
+
+  function executionTone(status: PromptExecutionResult['status']): string {
+    return status === 'success' ? 'good' : 'bad';
   }
 </script>
 
@@ -70,6 +76,42 @@
       {:else}
         <p class="empty">No validation state yet.</p>
       {/if}
+
+      <div class="execution-card">
+        <div class="heading">
+          <div>
+            <p class="eyebrow">Execution</p>
+            <h3>{tab.title}</h3>
+          </div>
+          {#if execution}
+            <span class={`badge ${executionTone(execution.status)}`}>{execution.status}</span>
+          {/if}
+        </div>
+
+        {#if executionLoading}
+          <p class="empty">Running prompt from the current draft…</p>
+        {:else if execution}
+          {#if execution.error}
+            <div class="messages">
+              <h4>Execution Error</h4>
+              <p>{execution.error}</p>
+            </div>
+          {/if}
+
+          <dl class="context-list">
+            <div>
+              <dt>Model</dt>
+              <dd>{execution.modelId || 'Unknown'}</dd>
+            </div>
+            <div>
+              <dt>Run File</dt>
+              <dd>{execution.runPath || 'Not persisted'}</dd>
+            </div>
+          </dl>
+        {:else}
+          <p class="empty">Run the active `.tera` prompt to save a new execution artifact.</p>
+        {/if}
+      </div>
     </div>
 
     <div class="preview">
@@ -83,6 +125,19 @@
       {:else}
         <p class="empty">Open a `.tera` prompt to generate a preview.</p>
       {/if}
+
+      <div class="output-panel">
+        <p class="eyebrow">Latest Run</p>
+        {#if executionLoading}
+          <p class="empty">Waiting for provider response…</p>
+        {:else if execution?.output}
+          <pre>{execution.output}</pre>
+        {:else if execution?.error}
+          <p class="empty">The latest execution failed before producing output.</p>
+        {:else}
+          <p class="empty">Run the active `.tera` prompt to inspect output here.</p>
+        {/if}
+      </div>
     </div>
   </div>
 {/if}
@@ -101,6 +156,13 @@
     display: grid;
     gap: 0.75rem;
     min-height: 0;
+    align-content: start;
+  }
+
+  .execution-card,
+  .output-panel {
+    display: grid;
+    gap: 0.75rem;
   }
 
   .heading {

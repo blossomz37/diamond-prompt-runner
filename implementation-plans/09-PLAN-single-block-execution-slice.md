@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 8:00 PM
-modified: 2026-04-03 8:35 PM
+modified: 2026-04-03 9:05 PM
 ---
 # Plan To Reach The Single-Block Execution Slice
 
@@ -35,6 +35,14 @@ Sequence around this milestone:
 - Read the API key from `OPENROUTER_API_KEY` as the current temporary app-level credential source.
 - Persist one JSON run artifact under `runs/` with run id, prompt path, rendered prompt, model info, timestamps, output, and raw response payload.
 - Add backend tests for successful execution, strict document-reference failure, and block-level model override selection.
+
+### Frontend execution wiring
+
+- Add a `Run` action for active editable `.tera` tabs in the asset viewer.
+- Execute from the current draft buffer so runs do not require a prior save.
+- Surface in-flight, success, and failure state in the editor header.
+- Show latest execution metadata and output in the existing bottom panel beside validation and preview.
+- Add frontend tests for successful run output display and execution failure display.
 
 ## Scope
 
@@ -143,6 +151,7 @@ Likely integration points:
 ## Follow-Up Checklist
 
 - [x] Implement the first backend-only execution foundation for a single `.tera` prompt tab.
+- [x] Wire frontend run controls and bottom-panel execution output for active `.tera` tabs.
 - [ ] Finalize API-key storage approach for local desktop execution beyond the current env-var default.
 - [ ] Decide whether to keep direct HTTP for the first full slice or replace it with the official SDK before frontend wiring.
 - [ ] Define exact strict-failure rules for unresolved variables and document references during execution.

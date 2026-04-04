@@ -4,6 +4,7 @@
   import WorkspaceShell from '$lib/components/WorkspaceShell.svelte';
   import {
     createProject,
+    executePromptBlock,
     getRecentProjects,
     listProjectAssets,
     openProject,
@@ -15,6 +16,7 @@
   } from '$lib/tauri';
   import type {
     ProjectAssetNode,
+    PromptExecutionResult,
     ProjectSummary,
     RecentProjectEntry,
     TemplateValidationResult,
@@ -34,6 +36,8 @@
   let loadingPath = $state<string | null>(null);
   let validationResult = $state<TemplateValidationResult | null>(null);
   let validationLoading = $state(false);
+  let executionResult = $state<PromptExecutionResult | null>(null);
+  let executionLoading = $state(false);
   let validationTimer: ReturnType<typeof setTimeout> | null = null;
   let validationRequestId = 0;
 
@@ -49,6 +53,8 @@
     loadingPath = null;
     validationResult = null;
     validationLoading = false;
+    executionResult = null;
+    executionLoading = false;
     mode = 'workspace';
   }
 
@@ -280,6 +286,43 @@
     }
   }
 
+  async function handleExecuteTab(path: string): Promise<void> {
+    if (!workspace) {
+      return;
+    }
+
+    const tab = tabs.find((candidate) => candidate.path === path);
+    if (!tab || tab.kind !== 'tera' || executionLoading) {
+      return;
+    }
+
+    executionLoading = true;
+    errorMessage = null;
+
+    try {
+      executionResult = await executePromptBlock(workspace.rootPath, path, tab.draftContent);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Prompt execution failed.';
+      executionResult = {
+        runId: '',
+        path,
+        blockId: null,
+        blockName: tab.title,
+        modelPreset: '',
+        modelId: '',
+        status: 'failed',
+        renderedPrompt: '',
+        output: null,
+        error: message,
+        runPath: '',
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString()
+      };
+    } finally {
+      executionLoading = false;
+    }
+  }
+
   function handleCloseTab(path: string): void {
     const index = tabs.findIndex((tab) => tab.path === path);
     if (index === -1) {
@@ -326,7 +369,10 @@
     onDraftChange={handleDraftChange}
     onSaveTab={handleSaveTab}
     onReloadTab={handleReloadTab}
+    onRunTab={handleExecuteTab}
     {validationResult}
     {validationLoading}
+    {executionResult}
+    {executionLoading}
   />
 {/if}

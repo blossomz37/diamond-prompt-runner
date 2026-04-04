@@ -1,14 +1,17 @@
 <script lang="ts">
-  import type { WorkspaceTab } from '$lib/types/project';
+  import type { PromptExecutionResult, WorkspaceTab } from '$lib/types/project';
 
   interface Props {
     tab: WorkspaceTab | null;
     onDraftChange: (path: string, content: string) => void;
     onSave: (path: string) => void | Promise<void>;
     onReload: (path: string) => void | Promise<void>;
+    onExecute: (path: string) => void | Promise<void>;
+    execution: PromptExecutionResult | null;
+    executionLoading: boolean;
   }
 
-  let { tab, onDraftChange, onSave, onReload }: Props = $props();
+  let { tab, onDraftChange, onSave, onReload, onExecute, execution, executionLoading }: Props = $props();
 </script>
 
 {#if !tab}
@@ -33,6 +36,22 @@
         <h2>{tab.title}</h2>
       </div>
       <div class="actions">
+        {#if tab.kind === 'tera'}
+          <span class:failed={execution?.status === 'failed'} class="run-status">
+            {#if executionLoading}
+              Running…
+            {:else if execution?.status === 'success'}
+              Last run saved
+            {:else if execution?.status === 'failed'}
+              Run failed
+            {:else}
+              No run yet
+            {/if}
+          </span>
+          <button type="button" class="primary run" onclick={() => onExecute(tab.path)} disabled={tab.isSaving || executionLoading}>
+            {executionLoading ? 'Running…' : 'Run'}
+          </button>
+        {/if}
         <span class:dirty={tab.draftContent !== tab.savedContent} class="status">
           {tab.draftContent === tab.savedContent ? 'Saved' : 'Unsaved changes'}
         </span>
@@ -115,6 +134,15 @@
     font-size: 0.82rem;
   }
 
+  .run-status {
+    color: var(--text-soft);
+    font-size: 0.82rem;
+  }
+
+  .run-status.failed {
+    color: var(--danger);
+  }
+
   .status.dirty {
     color: var(--accent-strong);
   }
@@ -135,6 +163,11 @@
   .primary {
     background: linear-gradient(135deg, rgba(132, 173, 255, 0.28), rgba(85, 113, 204, 0.36));
     border-color: rgba(139, 177, 255, 0.34);
+  }
+
+  .primary.run {
+    background: linear-gradient(135deg, rgba(153, 227, 190, 0.22), rgba(49, 134, 96, 0.28));
+    border-color: rgba(153, 227, 190, 0.3);
   }
 
   p {

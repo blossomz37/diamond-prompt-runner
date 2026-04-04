@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 12:57 PM
-modified: 2026-04-03 8:35 PM
+modified: 2026-04-03 9:05 PM
 ---
 
 # Rolling TODO List
@@ -34,6 +34,7 @@ Oldest to Newest
 - [x] Rendering and Validation Slice: add a slice sign-off checklist and manual validation notes.
 - [x] Single-Block Execution Slice: create active implementation plan and lock first-pass execution scope.
 - [x] Single-Block Execution Slice: add backend-only execution foundation with strict render, direct OpenRouter HTTP, and persisted run artifacts.
+- [x] Single-Block Execution Slice: wire frontend run controls and bottom-panel execution output for active `.tera` tabs.
 - [ ] Single-Block Execution Slice: finalize local desktop API-key storage beyond the current `OPENROUTER_API_KEY` env-var default.
 - [ ] Single-Block Execution Slice: decide whether to keep direct Rust HTTP or replace it with the official SDK before frontend wiring.
 - [ ] Single-Block Execution Slice: review curated model preset defaults and decide what should seed Diamond presets.
