@@ -20,7 +20,7 @@ Next active milestone plan after the Rendering and Validation Slice:
 - `implementation-plans/09-PLAN-single-block-execution-slice.md`
 
 Sequence after Milestone 1:
-- small follow-up: unavailable-recents `Locate` flow
+- completed small follow-up: unavailable-recents `Locate` flow
 - completed milestone: Editing Slice
 - completed milestone: Rendering and Validation Slice
 - active milestone: Single-Block Execution Slice

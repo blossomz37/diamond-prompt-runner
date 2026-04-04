@@ -18,7 +18,7 @@ This slice should prove the end-to-end path for one prompt block:
 This slice does not include pipelines, run-history browsing, prompt-pack work, or scoped `:online` behavior.
 
 Sequence around this milestone:
-- small follow-up: unavailable-recents `Locate` flow
+- completed small follow-up: unavailable-recents `Locate` flow
 - completed milestone: Rendering and Validation Slice
 - active milestone: Single-Block Execution Slice
 - later: Pipelines, History, and Exports

@@ -12,6 +12,7 @@
     onCreateProject: () => void | Promise<void>;
     onOpenExisting: () => void | Promise<void>;
     onOpenRecent: (project: ProjectSummary) => void | Promise<void>;
+    onLocateRecent: (project: RecentProjectEntry) => void | Promise<void>;
     onRemoveRecent: (rootPath: string) => void | Promise<void>;
   }
 
@@ -26,6 +27,7 @@
     onCreateProject,
     onOpenExisting,
     onOpenRecent,
+    onLocateRecent,
     onRemoveRecent
   }: Props = $props();
 </script>
@@ -120,6 +122,16 @@
                 <span>{project.defaultModelPreset}</span>
               </div>
               <div class="recent-actions">
+                {#if !project.lastKnownValid}
+                  <button
+                    class="recent-locate"
+                    type="button"
+                    onclick={() => onLocateRecent(project)}
+                    disabled={busy}
+                  >
+                    Locate
+                  </button>
+                {/if}
                 <button
                   class="recent-open"
                   type="button"
@@ -331,6 +343,7 @@
   }
 
   .recent-open,
+  .recent-locate,
   .recent-remove {
     min-height: 2.2rem;
     padding: 0.5rem 0.8rem;
@@ -341,6 +354,11 @@
 
   .recent-open {
     background: rgba(139, 177, 255, 0.12);
+  }
+
+  .recent-locate {
+    background: rgba(153, 227, 190, 0.12);
+    border-color: rgba(153, 227, 190, 0.28);
   }
 
   .recent-remove {

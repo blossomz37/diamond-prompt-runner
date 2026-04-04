@@ -10,6 +10,7 @@
     getRecentProjects,
     listPromptRunHistory,
     listProjectAssets,
+    locateRecentProject,
     openProject,
     pickDirectory,
     removeRecentProject,
@@ -185,6 +186,19 @@
     await withBusy(async () => {
       await removeRecentProject(rootPath);
       recentProjects = await getRecentProjects();
+    });
+  }
+
+  async function handleLocateRecent(project: RecentProjectEntry): Promise<void> {
+    const selected = await pickDirectory(`Locate ${project.projectName}`);
+    if (!selected) {
+      return;
+    }
+
+    await withBusy(async () => {
+      const summary = await locateRecentProject(project.rootPath, selected);
+      recentProjects = await getRecentProjects();
+      await enterWorkspace(summary);
     });
   }
 
@@ -487,6 +501,7 @@
     onCreateProject={handleCreateProject}
     onOpenExisting={handleOpenExisting}
     onOpenRecent={handleOpenRecent}
+    onLocateRecent={handleLocateRecent}
     onRemoveRecent={handleRemoveRecent}
   />
 {:else}

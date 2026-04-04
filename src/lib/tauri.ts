@@ -33,6 +33,16 @@ export async function removeRecentProject(rootPath: string): Promise<void> {
   return invoke('remove_recent_project', { rootPath });
 }
 
+export async function locateRecentProject(
+  previousRootPath: string,
+  candidateRootPath: string
+): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>('locate_recent_project', {
+    previousRootPath,
+    candidateRootPath
+  });
+}
+
 export async function createProject(parentPath: string, projectName: string): Promise<ProjectSummary> {
   return invoke<ProjectSummary>('create_project', { parentPath, projectName });
 }

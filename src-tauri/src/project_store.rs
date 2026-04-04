@@ -349,6 +349,51 @@ pub fn remove_recent_project(app_data_dir: &Path, root_path: &Path) -> StoreResu
     Ok(())
 }
 
+pub fn locate_recent_project(
+    app_data_dir: &Path,
+    previous_root_path: &Path,
+    candidate_root_path: &Path,
+) -> StoreResult<ProjectSummary> {
+    fs::create_dir_all(app_data_dir)?;
+    let mut store = read_recents_store(app_data_dir)?;
+    let previous_root = previous_root_path.to_string_lossy().to_string();
+
+    let Some(index) = store
+        .projects
+        .iter()
+        .position(|project| project.summary.root_path == previous_root)
+    else {
+        return Err(ProjectStoreError::message(
+            "The selected recent project entry no longer exists.",
+        ));
+    };
+
+    let expected_project_id = store.projects[index].summary.project_id.clone();
+    let (validated_root, manifest) = validate_project(candidate_root_path)?;
+
+    if manifest.project_id != expected_project_id {
+        return Err(ProjectStoreError::message(
+            "The selected folder is a valid Diamond project, but it does not match the missing recent project.",
+        ));
+    }
+
+    let summary = summarize_project(&validated_root, &manifest)?;
+    store.projects.remove(index);
+    store.projects.insert(
+        0,
+        RecentProjectEntry {
+            summary: summary.clone(),
+            last_opened_at: timestamp(),
+            last_known_valid: true,
+        },
+    );
+    store.projects.truncate(8);
+
+    let store_path = app_data_dir.join(RECENTS_FILE_NAME);
+    fs::write(store_path, serde_json::to_string_pretty(&store)?)?;
+    Ok(summary)
+}
+
 pub fn list_project_assets(root_path: &Path) -> StoreResult<Vec<ProjectAssetNode>> {
     let (root_path, _) = validate_project(root_path)?;
     let mut nodes = Vec::with_capacity(PROJECT_DIRS.len() + 1);
@@ -1489,6 +1534,43 @@ mod tests {
 
         let error = open_project(&invalid_path, temp.path()).unwrap_err();
         assert!(error.to_string().contains("missing required directory"));
+    }
+
+    #[test]
+    fn locates_moved_recent_project_when_project_id_matches() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "Story Lab", &app_data).unwrap();
+        let original_root = PathBuf::from(&summary.root_path);
+        let relocated_root = temp.path().join("Story Lab Moved");
+
+        fs::rename(&original_root, &relocated_root).unwrap();
+
+        let relocated = locate_recent_project(&app_data, &original_root, &relocated_root).unwrap();
+
+        assert_eq!(relocated.project_id, summary.project_id);
+        assert_eq!(relocated.root_path, relocated_root.canonicalize().unwrap().to_string_lossy());
+
+        let recents = get_recent_projects(&app_data).unwrap();
+        assert_eq!(recents.len(), 1);
+        assert_eq!(recents[0].summary.root_path, relocated.root_path);
+        assert!(recents[0].last_known_valid);
+    }
+
+    #[test]
+    fn rejects_locate_when_project_id_does_not_match_missing_recent() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "Story Lab", &app_data).unwrap();
+        let original_root = PathBuf::from(&summary.root_path);
+        let candidate_summary = create_project(temp.path(), "Other Lab", &app_data).unwrap();
+        let candidate_root = PathBuf::from(&candidate_summary.root_path);
+
+        fs::remove_dir_all(&original_root).unwrap();
+
+        let error = locate_recent_project(&app_data, &original_root, &candidate_root).unwrap_err();
+
+        assert!(error.to_string().contains("does not match the missing recent project"));
     }
 
     #[test]

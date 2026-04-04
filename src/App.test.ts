@@ -19,6 +19,7 @@ const tauri = vi.hoisted(() => ({
   getExecutionCredentialStatus: vi.fn(),
   listPromptRunHistory: vi.fn(),
   listProjectAssets: vi.fn(),
+  locateRecentProject: vi.fn(),
   openProject: vi.fn(),
   pickDirectory: vi.fn(),
   removeRecentProject: vi.fn(),
@@ -253,6 +254,7 @@ describe('App', () => {
     tauri.listPromptRunHistory.mockResolvedValue(runHistory);
     tauri.pickDirectory.mockResolvedValue('/tmp');
     tauri.createProject.mockResolvedValue(summary);
+    tauri.locateRecentProject.mockResolvedValue(summary);
     tauri.openProject.mockResolvedValue(summary);
     tauri.removeRecentProject.mockResolvedValue(undefined);
     tauri.listProjectAssets.mockResolvedValue(assetNodes);
@@ -348,6 +350,73 @@ describe('App', () => {
 
     await waitFor(() => expect(screen.getByText('No recent projects yet.')).toBeInTheDocument());
     expect(tauri.removeRecentProject).toHaveBeenCalledWith('/tmp/missing-project');
+  });
+
+  it('locates an unavailable recent project and opens the rebound workspace', async () => {
+    tauri.getRecentProjects
+      .mockResolvedValueOnce([
+        {
+          ...summary,
+          rootPath: '/tmp/missing-project',
+          lastOpenedAt: '2026-04-03T20:11:00Z',
+          lastKnownValid: false
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          ...summary,
+          rootPath: '/tmp/story-lab-relocated',
+          lastOpenedAt: '2026-04-03T20:12:00Z',
+          lastKnownValid: true
+        }
+      ]);
+
+    tauri.locateRecentProject.mockResolvedValueOnce({
+      ...summary,
+      rootPath: '/tmp/story-lab-relocated'
+    });
+    tauri.pickDirectory.mockResolvedValueOnce('/tmp/story-lab-relocated');
+
+    render(App);
+
+    expect(await screen.findByText('Unavailable')).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('button', { name: 'Locate' }));
+
+    await waitFor(() =>
+      expect(tauri.locateRecentProject).toHaveBeenCalledWith(
+        '/tmp/missing-project',
+        '/tmp/story-lab-relocated'
+      )
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument();
+  });
+
+  it('shows a locate mismatch error when the selected folder is the wrong project', async () => {
+    tauri.getRecentProjects.mockResolvedValueOnce([
+      {
+        ...summary,
+        rootPath: '/tmp/missing-project',
+        lastOpenedAt: '2026-04-03T20:11:00Z',
+        lastKnownValid: false
+      }
+    ]);
+    tauri.locateRecentProject.mockRejectedValueOnce(
+      new Error('The selected folder is a valid Diamond project, but it does not match the missing recent project.')
+    );
+    tauri.pickDirectory.mockResolvedValueOnce('/tmp/other-project');
+
+    render(App);
+
+    expect(await screen.findByText('Unavailable')).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('button', { name: 'Locate' }));
+
+    expect(
+      await screen.findByText(
+        'The selected folder is a valid Diamond project, but it does not match the missing recent project.'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText('Reopen quickly')).toBeInTheDocument();
   });
 
   it('edits and saves an editable asset', async () => {

@@ -46,6 +46,21 @@ fn remove_recent_project(app: tauri::AppHandle, root_path: String) -> Result<(),
 }
 
 #[tauri::command]
+fn locate_recent_project(
+    app: tauri::AppHandle,
+    previous_root_path: String,
+    candidate_root_path: String,
+) -> Result<ProjectSummary, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::locate_recent_project(
+        &app_data_dir,
+        PathBuf::from(previous_root_path).as_path(),
+        PathBuf::from(candidate_root_path).as_path(),
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn list_project_assets(root_path: String) -> Result<Vec<ProjectAssetNode>, String> {
     project_store::list_project_assets(PathBuf::from(root_path).as_path()).map_err(|error| error.to_string())
 }
@@ -123,6 +138,7 @@ pub fn run() {
             open_project,
             get_recent_projects,
             remove_recent_project,
+            locate_recent_project,
             list_project_assets,
             read_project_asset,
             write_project_asset,

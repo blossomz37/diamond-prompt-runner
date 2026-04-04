@@ -18,7 +18,7 @@ Status update:
 This slice adds local file editing on top of the existing read-and-navigate shell without pulling validation, preview, or provider execution into scope. The goal is to make the workspace useful for direct project authoring while keeping Diamond file-first and keeping milestone boundaries explicit.
 
 Sequence around this milestone:
-- small post-milestone follow-up: unavailable-recents `Locate` flow
+- completed small post-milestone follow-up: unavailable-recents `Locate` flow
 - next real milestone: Editing Slice
 - after editing: Rendering and Validation Slice
 - after validation: Single-Block Execution Slice
@@ -92,6 +92,6 @@ Validation-specific tests stay out of this slice except whatever is required to 
 
 - `implementation-plans/03-PLAN-app-bootstrap-and-shell.md` remains the umbrella roadmap.
 - This file records the completed Editing Slice.
-- The unavailable-recents `Locate` flow is a small follow-up after Milestone 1, not the next major milestone.
+- The unavailable-recents `Locate` flow was the small follow-up after Milestone 1, and it is now complete.
 - Model YAML editing is now part of the completed Editing Slice.
 - `TODO.md` should stay concise and reminder-oriented rather than duplicating this full plan.

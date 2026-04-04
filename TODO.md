@@ -19,7 +19,7 @@ Oldest to Newest
 - [x] Milestone 1 implementation: build read-only IDE shell with explorer, tabs, inspector, and bottom panel placeholder.
 - [x] Milestone 1 implementation: add `fixtures/sample-project/` and milestone smoke tests.
 - [x] Milestone 1 manual validation: completed all scenarios in `implementation-plans/06-REFERENCE-milestone-1-manual-test.md` and all passed.
-- [ ] Follow-up after Milestone 1: add a `Locate` flow for unavailable recent projects that rebinds a moved project only when the selected folder validates and matches the stored `project_id`.
+- [x] Follow-up after Milestone 1: add a `Locate` flow for unavailable recent projects that rebinds a moved project only when the selected folder validates and matches the stored `project_id`.
 - [x] Editing Slice: add save support for editable project files after shell and navigation stability.
 - [x] Editing Slice: support markdown and text document editing with visible dirty state and deterministic save or reload behavior.
 - [x] Editing Slice: support `.tera` template editing and editable model YAML while keeping `project.json` read-only.
