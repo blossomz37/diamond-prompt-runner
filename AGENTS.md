@@ -56,6 +56,9 @@ Use these commands as the default validation baseline for this repo:
 Default validation rule:
 - For implementation work, run the relevant frontend and backend checks that cover the changed surface before closing the task.
 
+Dev workflow note:
+- `npm run tauri:dev` now reuses an already-running Vite dev server on port `1420`; if that port is occupied by some other process, it fails with a clearer error instead of trying to launch a second Vite server.
+
 ## Architecture
 
 The app is split into a narrow frontend-to-backend boundary:

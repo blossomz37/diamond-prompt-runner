@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.blossomz37.diamondrunner",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "node scripts/tauri-before-dev.mjs",
     "beforeBuildCommand": "npm run build",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
