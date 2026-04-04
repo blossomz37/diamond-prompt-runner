@@ -1,7 +1,7 @@
 Project: {{ project.name }}
 Date: {{ current_date }}
 
-You are a genre analyst and commercial fiction strategist. Produce a comprehensive Genre Intelligence Report for {{ genre}}. The report should be structured as follows:
+You are a genre analyst and commercial fiction strategist. Produce a comprehensive Genre Intelligence Report for {{ genre }}. The report should be structured as follows:
 
 ## 1. Genre Definition & Boundaries
 - Core definition of {{ genre }} and where it sits in the broader market taxonomy

@@ -2,7 +2,7 @@
   "projectId": "sample-project-001",
   "projectName": "Sample Project",
   "createdAt": "2026-04-03T20:00:00Z",
-  "updatedAt": "2026-04-04T17:46:13Z",
+  "updatedAt": "2026-04-04T21:16:02Z",
   "defaultModelPreset": "models/default.yaml",
   "variables": {
     "tone": "precise"
@@ -45,7 +45,7 @@
       "name": "repetition audit",
       "templateSource": "prompts/repetition-audit.tera",
       "inputBindings": [],
-      "modelPreset": null,
+      "modelPreset": "models/Perplexity.yaml",
       "outputTarget": "run_artifact"
     },
     {
@@ -95,6 +95,14 @@
       "name": "Review Pipeline",
       "orderedBlocks": [
         "brief-review"
+      ],
+      "executionMode": "sequential"
+    },
+    {
+      "pipelineId": "research-genre",
+      "name": "Research Genre",
+      "orderedBlocks": [
+        "genre-research"
       ],
       "executionMode": "sequential"
     }

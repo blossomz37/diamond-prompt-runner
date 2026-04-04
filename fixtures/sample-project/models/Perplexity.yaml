@@ -1,0 +1,4 @@
+# Custom model preset.
+model: perplexity/sonar
+temperature: 1
+max_completion_tokens: 16000
