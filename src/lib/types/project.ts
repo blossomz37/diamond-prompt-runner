@@ -83,6 +83,8 @@ export interface PromptExecutionResult {
   path: string;
   blockId: string | null;
   blockName: string;
+  pipelineId: string | null;
+  pipelineName: string | null;
   modelPreset: string;
   modelId: string;
   status: 'success' | 'failed';
@@ -94,10 +96,13 @@ export interface PromptExecutionResult {
   completedAt: string;
 }
 
-export interface PromptRunHistoryEntry {
+export interface ProjectRunHistoryEntry {
   runId: string;
   path: string;
+  blockId: string | null;
   blockName: string;
+  pipelineId: string | null;
+  pipelineName: string | null;
   modelId: string;
   status: 'success' | 'failed';
   runPath: string;
@@ -106,6 +111,8 @@ export interface PromptRunHistoryEntry {
   outputPreview: string | null;
   error: string | null;
 }
+
+export type PromptRunHistoryEntry = ProjectRunHistoryEntry;
 
 export interface ProjectPipelineBlock {
   blockId: string;

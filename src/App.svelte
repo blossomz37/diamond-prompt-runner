@@ -10,6 +10,7 @@
     executePromptBlock,
     getExecutionCredentialStatus,
     getRecentProjects,
+    listProjectRunHistory,
     listProjectPipelines,
     listPromptRunHistory,
     listProjectAssets,
@@ -28,6 +29,7 @@
     PipelineExecutionResult,
     ProjectAssetNode,
     ProjectPipeline,
+    ProjectRunHistoryEntry,
     PromptExecutionResult,
     PromptRunHistoryEntry,
     ProjectSummary,
@@ -54,6 +56,8 @@
   let executionLoading = $state(false);
   let executionHistory = $state<PromptRunHistoryEntry[]>([]);
   let executionHistoryLoading = $state(false);
+  let projectRunHistory = $state<ProjectRunHistoryEntry[]>([]);
+  let projectRunHistoryLoading = $state(false);
   let pipelineExecutionResult = $state<PipelineExecutionResult | null>(null);
   let pipelineExecutionLoading = $state(false);
   let promptCreationLoading = $state(false);
@@ -82,12 +86,14 @@
 
   async function enterWorkspace(summary: ProjectSummary): Promise<void> {
     workspace = summary;
-    const [nodes, pipelines] = await Promise.all([
+    const [nodes, pipelines, runHistory] = await Promise.all([
       listProjectAssets(summary.rootPath),
-      listProjectPipelines(summary.rootPath)
+      listProjectPipelines(summary.rootPath),
+      listProjectRunHistory(summary.rootPath)
     ]);
     assetNodes = nodes;
     projectPipelines = pipelines;
+    projectRunHistory = runHistory;
     tabs = [];
     activePath = null;
     loadingPath = null;
@@ -97,6 +103,7 @@
     executionLoading = false;
     executionHistory = [];
     executionHistoryLoading = false;
+    projectRunHistoryLoading = false;
     pipelineExecutionResult = null;
     pipelineExecutionLoading = false;
     mode = 'workspace';
@@ -272,7 +279,12 @@
       const created: CreatedPromptBlockResult = await createPromptBlock(workspace.rootPath, promptName);
       workspace = created.summary;
       recentProjects = await getRecentProjects();
-      assetNodes = await listProjectAssets(created.summary.rootPath);
+      const [nodes, pipelines] = await Promise.all([
+        listProjectAssets(created.summary.rootPath),
+        listProjectPipelines(created.summary.rootPath)
+      ]);
+      assetNodes = nodes;
+      projectPipelines = pipelines;
       await openAssetPath(created.path);
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'Failed to create prompt.';
@@ -405,6 +417,7 @@
     try {
       executionResult = await executePromptBlock(workspace.rootPath, path, tab.draftContent);
       await refreshExecutionHistory(workspace.rootPath, path);
+      await refreshProjectRunHistory(workspace.rootPath);
       assetNodes = await listProjectAssets(workspace.rootPath);
       workspace = {
         ...workspace,
@@ -420,6 +433,8 @@
         path,
         blockId: null,
         blockName: tab.title,
+        pipelineId: null,
+        pipelineName: null,
         modelPreset: '',
         modelId: '',
         status: 'failed',
@@ -476,6 +491,7 @@
     try {
       const result = await executePipeline(workspace.rootPath, pipelineId);
       pipelineExecutionResult = result;
+      await refreshProjectRunHistory(workspace.rootPath);
 
       if (result.steps.length > 0) {
         executionResult = result.steps[result.steps.length - 1] ?? null;
@@ -533,6 +549,18 @@
     const requestId = ++executionHistoryRequestId;
     executionHistoryLoading = true;
     await loadExecutionHistory(rootPath, path, requestId);
+  }
+
+  async function refreshProjectRunHistory(rootPath: string): Promise<void> {
+    projectRunHistoryLoading = true;
+
+    try {
+      projectRunHistory = await listProjectRunHistory(rootPath);
+    } catch {
+      projectRunHistory = [];
+    } finally {
+      projectRunHistoryLoading = false;
+    }
   }
 
   async function handleOpenRunPath(path: string): Promise<void> {
@@ -624,6 +652,8 @@
     pipelines={projectPipelines}
     pipelineExecution={pipelineExecutionResult}
     pipelineLoading={pipelineExecutionLoading}
+    {projectRunHistory}
+    {projectRunHistoryLoading}
     onSelectAsset={handleSelectAsset}
     onSelectTab={handleSelectTab}
     onCloseTab={handleCloseTab}

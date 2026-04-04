@@ -7,6 +7,7 @@ import type {
   PipelineExecutionResult,
   ProjectAssetNode,
   ProjectPipeline,
+  ProjectRunHistoryEntry,
   ProjectSummary,
   PromptExecutionResult,
   PromptRunHistoryEntry,
@@ -134,5 +135,11 @@ export async function listPromptRunHistory(
   return invoke<PromptRunHistoryEntry[]>('list_prompt_run_history', {
     rootPath,
     relativePath
+  });
+}
+
+export async function listProjectRunHistory(rootPath: string): Promise<ProjectRunHistoryEntry[]> {
+  return invoke<ProjectRunHistoryEntry[]>('list_project_run_history', {
+    rootPath
   });
 }

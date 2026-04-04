@@ -11,7 +11,7 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 - Product spec: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
 - Approved prototype: `Diamond Runner v2 - IDE Pass`
 - App direction: Tauri + Svelte desktop app with an IDE-like shell
-- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, and the Single-Block Execution Slice are complete; the Pipeline Runner Slice is now active with manifest-driven sequential pipeline runs and inspector-level pipeline controls in place
+- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, the Single-Block Execution Slice, the Pipeline Runner Slice, and the Run History Slice are complete
 - Current Rendering and Validation behavior:
 	- markdown, text, `.tera`, and model YAML assets are editable in the workspace
 	- new prompt blocks can be created directly from the explorer without hand-editing `project.json`
@@ -35,8 +35,10 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 	- manifest-defined pipelines can now be listed and run sequentially from the inspector
 	- pipeline runs stop on the first failing block and reuse the existing per-block run artifact contract under `runs/`
 	- pipeline runs are guarded against unsaved related `.tera` drafts so the user does not accidentally run stale saved prompt files
+	- the inspector now shows project-wide persisted run history sourced from `runs/` and can filter those artifacts by block or pipeline
+	- pipeline-originated block runs now retain pipeline metadata in their persisted artifacts so project history can group and inspect them later
 
-Active implementation plan: `implementation-plans/10-PLAN-pipeline-runner-slice.md`
+Active implementation plan: `implementation-plans/11-PLAN-run-history-slice.md`
 
 ## Recommended Agent Setup
 

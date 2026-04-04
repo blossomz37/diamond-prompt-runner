@@ -8,6 +8,7 @@
     PipelineExecutionResult,
     ProjectAssetNode,
     ProjectPipeline,
+    ProjectRunHistoryEntry,
     PromptExecutionResult,
     PromptRunHistoryEntry,
     ProjectSummary,
@@ -25,6 +26,8 @@
     pipelines: ProjectPipeline[];
     pipelineExecution: PipelineExecutionResult | null;
     pipelineLoading: boolean;
+    projectRunHistory: ProjectRunHistoryEntry[];
+    projectRunHistoryLoading: boolean;
     onSelectAsset: (node: ProjectAssetNode) => void | Promise<void>;
     onSelectTab: (path: string) => void;
     onCloseTab: (path: string) => void;
@@ -60,6 +63,8 @@
     pipelines,
     pipelineExecution,
     pipelineLoading,
+    projectRunHistory,
+    projectRunHistoryLoading,
     onSelectAsset,
     onSelectTab,
     onCloseTab,
@@ -204,6 +209,9 @@
         pipelineExecution={pipelineExecution}
         pipelineLoading={pipelineLoading}
         onRunPipeline={onRunPipeline}
+        runHistory={projectRunHistory}
+        runHistoryLoading={projectRunHistoryLoading}
+        onOpenRunPath={onOpenRunPath}
       />
     </aside>
 

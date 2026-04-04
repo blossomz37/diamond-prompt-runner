@@ -8,6 +8,7 @@ import type {
   PipelineExecutionResult,
   ProjectAssetNode,
   ProjectPipeline,
+  ProjectRunHistoryEntry,
   PromptExecutionResult,
   PromptRunHistoryEntry,
   ProjectSummary,
@@ -23,6 +24,7 @@ const tauri = vi.hoisted(() => ({
   getRecentProjects: vi.fn(),
   getExecutionCredentialStatus: vi.fn(),
   listProjectPipelines: vi.fn(),
+  listProjectRunHistory: vi.fn(),
   listPromptRunHistory: vi.fn(),
   listProjectAssets: vi.fn(),
   locateRecentProject: vi.fn(),
@@ -196,6 +198,8 @@ const executionResult: PromptExecutionResult = {
   path: 'prompts/brief-review.tera',
   blockId: 'brief-review',
   blockName: 'Brief Review',
+  pipelineId: null,
+  pipelineName: null,
   modelPreset: 'models/default.yaml',
   modelId: 'openai/gpt-5.4-nano',
   status: 'success',
@@ -221,7 +225,10 @@ const runHistory: PromptRunHistoryEntry[] = [
   {
     runId: 'run-2',
     path: 'prompts/brief-review.tera',
+    blockId: 'brief-review',
     blockName: 'Brief Review',
+    pipelineId: null,
+    pipelineName: null,
     modelId: 'openai/gpt-5.4-nano',
     status: 'success',
     runPath: 'runs/run-2.json',
@@ -229,6 +236,39 @@ const runHistory: PromptRunHistoryEntry[] = [
     completedAt: '2026-04-03T20:20:04Z',
     outputPreview: 'Earlier persisted output.',
     error: null
+  }
+];
+
+const projectRunHistory: ProjectRunHistoryEntry[] = [
+  {
+    runId: 'run-pipeline',
+    path: 'prompts/brief-review.tera',
+    blockId: 'brief-review',
+    blockName: 'Brief Review',
+    pipelineId: 'review-pipeline',
+    pipelineName: 'Review Pipeline',
+    modelId: 'openai/gpt-5.4-nano',
+    status: 'success',
+    runPath: 'runs/run-pipeline.json',
+    startedAt: '2026-04-03T20:21:00Z',
+    completedAt: '2026-04-03T20:21:08Z',
+    outputPreview: 'Pipeline output preview.',
+    error: null
+  },
+  {
+    runId: 'run-standalone',
+    path: 'prompts/other.tera',
+    blockId: 'other-block',
+    blockName: 'Other Prompt',
+    pipelineId: null,
+    pipelineName: null,
+    modelId: 'openai/gpt-5.4',
+    status: 'failed',
+    runPath: 'runs/run-standalone.json',
+    startedAt: '2026-04-03T20:10:00Z',
+    completedAt: '2026-04-03T20:10:02Z',
+    outputPreview: null,
+    error: 'Provider timeout'
   }
 ];
 
@@ -317,6 +357,7 @@ describe('App', () => {
     tauri.getRecentProjects.mockResolvedValue(recents);
     tauri.getExecutionCredentialStatus.mockResolvedValue(missingCredentialStatus);
     tauri.listProjectPipelines.mockResolvedValue(pipelines);
+    tauri.listProjectRunHistory.mockResolvedValue(projectRunHistory);
     tauri.listPromptRunHistory.mockResolvedValue(runHistory);
     tauri.pickDirectory.mockResolvedValue('/tmp');
     tauri.createProject.mockResolvedValue(summary);
@@ -555,6 +596,29 @@ describe('App', () => {
 
     expect(await screen.findByText('Pipeline complete')).toBeInTheDocument();
     expect(screen.getByText('1 / 1 blocks completed')).toBeInTheDocument();
+  });
+
+  it('filters project run history by pipeline in the inspector', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    expect(await screen.findByText('Pipeline output preview.')).toBeInTheDocument();
+    expect(screen.getByText('Provider timeout')).toBeInTheDocument();
+
+    const historyFilter = screen.getByRole('combobox');
+
+    await fireEvent.change(historyFilter, {
+      target: { value: 'pipeline:review-pipeline' }
+    });
+
+    expect(historyFilter).toHaveValue('pipeline:review-pipeline');
+    expect(screen.getByText('Pipeline output preview.')).toBeInTheDocument();
+    expect(screen.queryByText('Provider timeout')).not.toBeInTheDocument();
   });
 
   it('blocks pipeline runs when a related prompt tab has unsaved changes', async () => {
@@ -835,8 +899,10 @@ describe('App', () => {
     await fireEvent.click(within(explorer).getByText('prompts'));
     await fireEvent.click(within(explorer).getByText('brief-review.tera'));
 
-    expect(await screen.findByText('Earlier persisted output.')).toBeInTheDocument();
-    await fireEvent.click(screen.getByRole('button', { name: 'Open artifact' }));
+    const historyPreview = await screen.findByText('Earlier persisted output.');
+    const historyItem = historyPreview.closest('article');
+    expect(historyItem).not.toBeNull();
+    await fireEvent.click(within(historyItem!).getByRole('button', { name: 'Open artifact' }));
 
     await waitFor(() =>
       expect(tauri.readProjectAsset).toHaveBeenCalledWith('/tmp/story-lab', 'runs/run-2.json')

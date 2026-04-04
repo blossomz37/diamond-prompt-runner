@@ -161,6 +161,10 @@ pub struct PromptExecutionResult {
     pub path: String,
     pub block_id: Option<String>,
     pub block_name: String,
+    #[serde(default)]
+    pub pipeline_id: Option<String>,
+    #[serde(default)]
+    pub pipeline_name: Option<String>,
     pub model_preset: String,
     pub model_id: String,
     pub status: ExecutionStatus,
@@ -177,7 +181,28 @@ pub struct PromptExecutionResult {
 pub struct PromptRunHistoryEntry {
     pub run_id: String,
     pub path: String,
+    pub block_id: Option<String>,
     pub block_name: String,
+    pub pipeline_id: Option<String>,
+    pub pipeline_name: Option<String>,
+    pub model_id: String,
+    pub status: ExecutionStatus,
+    pub run_path: String,
+    pub started_at: String,
+    pub completed_at: String,
+    pub output_preview: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectRunHistoryEntry {
+    pub run_id: String,
+    pub path: String,
+    pub block_id: Option<String>,
+    pub block_name: String,
+    pub pipeline_id: Option<String>,
+    pub pipeline_name: Option<String>,
     pub model_id: String,
     pub status: ExecutionStatus,
     pub run_path: String,
@@ -655,6 +680,7 @@ pub fn execute_prompt_block(
         &manifest,
         relative_path,
         content,
+        None,
         &api_key,
         &mut transport,
     )
@@ -702,6 +728,36 @@ pub fn list_prompt_run_history(root_path: &Path, relative_path: &str) -> StoreRe
     let safe_relative = sanitize_relative_path(relative_path)?;
     let safe_relative_string = safe_relative.to_string_lossy().replace('\\', "/");
 
+    let entries = read_run_history_entries(&root_path, Some(&safe_relative_string))?;
+    Ok(entries
+        .into_iter()
+        .map(|entry| PromptRunHistoryEntry {
+            run_id: entry.run_id,
+            path: entry.path,
+            block_id: entry.block_id,
+            block_name: entry.block_name,
+            pipeline_id: entry.pipeline_id,
+            pipeline_name: entry.pipeline_name,
+            model_id: entry.model_id,
+            status: entry.status,
+            run_path: entry.run_path,
+            started_at: entry.started_at,
+            completed_at: entry.completed_at,
+            output_preview: entry.output_preview,
+            error: entry.error,
+        })
+        .collect())
+}
+
+pub fn list_project_run_history(root_path: &Path) -> StoreResult<Vec<ProjectRunHistoryEntry>> {
+    let (root_path, _) = validate_project(root_path)?;
+    read_run_history_entries(&root_path, None)
+}
+
+fn read_run_history_entries(
+    root_path: &Path,
+    path_filter: Option<&str>,
+) -> StoreResult<Vec<ProjectRunHistoryEntry>> {
     let mut entries = Vec::new();
     for entry in fs::read_dir(root_path.join("runs"))?.flatten() {
         let path = entry.path();
@@ -719,15 +775,20 @@ pub fn list_prompt_run_history(root_path: &Path, relative_path: &str) -> StoreRe
             Err(_) => continue,
         };
 
-        if record.path != safe_relative_string {
-            continue;
+        if let Some(filter) = path_filter {
+            if record.path != filter {
+                continue;
+            }
         }
 
         let run_path = diff_path(&root_path, &path)?;
-        entries.push(PromptRunHistoryEntry {
+        entries.push(ProjectRunHistoryEntry {
             run_id: record.run_id,
             path: record.path,
+            block_id: record.block_id,
             block_name: record.block_name,
+            pipeline_id: record.pipeline_id,
+            pipeline_name: record.pipeline_name,
             model_id: record.model_id,
             status: record.status,
             run_path,
@@ -747,6 +808,7 @@ fn execute_prompt_block_with_transport<F>(
     manifest: &ProjectManifest,
     relative_path: &str,
     content: &str,
+    pipeline_context: Option<&PipelineExecutionContext>,
     api_key: &str,
     transport: &mut F,
 ) -> StoreResult<PromptExecutionResult>
@@ -815,6 +877,8 @@ where
         path: safe_relative_string.clone(),
         block_id,
         block_name,
+        pipeline_id: pipeline_context.map(|context| context.pipeline_id.clone()),
+        pipeline_name: pipeline_context.map(|context| context.pipeline_name.clone()),
         model_preset,
         model_id,
         status: ExecutionStatus::Success,
@@ -864,6 +928,10 @@ where
     let mut steps = Vec::new();
     let mut status = ExecutionStatus::Success;
     let mut error = None;
+    let pipeline_context = PipelineExecutionContext {
+        pipeline_id: pipeline.pipeline_id.clone(),
+        pipeline_name: pipeline.name.clone(),
+    };
 
     for block_id in &pipeline.ordered_blocks {
         let block = manifest
@@ -893,6 +961,7 @@ where
             manifest,
             &relative_path,
             &content,
+            Some(&pipeline_context),
             api_key,
             transport,
         ) {
@@ -1622,6 +1691,10 @@ struct PersistedRunRecord {
     block_id: Option<String>,
     block_name: String,
     #[serde(default)]
+    pipeline_id: Option<String>,
+    #[serde(default)]
+    pipeline_name: Option<String>,
+    #[serde(default)]
     model_preset: String,
     model_id: String,
     status: ExecutionStatus,
@@ -1643,6 +1716,8 @@ impl PersistedRunRecord {
             path: result.path.clone(),
             block_id: result.block_id.clone(),
             block_name: result.block_name.clone(),
+            pipeline_id: result.pipeline_id.clone(),
+            pipeline_name: result.pipeline_name.clone(),
             model_preset: result.model_preset.clone(),
             model_id: result.model_id.clone(),
             status: result.status.clone(),
@@ -1654,6 +1729,12 @@ impl PersistedRunRecord {
             response,
         }
     }
+}
+
+#[derive(Debug, Clone)]
+struct PipelineExecutionContext {
+    pipeline_id: String,
+    pipeline_name: String,
 }
 
 fn persisted_run_record_version() -> u32 {
@@ -2114,6 +2195,7 @@ mod tests {
             &manifest,
             "prompts/review.tera",
             "Context:\n{{ doc(\"context.md\") }}\nTone: {{ tone }}\nModel: {{ model_id }}",
+            None,
             "test-key",
             &mut transport,
         )
@@ -2152,6 +2234,7 @@ mod tests {
             &manifest,
             "prompts/review.tera",
             "{{ doc(\"missing.md\") }}",
+            None,
             "test-key",
             &mut transport,
         )
@@ -2176,6 +2259,7 @@ mod tests {
             &manifest,
             "prompts/review.tera",
             "Tone: {{ missing_tone }}",
+            None,
             "test-key",
             &mut transport,
         )
@@ -2215,6 +2299,7 @@ mod tests {
             &manifest,
             "prompts/review.tera",
             "{% if missing_tone is defined %}{{ missing_tone }}{% else %}Fallback tone{% endif %}",
+            None,
             "test-key",
             &mut transport,
         )
@@ -2266,6 +2351,7 @@ mod tests {
             &manifest,
             "prompts/review.tera",
             "Hello world",
+            None,
             "test-key",
             &mut transport,
         )
@@ -2364,6 +2450,64 @@ mod tests {
         assert_eq!(history[0].run_id, "run-new");
         assert_eq!(history[1].run_id, "run-old");
         assert_eq!(history[0].run_path, "runs/run-new.json");
+    }
+
+    #[test]
+    fn lists_project_run_history_with_pipeline_metadata() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "ProjectHistory", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        fs::write(
+            root.join("runs").join("run-pipeline.json"),
+            serde_json::to_string_pretty(&json!({
+                "runId": "run-pipeline",
+                "path": "prompts/review.tera",
+                "blockId": "brief-review",
+                "blockName": "Brief Review",
+                "pipelineId": "review-pipeline",
+                "pipelineName": "Review Pipeline",
+                "modelId": "openai/gpt-5.4",
+                "status": "success",
+                "output": "Pipeline output",
+                "error": null,
+                "startedAt": "2026-04-03T21:00:00Z",
+                "completedAt": "2026-04-03T21:00:01Z"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        fs::write(
+            root.join("runs").join("run-standalone.json"),
+            serde_json::to_string_pretty(&json!({
+                "runId": "run-standalone",
+                "path": "prompts/other.tera",
+                "blockId": "other-block",
+                "blockName": "Other",
+                "pipelineId": null,
+                "pipelineName": null,
+                "modelId": "openai/gpt-5.4-nano",
+                "status": "failed",
+                "output": null,
+                "error": "Provider timeout",
+                "startedAt": "2026-04-03T20:00:00Z",
+                "completedAt": "2026-04-03T20:00:02Z"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let history = list_project_run_history(&root).unwrap();
+
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].run_id, "run-pipeline");
+        assert_eq!(history[0].pipeline_id.as_deref(), Some("review-pipeline"));
+        assert_eq!(history[0].pipeline_name.as_deref(), Some("Review Pipeline"));
+        assert_eq!(history[0].block_id.as_deref(), Some("brief-review"));
+        assert_eq!(history[1].run_id, "run-standalone");
+        assert_eq!(history[1].pipeline_id, None);
     }
 
     #[test]

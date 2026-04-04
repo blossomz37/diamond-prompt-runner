@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 7:15 PM
-modified: 2026-04-03 7:15 PM
+modified: 2026-04-04 12:00 AM
 ---
 # Plan To Reach The Pipeline Runner Slice
 
@@ -21,7 +21,7 @@ This slice does not include pipeline editing, pipeline cancellation, workspace-w
 Sequence around this milestone:
 - completed small follow-up: unavailable-recents `Locate` flow
 - completed milestone: Single-Block Execution Slice
-- active milestone: Pipeline Runner Slice
+- completed milestone: Pipeline Runner Slice
 - later: Run History / Output Inspector expansion
 - later: Exports and import/export workflows
 - later: scoped online-research extension
@@ -69,7 +69,7 @@ Explicitly out of scope for this slice:
 - [x] Surface pipeline run controls and latest pipeline status in the existing shell.
 - [x] Guard against pipeline runs when related prompt tabs have unsaved drafts.
 - [x] Add an in-app prompt creation flow so new prompt blocks no longer require manual filesystem edits.
-- [ ] Expand run-history UX beyond prompt-scoped bottom-panel browsing.
+- [x] Expand run-history UX beyond prompt-scoped bottom-panel browsing.
 - [ ] Add export-oriented slices after the pipeline runner behavior settles.
 
 ## Verification

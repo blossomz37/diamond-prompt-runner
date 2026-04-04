@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 12:57 PM
-modified: 2026-04-03 11:20 PM
+modified: 2026-04-04 12:00 AM
 ---
 
 # Rolling TODO List
@@ -44,6 +44,8 @@ Oldest to Newest
 - [x] Pipeline Runner Slice: create the active implementation plan and add manifest-driven sequential pipeline runs to the inspector.
 - [x] Pipeline Runner Slice: stop pipeline execution on the first failing block while reusing the existing per-block run artifact contract under `runs/`.
 - [x] Prompt Authoring: add an explorer-side create flow for new `.tera` prompt blocks and manifest entries.
+- [x] Run History Slice: expose project-wide persisted run history in the inspector while keeping prompt-scoped bottom-panel history in place.
+- [x] Run History Slice: retain pipeline metadata on persisted block runs so history can filter by pipeline.
 - [ ] Post-MVP online extension: support scoped `:online` behavior for prompts that require live web research.
 - [ ] Post-MVP online extension: add tests for scoped online-research prompt behavior.
 - [ ] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.
