@@ -25,3 +25,5 @@ src-tauri/target/
 .env
 .vscode/tasks.json
 fixtures/sample-project/runs/
+workshop-parts/openrouter/OpenRouter Quickstart.md
+.gitignore
