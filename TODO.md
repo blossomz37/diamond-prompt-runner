@@ -48,6 +48,7 @@ Oldest to Newest
 - [x] Run History Slice: retain pipeline metadata on persisted block runs so history can filter by pipeline.
 - [x] Pipeline Authoring Slice: add an active implementation plan and replace manual `project.json` edits with structured in-app pipeline editing.
 - [x] Export Bundle Slice: export selected open tabs into derived bundles under `exports/` and block unsaved editable drafts from being exported.
+- [x] Post-MVP online extension: add the active implementation plan and require the standalone OpenRouter probe to pass before app behavior is hardcoded.
 - [ ] Post-MVP online extension: support scoped `:online` behavior for prompts that require live web research.
 - [ ] Post-MVP online extension: add tests for scoped online-research prompt behavior.
 - [ ] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.

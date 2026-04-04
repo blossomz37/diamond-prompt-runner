@@ -41,7 +41,7 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 	- the inspector can export selected open tabs into a derived bundle under `exports/` and writes bundle metadata alongside the copied artifacts
 	- export bundles are derived from saved files on disk and block attempts to export unsaved editable drafts
 
-Active implementation plan: `implementation-plans/13-PLAN-export-bundle-slice.md`
+Active implementation plan: `implementation-plans/14-PLAN-online-research-slice.md`
 
 ## Recommended Agent Setup
 

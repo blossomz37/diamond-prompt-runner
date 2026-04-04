@@ -1,6 +1,5 @@
----
 created: 2026-04-03 2:16 PM
-modified: 2026-04-04 12:20 AM
+modified: 2026-04-03 9:12 PM
 ---
 # Diamond Runner: Planning, Setup, and Engineering Roadmap
 
@@ -23,6 +22,9 @@ Current slice status:
 Latest completed milestone plan:
 - `implementation-plans/13-PLAN-export-bundle-slice.md`
 
+Next active milestone plan:
+- `implementation-plans/14-PLAN-online-research-slice.md`
+
 Sequence after Milestone 1:
 - completed small follow-up: unavailable-recents `Locate` flow
 - completed milestone: Editing Slice
@@ -32,7 +34,7 @@ Sequence after Milestone 1:
 - completed milestone: Run History Slice
 - completed milestone: Pipeline Authoring Slice
 - completed milestone: Export Bundle Slice
-- later scoped online-research extension
+- next active milestone: scoped online-research extension
 
 ## Implementation Plan
 
