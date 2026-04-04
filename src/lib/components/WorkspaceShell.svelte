@@ -464,6 +464,7 @@
           recentRuns={historyItems}
           recentRunsLoading={historyLoading}
           onOpenRunPath={onOpenRunPath}
+          onExecute={onRunTab}
         />
       {/if}
     </section>

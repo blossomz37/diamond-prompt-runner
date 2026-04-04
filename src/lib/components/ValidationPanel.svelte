@@ -23,6 +23,7 @@
     recentRuns: PromptRunHistoryEntry[];
     recentRunsLoading: boolean;
     onOpenRunPath: (path: string) => void | Promise<void>;
+    onExecute: (path: string) => void | Promise<void>;
   }
 
   let {
@@ -39,7 +40,8 @@
     onClearCredential,
     recentRuns,
     recentRunsLoading,
-    onOpenRunPath
+    onOpenRunPath,
+    onExecute
   }: Props = $props();
 
   function tone(status: TemplateValidationResult['status']): string {
@@ -206,13 +208,26 @@
           </div>
         </div>
 
-        {#if executionLoading}
-          <p class="empty">Running prompt from the current draft…</p>
+         {#if executionLoading}
+          <div class="run-action state-loading">
+            <p class="empty">Assembling and running prompt…</p>
+          </div>
         {:else if execution}
+          <div class="run-action state-done">
+            <button
+              type="primary"
+              class="primary run-action-btn"
+              onclick={() => onExecute(tab!.path)}
+            >
+              Re-Assemble & Run
+            </button>
+          </div>
+
           {#if execution.error}
             <div class="messages">
               <h4>Execution Error</h4>
               <p>{execution.error}</p>
+              <p class="meta">If you see decoding or OpenRouter errors, the provider may be experiencing network instability or returning corrupted data. Please wait a moment and try assembling the run again.</p>
             </div>
           {/if}
 
@@ -277,7 +292,17 @@
             </div>
           </dl>
         {:else}
-          <p class="empty">Run the active `.tera` prompt to save a new execution artifact.</p>
+          <div class="run-action state-ready">
+            <p class="empty">Context is ready. Assemble references and execute via OpenRouter.</p>
+            <button
+              type="primary"
+              class="primary run-action-btn"
+              onclick={() => onExecute(tab!.path)}
+              disabled={!credentialState.hasStoredKey}
+            >
+              Assemble & Run Prompt
+            </button>
+          </div>
         {/if}
       </div>
     </div>
@@ -520,6 +545,28 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.6rem;
+  }
+
+  .run-action {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: 12px;
+    background: rgba(49, 134, 96, 0.05);
+    border: 1px solid rgba(153, 227, 190, 0.15);
+    align-items: start;
+    justify-items: start;
+  }
+
+  .run-action.state-loading,
+  .run-action.state-done {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(157, 180, 255, 0.12);
+  }
+
+  .run-action-btn {
+    font-size: 0.95rem;
+    padding: 0.6rem 1.2rem;
   }
 
   button {
