@@ -6,10 +6,12 @@ modified: 2026-04-04 12:20 AM
 # Rolling TODO List
 Oldest to Newest
 
+
 ## 2026-04-03
 - [ ] ONGOING: Implementation Plans. `implementation-plans/`
+- [ ] ONGOING: Keep README and AGENTS aligned with the approved tool and commit workflow recommendations.
 - [x] Spare parts files from YFD Runner. `workshop-parts/`
-- [ ] MVP Specifications. `specifications/`
+- [x] MVP Specifications. `specifications/`
 - [x] Figma Prototype. Selected `Diamond Runner v2 - IDE Pass`.
 - [x] Prototype direction approved. IDE shell is the selected UI model.
 - [x] Create a user-facing readme.
@@ -48,11 +50,18 @@ Oldest to Newest
 - [x] Run History Slice: retain pipeline metadata on persisted block runs so history can filter by pipeline.
 - [x] Pipeline Authoring Slice: add an active implementation plan and replace manual `project.json` edits with structured in-app pipeline editing.
 - [x] Export Bundle Slice: export selected open tabs into derived bundles under `exports/` and block unsaved editable drafts from being exported.
+
+
+## Post-MVP
 - [x] Post-MVP online extension: add the active implementation plan and require the standalone OpenRouter probe to pass before app behavior is hardcoded.
 - [x] Post-MVP online extension: support scoped `:online` behavior for prompts that require live web research.
 - [x] Post-MVP online extension: add tests for scoped online-research prompt behavior.
 - [ ] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.
 - [ ] Post-MVP online extension: decide whether `:online` support belongs in the MVP spec or as a later extension.
-- [ ] Test GitHub app tools directly for repo workflows in this workspace.
 - [ ] Decide whether to create custom Diamond-specific skills for implementation, fixtures, and prompt-pack porting.
-- [ ] Keep README and AGENTS aligned with the approved tool and commit workflow recommendations.
+
+
+## Other
+- [ ] Test GitHub app tools directly for repo workflows in this workspace.
+
+
