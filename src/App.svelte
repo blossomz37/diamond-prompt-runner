@@ -464,6 +464,13 @@
           enabled: false,
           webSearchRequests: 0,
           citationCount: 0
+        },
+        usage: {
+          promptTokens: null,
+          completionTokens: null,
+          totalTokens: null,
+          cost: null,
+          outputWordCount: null
         }
       };
     } finally {

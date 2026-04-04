@@ -18,12 +18,13 @@ Current slice status:
 - the Run History Slice is complete
 - the Pipeline Authoring Slice is complete
 - the Export Bundle Slice is complete
+- the Online Research Slice is complete
+- the Usage Metrics Slice is complete
 
 Latest completed milestone plan:
-- `implementation-plans/13-PLAN-export-bundle-slice.md`
+- `implementation-plans/15-PLAN-usage-metrics-slice.md`
 
-Next active milestone plan:
-- `implementation-plans/14-PLAN-online-research-slice.md`
+All implementation slices through Usage Metrics are complete.
 
 Sequence after Milestone 1:
 - completed small follow-up: unavailable-recents `Locate` flow
@@ -34,7 +35,8 @@ Sequence after Milestone 1:
 - completed milestone: Run History Slice
 - completed milestone: Pipeline Authoring Slice
 - completed milestone: Export Bundle Slice
-- next active milestone: scoped online-research extension
+- completed milestone: Online Research Slice (post-MVP extension)
+- completed milestone: Usage Metrics Slice
 
 ## Implementation Plan
 
@@ -161,10 +163,17 @@ Sequence after Milestone 1:
 
 ### Phase 8: Post-MVP Online Research Extension
 
-- Add scoped online-research prompt behavior only after the local-first execution path is stable.
-- Scope it to selected prompts or presets, not a global toggle-first design.
+- Add scoped online-research prompt behavior only after the local-first execution path is stable. **Complete.**
+- Scope it to selected prompts or presets, not a global toggle-first design. **Complete.**
 - Validate it with explicit tests and then document it in the in-app Help section.
 - Do not rely on deprecated `:online` behavior as the product baseline without a fresh design review at implementation time.
+
+### Phase 9: Usage Metrics Extraction
+
+- Extract structured usage data from the already-persisted raw OpenRouter response: prompt tokens, completion tokens, total tokens, estimated cost, and output word count. **Complete.**
+- Thread usage metrics through the full data path: execution result → persisted artifact → run history → UI display. **Complete.**
+- Keep all usage fields optional so responses that omit token or cost data degrade gracefully. **Complete.**
+- Bump the persisted run record version with backward-compatible serde defaults. **Complete.**
 
 ## Important Interfaces And Decisions
 

@@ -41,7 +41,7 @@ const OPENROUTER_CHAT_COMPLETIONS_URL: &str = "https://openrouter.ai/api/v1/chat
 const OPENROUTER_API_KEY_ENV: &str = "OPENROUTER_API_KEY";
 const OPENROUTER_KEYCHAIN_SERVICE: &str = "com.blossomz37.diamondrunner";
 const OPENROUTER_KEYCHAIN_ACCOUNT: &str = "openrouter-api-key";
-const PERSISTED_RUN_RECORD_VERSION: u32 = 2;
+const PERSISTED_RUN_RECORD_VERSION: u32 = 3;
 const ONLINE_PROMPT_DIRECTIVE: &str = "diamond:online";
 const DEFAULT_ONLINE_WEB_MAX_RESULTS: u32 = 3;
 const DEFAULT_ONLINE_SEARCH_CONTEXT_SIZE: &str = "medium";
@@ -191,6 +191,28 @@ impl Default for OnlineRunMetadata {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct UsageMetrics {
+    pub prompt_tokens: Option<u32>,
+    pub completion_tokens: Option<u32>,
+    pub total_tokens: Option<u32>,
+    pub cost: Option<f64>,
+    pub output_word_count: Option<u32>,
+}
+
+impl Default for UsageMetrics {
+    fn default() -> Self {
+        Self {
+            prompt_tokens: None,
+            completion_tokens: None,
+            total_tokens: None,
+            cost: None,
+            output_word_count: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PromptExecutionResult {
@@ -213,9 +235,11 @@ pub struct PromptExecutionResult {
     pub completed_at: String,
     #[serde(default)]
     pub online: OnlineRunMetadata,
+    #[serde(default)]
+    pub usage: UsageMetrics,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PromptRunHistoryEntry {
     pub run_id: String,
@@ -233,9 +257,11 @@ pub struct PromptRunHistoryEntry {
     pub error: Option<String>,
     #[serde(default)]
     pub online: OnlineRunMetadata,
+    #[serde(default)]
+    pub usage: UsageMetrics,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectRunHistoryEntry {
     pub run_id: String,
@@ -253,6 +279,8 @@ pub struct ProjectRunHistoryEntry {
     pub error: Option<String>,
     #[serde(default)]
     pub online: OnlineRunMetadata,
+    #[serde(default)]
+    pub usage: UsageMetrics,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -962,6 +990,7 @@ pub fn list_prompt_run_history(root_path: &Path, relative_path: &str) -> StoreRe
             output_preview: entry.output_preview,
             error: entry.error,
             online: entry.online,
+            usage: entry.usage,
         })
         .collect())
 }
@@ -1014,6 +1043,7 @@ fn read_run_history_entries(
             output_preview: record.output.as_deref().map(|value| preview_text(value, 180)),
             error: record.error,
             online: record.online,
+            usage: record.usage,
         });
     }
 
@@ -1109,6 +1139,7 @@ where
         started_at,
         completed_at,
         online: extract_online_run_metadata(&response, online_enabled),
+        usage: extract_usage_metrics(&response, Some(output.trim())),
     };
 
     persist_run_record(&root_path, &result, &response)?;
@@ -2008,6 +2039,34 @@ fn extract_online_run_metadata(response: &Value, online_enabled: bool) -> Online
     }
 }
 
+fn extract_usage_metrics(response: &Value, output: Option<&str>) -> UsageMetrics {
+    let usage = response.get("usage");
+    let prompt_tokens = usage
+        .and_then(|u| u.get("prompt_tokens"))
+        .and_then(|v| v.as_u64())
+        .and_then(|v| u32::try_from(v).ok());
+    let completion_tokens = usage
+        .and_then(|u| u.get("completion_tokens"))
+        .and_then(|v| v.as_u64())
+        .and_then(|v| u32::try_from(v).ok());
+    let total_tokens = usage
+        .and_then(|u| u.get("total_tokens"))
+        .and_then(|v| v.as_u64())
+        .and_then(|v| u32::try_from(v).ok());
+    let cost = usage
+        .and_then(|u| u.get("cost"))
+        .and_then(|v| v.as_f64());
+    let output_word_count = output.map(|text| text.split_whitespace().count() as u32);
+
+    UsageMetrics {
+        prompt_tokens,
+        completion_tokens,
+        total_tokens,
+        cost,
+        output_word_count,
+    }
+}
+
 fn post_openrouter_chat_completion(url: &str, api_key: &str, payload: &Value) -> StoreResult<Value> {
     let response = reqwest::blocking::Client::new()
         .post(url)
@@ -2093,6 +2152,8 @@ struct PersistedRunRecord {
     #[serde(default)]
     online: OnlineRunMetadata,
     #[serde(default)]
+    usage: UsageMetrics,
+    #[serde(default)]
     response: Value,
 }
 
@@ -2115,6 +2176,7 @@ impl PersistedRunRecord {
             started_at: result.started_at.clone(),
             completed_at: result.completed_at.clone(),
             online: result.online.clone(),
+            usage: result.usage.clone(),
             response,
         }
     }
@@ -2575,7 +2637,13 @@ mod tests {
                             "content": "Execution output."
                         }
                     }
-                ]
+                ],
+                "usage": {
+                    "prompt_tokens": 42,
+                    "completion_tokens": 10,
+                    "total_tokens": 52,
+                    "cost": 0.00123
+                }
             }))
         };
 
@@ -2600,12 +2668,20 @@ mod tests {
             &fs::read_to_string(root.join(&result.run_path)).unwrap(),
         )
         .unwrap();
-        assert_eq!(persisted.artifact_version, 2);
+        assert_eq!(persisted.artifact_version, 3);
         assert_eq!(persisted.block_id.as_deref(), Some("block-1"));
         assert_eq!(persisted.model_preset, "models/default.yaml");
         assert!(persisted.rendered_prompt.contains("Doc body."));
         assert!(!persisted.online.enabled);
         assert!(persisted.response.get("choices").is_some());
+
+        assert_eq!(result.usage.prompt_tokens, Some(42));
+        assert_eq!(result.usage.completion_tokens, Some(10));
+        assert_eq!(result.usage.total_tokens, Some(52));
+        assert!((result.usage.cost.unwrap() - 0.00123).abs() < f64::EPSILON);
+        assert_eq!(result.usage.output_word_count, Some(2));
+        assert_eq!(persisted.usage.prompt_tokens, Some(42));
+        assert_eq!(persisted.usage.completion_tokens, Some(10));
     }
 
     #[test]
@@ -3223,5 +3299,36 @@ mod tests {
         assert_eq!(result.steps[0].block_name, "Review");
         assert!(result.error.unwrap().contains("Outline"));
         assert_eq!(calls, 1);
+    }
+
+    #[test]
+    fn extracts_usage_metrics_from_response_with_all_fields() {
+        let response = json!({
+            "usage": {
+                "prompt_tokens": 100,
+                "completion_tokens": 200,
+                "total_tokens": 300,
+                "cost": 0.0042
+            }
+        });
+        let metrics = extract_usage_metrics(&response, Some("Hello world output here"));
+        assert_eq!(metrics.prompt_tokens, Some(100));
+        assert_eq!(metrics.completion_tokens, Some(200));
+        assert_eq!(metrics.total_tokens, Some(300));
+        assert!((metrics.cost.unwrap() - 0.0042).abs() < f64::EPSILON);
+        assert_eq!(metrics.output_word_count, Some(4));
+    }
+
+    #[test]
+    fn extracts_usage_metrics_gracefully_when_fields_missing() {
+        let response = json!({
+            "choices": [{ "message": { "content": "ok" } }]
+        });
+        let metrics = extract_usage_metrics(&response, None);
+        assert_eq!(metrics.prompt_tokens, None);
+        assert_eq!(metrics.completion_tokens, None);
+        assert_eq!(metrics.total_tokens, None);
+        assert!(metrics.cost.is_none());
+        assert!(metrics.output_word_count.is_none());
     }
 }

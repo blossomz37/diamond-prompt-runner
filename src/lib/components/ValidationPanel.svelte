@@ -218,6 +218,36 @@
               <dt>Model</dt>
               <dd>{execution.modelId || 'Unknown'}</dd>
             </div>
+            {#if execution.usage.promptTokens != null}
+              <div>
+                <dt>Prompt Tokens</dt>
+                <dd>{execution.usage.promptTokens.toLocaleString()}</dd>
+              </div>
+            {/if}
+            {#if execution.usage.completionTokens != null}
+              <div>
+                <dt>Completion Tokens</dt>
+                <dd>{execution.usage.completionTokens.toLocaleString()}</dd>
+              </div>
+            {/if}
+            {#if execution.usage.totalTokens != null}
+              <div>
+                <dt>Total Tokens</dt>
+                <dd>{execution.usage.totalTokens.toLocaleString()}</dd>
+              </div>
+            {/if}
+            {#if execution.usage.cost != null}
+              <div>
+                <dt>Cost</dt>
+                <dd>${execution.usage.cost.toFixed(4)}</dd>
+              </div>
+            {/if}
+            {#if execution.usage.outputWordCount != null}
+              <div>
+                <dt>Output Words</dt>
+                <dd>{execution.usage.outputWordCount.toLocaleString()}</dd>
+              </div>
+            {/if}
             <div>
               <dt>Online</dt>
               <dd>{execution.online.enabled ? 'Enabled' : 'Disabled'}</dd>
@@ -289,6 +319,11 @@
                     <span class={`badge ${executionTone(item.status)}`}>{item.status}</span>
                   </div>
                   <p class="empty">{item.modelId}</p>
+                  {#if item.usage.totalTokens != null || item.usage.cost != null}
+                    <p class="empty">
+                      {#if item.usage.totalTokens != null}{item.usage.totalTokens.toLocaleString()} tokens{/if}{#if item.usage.totalTokens != null && item.usage.cost != null} · {/if}{#if item.usage.cost != null}${item.usage.cost.toFixed(4)}{/if}{#if item.usage.outputWordCount != null} · {item.usage.outputWordCount.toLocaleString()} words{/if}
+                    </p>
+                  {/if}
                   {#if item.online.enabled}
                     <p class="empty">
                       Online research: {item.online.webSearchRequests} web request{item.online.webSearchRequests === 1 ? '' : 's'} / {item.online.citationCount} citation{item.online.citationCount === 1 ? '' : 's'}

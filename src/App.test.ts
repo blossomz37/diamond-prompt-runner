@@ -54,6 +54,14 @@ const offlineRunMetadata = {
   citationCount: 0
 };
 
+const emptyUsageMetrics = {
+  promptTokens: null,
+  completionTokens: null,
+  totalTokens: null,
+  cost: null,
+  outputWordCount: null
+};
+
 const summary: ProjectSummary = {
   rootPath: '/tmp/story-lab',
   projectId: 'project-1',
@@ -223,7 +231,8 @@ const executionResult: PromptExecutionResult = {
   runPath: 'runs/run-1.json',
   startedAt: '2026-04-03T20:13:00Z',
   completedAt: '2026-04-03T20:13:05Z',
-  online: offlineRunMetadata
+  online: offlineRunMetadata,
+  usage: emptyUsageMetrics
 };
 
 const missingCredentialStatus: ExecutionCredentialStatus = {
@@ -251,7 +260,8 @@ const runHistory: PromptRunHistoryEntry[] = [
     completedAt: '2026-04-03T20:20:04Z',
     outputPreview: 'Earlier persisted output.',
     error: null,
-    online: offlineRunMetadata
+    online: offlineRunMetadata,
+    usage: emptyUsageMetrics
   }
 ];
 
@@ -270,7 +280,8 @@ const projectRunHistory: ProjectRunHistoryEntry[] = [
     completedAt: '2026-04-03T20:21:08Z',
     outputPreview: 'Pipeline output preview.',
     error: null,
-    online: offlineRunMetadata
+    online: offlineRunMetadata,
+    usage: emptyUsageMetrics
   },
   {
     runId: 'run-standalone',
@@ -286,7 +297,8 @@ const projectRunHistory: ProjectRunHistoryEntry[] = [
     completedAt: '2026-04-03T20:10:02Z',
     outputPreview: null,
     error: 'Provider timeout',
-    online: offlineRunMetadata
+    online: offlineRunMetadata,
+    usage: emptyUsageMetrics
   }
 ];
 

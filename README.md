@@ -11,7 +11,7 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 - Product spec: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
 - Approved prototype: `Diamond Runner v2 - IDE Pass`
 - App direction: Tauri + Svelte desktop app with an IDE-like shell
-- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, the Single-Block Execution Slice, the Pipeline Runner Slice, the Run History Slice, the Pipeline Authoring Slice, and the Export Bundle Slice are complete
+- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, the Single-Block Execution Slice, the Pipeline Runner Slice, the Run History Slice, the Pipeline Authoring Slice, the Export Bundle Slice, and the Usage Metrics Slice are complete
 - Current Rendering and Validation behavior:
 	- markdown, text, `.tera`, and model YAML assets are editable in the workspace
 	- new prompt blocks can be created directly from the explorer without hand-editing `project.json`
@@ -42,8 +42,10 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 	- export bundles are derived from saved files on disk and block attempts to export unsaved editable drafts
 	- prompts whose first non-empty line is `{# diamond:online #}` now opt into OpenRouter web-backed execution without changing standard prompt runs
 	- online-enabled runs now persist audit metadata for whether online mode was enabled, how many web-search requests were issued, and how many citations were returned
+	- execution results now extract and display usage metrics from the provider response: prompt tokens, completion tokens, total tokens, estimated cost, and output word count
+	- persisted run artifacts and run history entries carry usage metrics extracted from the raw OpenRouter response
 
-Active implementation plan: `implementation-plans/14-PLAN-online-research-slice.md`
+Active implementation plan: `implementation-plans/15-PLAN-usage-metrics-slice.md`
 
 ## Recommended Agent Setup
 

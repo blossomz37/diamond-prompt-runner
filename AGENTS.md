@@ -33,14 +33,14 @@ Rules:
 Use these docs by question type:
 - Current product direction, approved prototype, and shipped milestone status: `README.md`
 - MVP behavior, data model, and public product scope: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
-- Current implementation sequence and active slice details: `implementation-plans/09-PLAN-single-block-execution-slice.md`
+- Current implementation sequence and active slice details: `implementation-plans/15-PLAN-usage-metrics-slice.md`
 - Rolling task inventory and follow-ups: `TODO.md`
 - Historical planning context or milestone references: other files under `implementation-plans/`
 
 ## Current Active Slice
-- The active implementation plan is `implementation-plans/09-PLAN-single-block-execution-slice.md`.
-- Single-Block Execution is in progress.
-- Rendering and Validation is complete and should be treated as closed work unless a regression is introduced.
+- The most recently completed implementation plan is `implementation-plans/15-PLAN-usage-metrics-slice.md`.
+- Usage Metrics Extraction is complete.
+- All prior slices (Milestone 1, Editing, Rendering and Validation, Single-Block Execution, Pipeline Runner, Run History, Pipeline Authoring, Export Bundle, Online Research) are complete and should be treated as closed work unless a regression is introduced.
 
 ## Build And Test Commands
 

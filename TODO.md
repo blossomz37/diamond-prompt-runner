@@ -50,6 +50,8 @@ Oldest to Newest
 - [x] Run History Slice: retain pipeline metadata on persisted block runs so history can filter by pipeline.
 - [x] Pipeline Authoring Slice: add an active implementation plan and replace manual `project.json` edits with structured in-app pipeline editing.
 - [x] Export Bundle Slice: export selected open tabs into derived bundles under `exports/` and block unsaved editable drafts from being exported.
+- [x] Usage Metrics Slice: extract and display prompt tokens, completion tokens, total tokens, cost, and output word count from OpenRouter responses.
+- [x] Usage Metrics Slice: persist usage metrics in run artifacts and surface them in execution metadata and run history UI.
 
 
 ## Post-MVP

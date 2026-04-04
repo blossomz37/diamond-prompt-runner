@@ -84,6 +84,14 @@ export interface OnlineRunMetadata {
   citationCount: number;
 }
 
+export interface UsageMetrics {
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
+  cost: number | null;
+  outputWordCount: number | null;
+}
+
 export interface PromptExecutionResult {
   runId: string;
   path: string;
@@ -101,6 +109,7 @@ export interface PromptExecutionResult {
   startedAt: string;
   completedAt: string;
   online: OnlineRunMetadata;
+  usage: UsageMetrics;
 }
 
 export interface ProjectRunHistoryEntry {
@@ -118,6 +127,7 @@ export interface ProjectRunHistoryEntry {
   outputPreview: string | null;
   error: string | null;
   online: OnlineRunMetadata;
+  usage: UsageMetrics;
 }
 
 export type PromptRunHistoryEntry = ProjectRunHistoryEntry;
