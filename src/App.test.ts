@@ -22,17 +22,22 @@ import type {
 
 const tauri = vi.hoisted(() => ({
   clearExecutionApiKey: vi.fn(),
+  createModelPreset: vi.fn(),
   createPipeline: vi.fn(),
   createProject: vi.fn(),
   createPromptBlock: vi.fn(),
+  deleteDocument: vi.fn(),
+  deleteModelPreset: vi.fn(),
+  deletePipeline: vi.fn(),
+  deletePromptBlock: vi.fn(),
+  deleteRun: vi.fn(),
   executePipeline: vi.fn(),
   exportProjectAssets: vi.fn(),
   getRecentProjects: vi.fn(),
   getExecutionCredentialStatus: vi.fn(),
   getGlobalVariables: vi.fn(),
   getProjectUsageSummary: vi.fn(),
-  setGlobalVariables: vi.fn(),
-  setProjectVariables: vi.fn(),
+  listModelPresets: vi.fn(),
   listProjectPipelines: vi.fn(),
   listProjectPromptBlocks: vi.fn(),
   listProjectRunHistory: vi.fn(),
@@ -43,8 +48,16 @@ const tauri = vi.hoisted(() => ({
   pickDirectory: vi.fn(),
   removeRecentProject: vi.fn(),
   readProjectAsset: vi.fn(),
+  renameDocument: vi.fn(),
+  renameProject: vi.fn(),
   executePromptBlock: vi.fn(),
   saveExecutionApiKey: vi.fn(),
+  setBlockModelPreset: vi.fn(),
+  setBlockOutputFilename: vi.fn(),
+  setBlockOutputTarget: vi.fn(),
+  setDefaultModelPreset: vi.fn(),
+  setGlobalVariables: vi.fn(),
+  setProjectVariables: vi.fn(),
   updatePipeline: vi.fn(),
   validateProjectTemplate: vi.fn(),
   writeProjectAsset: vi.fn()
@@ -79,7 +92,8 @@ const summary: ProjectSummary = {
     models: 1,
     runs: 0,
     exports: 0,
-    help: 0
+    help: 0,
+    variables: 0
   },
   variables: {}
 };
@@ -333,7 +347,9 @@ const pipelines: ProjectPipeline[] = [
         blockId: 'brief-review',
         name: 'Brief Review',
         templateSource: 'prompts/brief-review.tera',
-        modelPreset: 'models/default.yaml'
+        modelPreset: 'models/default.yaml',
+        outputTarget: 'replace_document',
+        outputFilename: null
       }
     ]
   }
@@ -344,13 +360,17 @@ const promptBlocks: ProjectPromptBlock[] = [
     blockId: 'brief-review',
     name: 'Brief Review',
     templateSource: 'prompts/brief-review.tera',
-    modelPreset: 'models/default.yaml'
+    modelPreset: 'models/default.yaml',
+    outputTarget: 'replace_document',
+    outputFilename: null
   },
   {
     blockId: 'scene-draft',
     name: 'Scene Draft',
     templateSource: 'prompts/scene-draft.tera',
-    modelPreset: 'models/default.yaml'
+    modelPreset: 'models/default.yaml',
+    outputTarget: 'replace_document',
+    outputFilename: null
   }
 ];
 
@@ -454,27 +474,41 @@ async function expandSidebarSection(sectionName: string): Promise<void> {
     await fireEvent.click(header!);
   }
 
-  async function openExplorerAsset(folderName: string, assetName: string): Promise<void> {
-  const explorer = screen.getByTestId('explorer-tree');
-  const folderButton = within(explorer)
-    .getAllByRole('button')
-    .find((button) => button.textContent?.trim().endsWith(folderName));
-  expect(folderButton).toBeTruthy();
-  await fireEvent.click(folderButton!);
+  async function openDocumentAsset(assetName: string): Promise<void> {
+    await expandSidebarSection('Documents');
+    await waitFor(() => {
+      const tree = screen.getByTestId('explorer-tree');
+      const btn = within(tree)
+        .queryAllByRole('button')
+        .find((b) => b.textContent?.trim().endsWith(assetName));
+      expect(btn).toBeTruthy();
+    });
+    const tree = screen.getByTestId('explorer-tree');
+    const btn = within(tree)
+      .getAllByRole('button')
+      .find((b) => b.textContent?.trim().endsWith(assetName));
+    await fireEvent.click(btn!);
+  }
 
-  await waitFor(() => {
-    const assetButton = within(screen.getByTestId('explorer-tree'))
-      .queryAllByRole('button')
-      .find((button) => button.textContent?.trim().endsWith(assetName));
-    expect(assetButton).toBeTruthy();
-  });
+  async function openPromptAsset(assetName: string): Promise<void> {
+    await expandSidebarSection('Prompts');
+    await waitFor(() => {
+      const btn = screen
+        .queryAllByRole('button')
+        .find((b) => b.textContent?.trim().endsWith(assetName));
+      expect(btn).toBeTruthy();
+    });
+    const btn = screen
+      .getAllByRole('button')
+      .find((b) => b.textContent?.trim().endsWith(assetName));
+    await fireEvent.click(btn!);
+  }
 
-  const assetButton = within(screen.getByTestId('explorer-tree'))
-    .getAllByRole('button')
-    .find((button) => button.textContent?.trim().endsWith(assetName));
-  expect(assetButton).toBeTruthy();
-  await fireEvent.click(assetButton!);
-}
+  async function openModelPresetFile(presetFilename: string): Promise<void> {
+    await expandSidebarSection('Models');
+    const editBtn = await screen.findByRole('button', { name: `Edit ${presetFilename}` });
+    await fireEvent.click(editBtn);
+  }
 
 describe('App', () => {
   beforeEach(() => {
@@ -486,6 +520,9 @@ describe('App', () => {
     tauri.listProjectPromptBlocks.mockResolvedValue(promptBlocks);
     tauri.listProjectRunHistory.mockResolvedValue(projectRunHistory);
     tauri.getProjectUsageSummary.mockResolvedValue(emptyUsageSummary);
+    tauri.listModelPresets.mockResolvedValue([
+      { path: 'models/default.yaml', filename: 'default.yaml', modelId: 'openai/gpt-5.4' }
+    ]);
     tauri.getGlobalVariables.mockResolvedValue({});
     tauri.setGlobalVariables.mockImplementation(async (vars: Record<string, string>) => vars);
     tauri.setProjectVariables.mockResolvedValue(summary);
@@ -565,7 +602,7 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('documents', 'context.md');
+    await openDocumentAsset('context.md');
     await waitFor(() => expect(screen.getAllByText('context.md')).not.toHaveLength(0));
 
     const contextButton = within(screen.getByTestId('explorer-tree'))
@@ -611,6 +648,7 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
+    await expandSidebarSection('Prompts');
     await fireEvent.click(screen.getByRole('button', { name: 'New Prompt' }));
     await fireEvent.input(screen.getByRole('textbox', { name: 'Prompt name' }), {
       target: { value: 'Scene Draft' }
@@ -830,7 +868,7 @@ describe('App', () => {
     );
   });
 
-  it('filters project run history by pipeline in the inspector', async () => {
+  it('filters project run history by pipeline in the sidebar', async () => {
     render(App);
 
     await fireEvent.click(await screen.findByText('Open Existing Project'));
@@ -838,6 +876,8 @@ describe('App', () => {
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
+
+    await expandSidebarSection('Runs');
 
     expect(await screen.findByText('Pipeline output preview.')).toBeInTheDocument();
     expect(screen.getByText('Provider timeout')).toBeInTheDocument();
@@ -862,7 +902,7 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('prompts', 'brief-review.tera');
+    await openPromptAsset('brief-review.tera');
 
     const editor = await screen.findByTestId('asset-editor');
     await fireEvent.input(editor, { target: { value: `${teraAssetContent.content}\n# unsaved` } });
@@ -887,7 +927,7 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('documents', 'context.md');
+    await openDocumentAsset('context.md');
 
     const editor = await screen.findByTestId('asset-editor');
     await fireEvent.input(editor, { target: { value: '# Context\n\nUpdated document.' } });
@@ -938,8 +978,8 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('documents', 'context.md');
-    await openExplorerAsset('prompts', 'brief-review.tera');
+    await openDocumentAsset('context.md');
+    await openPromptAsset('brief-review.tera');
 
     await expandSidebarSection('Exports');
 
@@ -989,7 +1029,7 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('models', 'default.yaml');
+    await openModelPresetFile('default.yaml');
 
     const editor = await screen.findByTestId('asset-editor');
     expect(editor).toHaveValue(yamlAssetContent.content);
@@ -1005,7 +1045,7 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('prompts', 'brief-review.tera');
+    await openPromptAsset('brief-review.tera');
 
     await waitFor(() =>
       expect(tauri.validateProjectTemplate).toHaveBeenCalledWith(
@@ -1029,10 +1069,10 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('prompts', 'brief-review.tera');
+    await openPromptAsset('brief-review.tera');
     await waitFor(() => expect(screen.findByText('valid')).toBeTruthy());
 
-    await openExplorerAsset('documents', 'context.md');
+    await openDocumentAsset('context.md');
 
     await waitFor(() =>
       expect(
@@ -1058,7 +1098,7 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('prompts', 'brief-review.tera');
+    await openPromptAsset('brief-review.tera');
 
     await waitFor(() =>
       expect(
@@ -1079,7 +1119,7 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('prompts', 'brief-review.tera');
+    await openPromptAsset('brief-review.tera');
 
     await waitFor(() =>
       expect(tauri.validateProjectTemplate).toHaveBeenCalledWith(
@@ -1111,7 +1151,7 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('prompts', 'brief-review.tera');
+    await openPromptAsset('brief-review.tera');
 
     const editor = await screen.findByTestId('asset-editor');
     await fireEvent.input(editor, {
@@ -1131,7 +1171,7 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('prompts', 'brief-review.tera');
+    await openPromptAsset('brief-review.tera');
 
     await fireEvent.click(await screen.findByRole('button', { name: 'Run' }));
 
@@ -1160,7 +1200,7 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('prompts', 'brief-review.tera');
+    await openPromptAsset('brief-review.tera');
 
     await fireEvent.click(await screen.findByRole('button', { name: 'Run' }));
 
@@ -1173,22 +1213,15 @@ describe('App', () => {
   it('stores an execution api key in app credential storage', async () => {
     render(App);
 
-    await fireEvent.click(await screen.findByText('Open Existing Project'));
-
-    await waitFor(() =>
-      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
-    );
-
-    await openExplorerAsset('prompts', 'brief-review.tera');
-
-    const input = await screen.findByLabelText('OpenRouter API key');
+    // The API key input is on the ProjectBrowser page (before opening a project)
+    const input = await screen.findByPlaceholderText('sk-or-v1-...');
     await fireEvent.input(input, { target: { value: 'sk-test-123' } });
     await fireEvent.click(screen.getByRole('button', { name: 'Save key' }));
 
     await waitFor(() => expect(tauri.saveExecutionApiKey).toHaveBeenCalledWith('sk-test-123'));
 
-    expect(await screen.findByText('Stored in the native keychain for this app.')).toBeInTheDocument();
-    expect(input).toHaveValue('');
+    // After saving, the badge changes to 'keychain' and a mask replaces the input
+    expect(await screen.findByText('keychain')).toBeInTheDocument();
   });
 
   it('shows prompt run history and opens a persisted run artifact', async () => {
@@ -1200,7 +1233,7 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
     );
 
-    await openExplorerAsset('prompts', 'brief-review.tera');
+    await openPromptAsset('brief-review.tera');
 
     const historyPreview = await screen.findByText('Earlier persisted output.');
     const historyItem = historyPreview.closest('article');
@@ -1222,7 +1255,7 @@ describe('App', () => {
     await fireEvent.click(await screen.findByText('Open Existing Project'));
     await screen.findByRole('heading', { name: 'Story Lab', level: 1 });
 
-    await expandSidebarSection('Variables');
+    await expandSidebarSection('Global Variables');
     expect(await screen.findByText('tone')).toBeInTheDocument();
     expect(screen.getByText('precise')).toBeInTheDocument();
   });
@@ -1232,7 +1265,7 @@ describe('App', () => {
     await fireEvent.click(await screen.findByText('Open Existing Project'));
     await screen.findByRole('heading', { name: 'Story Lab', level: 1 });
 
-    await expandSidebarSection('Variables');
+    await expandSidebarSection('Global Variables');
 
     const nameInputs = screen.getAllByPlaceholderText('name');
     const valueInputs = screen.getAllByPlaceholderText('value');
@@ -1255,13 +1288,13 @@ describe('App', () => {
     await fireEvent.click(await screen.findByText('Open Existing Project'));
     await screen.findByRole('heading', { name: 'Story Lab', level: 1 });
 
-    await expandSidebarSection('Variables');
+    await expandSidebarSection('Workspace Variables');
 
     const nameInputs = screen.getAllByPlaceholderText('name');
     const valueInputs = screen.getAllByPlaceholderText('value');
-    await fireEvent.input(nameInputs[1], { target: { value: 'chapter' } });
-    await fireEvent.input(valueInputs[1], { target: { value: '12' } });
-    await fireEvent.click(screen.getAllByRole('button', { name: '+ Add' })[1]);
+    await fireEvent.input(nameInputs[0], { target: { value: 'chapter' } });
+    await fireEvent.input(valueInputs[0], { target: { value: '12' } });
+    await fireEvent.click(screen.getAllByRole('button', { name: '+ Add' })[0]);
 
     await waitFor(() =>
       expect(tauri.setProjectVariables).toHaveBeenCalledWith('/tmp/story-lab', { chapter: '12' })
