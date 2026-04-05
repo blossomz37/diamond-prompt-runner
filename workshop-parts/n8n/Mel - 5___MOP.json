@@ -1,0 +1,1477 @@
+{
+  "name": "5 - MOP (May 6 at 14:41:04)",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Manuscript Overhaul",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Total Chapters",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Google Drive Folder",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "System Instructions",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -20
+      ],
+      "id": "5917868b-f5f4-4bc9-bd28-31409e464afd",
+      "name": "On form submission",
+      "webhookId": "f6f3a929-4e6a-4905-96c5-488147846836"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.docMap.Manuscript }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        500,
+        140
+      ],
+      "id": "6a8a6b66-68b2-4a5d-bcda-5e0322c97b78",
+      "name": "Get Manuscript",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').item.json.docMap['Writing Style'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ],
+      "id": "f4b8528f-a19a-45ec-a5aa-386f067195ef",
+      "name": "Get Writing Style Guide",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "MOP Chapter Plans",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('On form submission').last().json['Google Drive Folder'] }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1820,
+        300
+      ],
+      "id": "e776e3a2-85a8-4491-947e-c5463721fe8e",
+      "name": "Create MOP Chapter Plans",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GGMwsXDU5mzBg6G4",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "MOP Chapters",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('On form submission').last().json['Google Drive Folder'] }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1640,
+        300
+      ],
+      "id": "0aad3212-2ea0-4e2b-9d4a-3b752b334986",
+      "name": "Create MOP Chapters Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GGMwsXDU5mzBg6G4",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-exp-03-25",
+        "options": {
+          "safetySettings": {
+            "values": [
+              {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_NONE"
+              },
+              {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_NONE"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        3140,
+        1160
+      ],
+      "id": "cdd9a25c-8529-41c7-8e3c-76176ab13b77",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0XJKUeeULEEpGDrC",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Manuscript Overhaul Plan').last().json.text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        100
+      ],
+      "id": "768f6dbc-bb2b-4e47-837d-cd4dcce133a0",
+      "name": "Update MOP Plan",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "={{ $('On form submission').last().json['Google Drive Folder'] }}",
+        "title": "=MOP Plan"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        100
+      ],
+      "id": "aac2805e-385e-4f44-b7fa-ff5cde929ff4",
+      "name": "Create MOP Plan",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Get System Instructions').last().json.content }}\nHere is the information about this novel:\n{{ $('Get Story Dossier').last().json.content }}\n\nHere is the Manuscript for this novel:\n\n{{ $('Get Manuscript').last().json.content }}\n\nRead this novel and using what you know about the genre, produce a Manuscript Overhaul Plan with specific details about any areas in this manuscript that need addressing. Your goal is to provide specific, meaningful feedback that will help elevate this to the level of an acquisitions editor at a top publishing company. \n\nTargeted Focus for Overhaul:\n- Assess the pacing and progression of suspense/tension.\n- Evaluate each main character's motivations and arcs for consistency.\n- Identify sections of the story that could benefit from heightened tension, streamlined exposition, or deeper emotional resonance.\n- Examine the thematic elements and suggest any expansions or clarifications to strengthen them.\n- Suggest improvements that align with commercial viability, focusing on what an acquisitions editor might look for in a novel of the genre.\n\nOverall Narrative & Character Development:\n- Comment on the overall story arc, including the climax and resolution.\n- Check if the main plot remains compelling from start to finish.\n- Indicate any subplot or character whose arc feels underdeveloped or too loosely tied to the main narrative.\n\nSpecialized Language & Jargon Assessment:\n- Identify any overuse of specialized terminology related to the protagonist's expertise, background, or the story's central metaphors (e.g., music, science, technology).\n- Evaluate whether specialized language enhances characterization and worldbuilding or creates barriers to reader engagement.\n- Suggest specific strategies to balance authentic voice with accessibility, such as:\n  * Establishing clear context for specialized terms early in the narrative\n  * Varying metaphorical language beyond the primary domain\n  * Reserving technical terminology for key plot moments rather than routine descriptions\n  * Ensuring emotional moments are conveyed in universally accessible language\n  * Creating a balance between specialized terminology and sensory descriptions\n- Provide examples of passages where jargon could be simplified without losing the distinctive voice\n\nUsage of Provided Materials:\n- Cross-reference your feedback with the tropes, themes, and character profiles provided.\n- Note whether each character is utilized to their fullest potential based on their documented personalities and arcs.\n- Align suggestions with the stated Writing Style.\n\nConstructive Solutions:\n- For any perceived issues, guide me with explicit solutions: possible rewritten lines, alternative plot beats, or additional scenes.\n- If no major issue exists in a certain section, indicate that it's working well.\n\nFinal Deliverable: A structured, in-depth Manuscript Overhaul Plan with:\n- Overall Observations\n- Character Arc Evaluations\n- Themes & Market Fit Suggestions\n- Specialized Language Analysis & Recommendations\n- Additional Recommendations (high, medium, low priority)\n- Closing Remarks\n\nReminder: Ensure all content is relevant and directly aimed at elevating the manuscript to a professional publishing standard. Omit feedback that isn't actionable or pertinent."
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        1080,
+        -60
+      ],
+      "id": "c3583264-4ffc-45a9-b17f-294d0570ef5b",
+      "name": "Manuscript Overhaul Plan"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2940,
+        540
+      ],
+      "id": "cdbece4e-55de-4b9b-a858-241867e70336",
+      "name": "Get MOP Manuscript",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// This code analyzes the manuscript to determine the next chapter number\n// Get the manuscript text\nlet manuscriptText = \"\";\ntry {\n  if ($input && $input.last() && $input.last().json && $input.last().json.content) {\n    manuscriptText = $input.last().json.content;\n    console.log(\"Got manuscript, length:\", manuscriptText.length);\n  } else {\n    console.log(\"Manuscript content not found in input\");\n  }\n} catch (error) {\n  console.log(\"Error accessing manuscript:\", error.message);\n}\n\n// Find all chapters in the manuscript using the BEGIN/END markers\nconst chapterNumbers = [];\ntry {\n  // Look for chapter markers in standard format\n  const chapterPattern = /\\[BEGIN CHAPTER (\\d+)\\]/g;\n  let match;\n  \n  while ((match = chapterPattern.exec(manuscriptText)) !== null) {\n    const chapterNum = parseInt(match[1], 10);\n    chapterNumbers.push(chapterNum);\n    console.log(`Found chapter ${chapterNum}`);\n  }\n  \n  // Also look for MOP chapter format if present\n  const mopPattern = /\\[BEGIN MOP CHAPTER (\\d+)\\]/g;\n  while ((match = mopPattern.exec(manuscriptText)) !== null) {\n    const chapterNum = parseInt(match[1], 10);\n    if (!chapterNumbers.includes(chapterNum)) {\n      chapterNumbers.push(chapterNum);\n      console.log(`Found MOP chapter ${chapterNum}`);\n    }\n  }\n} catch (error) {\n  console.log(\"Error finding chapters:\", error.message);\n}\n\n// Get total chapters from form submission\nlet totalChapters = 0;\ntry {\n  totalChapters = parseInt($('On form submission').first().json['Total Chapters'], 10);\n} catch (error) {\n  // Default if we can't get from form\n  totalChapters = 30;\n  console.log(\"Using default total chapters:\", totalChapters);\n}\n\n// Find the highest chapter number in the manuscript\nconst highestChapter = chapterNumbers.length > 0 ? Math.max(...chapterNumbers) : 0;\nconsole.log(`Highest chapter found in manuscript: ${highestChapter}`);\n\n// The next chapter is simply the highest chapter + 1\nconst nextChapterNumber = highestChapter + 1;\nconsole.log(`Next chapter to process: ${nextChapterNumber}`);\n\n// Calculate progress\nconst completedCount = chapterNumbers.length;\nconst isComplete = nextChapterNumber > totalChapters;\nconst progressPercent = Math.round((completedCount / totalChapters) * 100);\n\n// Get the target chapter name\nconst targetChapterName = `Chapter ${nextChapterNumber} Draft`;\n\n// Extract the last 4 chapters for context\nconst recentChapters = chapterNumbers.slice(Math.max(0, chapterNumbers.length - 4));\nconsole.log(`Recent chapters (last ${recentChapters.length}): ${recentChapters.map(ch => ch.number).join(', ')}`);\n\n// Return the results\nreturn {\n  json: {\n    nextChapterNumber: nextChapterNumber,\n    targetChapterName: targetChapterName,\n    isComplete: isComplete,\n    totalChapters: totalChapters,\n    completedCount: chapterNumbers.length,\n    progressPercent: progressPercent,\n    isFirstChapter: highestChapter === 0,\n    lastChapterContent: recentChapters.length > 0 ? recentChapters[recentChapters.length - 1].content : \"\",    \n    // Include found chapters for debugging\n    foundChapters: chapterNumbers.sort((a, b) => a - b)\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3160,
+        540
+      ],
+      "id": "0edb714b-2d91-4b05-957c-0440573c40dc",
+      "name": "Determine Next Chapter"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM PERSONA]\n{{ $('Get System Instructions').last().json.content }}\n[END SYSTEM PERSONA]\n\nHere is the information for the story:\n\n[BEGIN STORY INFORMATION]\n{{ $('Get Story Dossier').last().json.content }}\n[END STORY INFORMATION]\n\nRead the following Manuscript Overhaul Plan for this novel:\n\n[BEGIN MANUSCRIPT OVERHAUL PLAN]\n{{ $('Get MOP Plan').last().json.content }}\n[END MANUSCRIPT OVERHAUL PLAN]\n\nHere are the most recently revised chapters in this novel:\n\n[BEGIN CURRENT MANUSCRIPT]\n{{ $json.dynamicContext }}\n[END CURRENT MANUSCRIPT]\n\nUsing the Manuscript Overhaul Plan as your guiding document, please produce a detailed Editing Plan for the current chapter. Keep the following points in mind:\n\nRefer back to the Overhaul Plan's global recommendations (pacing, character consistency, thematic depth) and show how each proposed edit in this chapter addresses or supports those high-level objectives.\n\nProvide a brief scene-by-scene breakdown of what needs revision. Focus particularly on:\n- Strengthening the in medias res opening hook.\n- Ensuring the chapter's ending flows naturally into the next while offering a compelling cliffhanger or resolution.\n- Maintaining consistency with each character's established personality and arc.\n- Preserving and enhancing the overall plot without adding new, unrelated subplots or characters.\n\nSpecialized Language & Jargon Assessment:\n- Identify any passages where specialized terminology or jargon (particularly related to the protagonist's profession or the story's central metaphors) might create barriers for readers.\n- Suggest specific revisions to balance authentic voice with accessibility by:\n  * Replacing overly technical terms with more accessible language where appropriate\n  * Adding clarifying context for necessary specialized terminology\n  * Ensuring critical plot points aren't dependent solely on understanding specialized concepts\n  * Varying metaphorical language beyond a single domain (e.g., music, science, technology)\n  * Pairing specialized descriptions with universal sensory or emotional cues\n- For each suggested revision, provide a concrete example of how the text could be modified\n\nIf you see any areas where the chapter lags in pacing or where the dialogue/inner monologue could be more impactful, suggest specific rewrites or modifications. Please include concrete examples or sample text.\n\nFor each suggested edit or removal, briefly explain why it's necessary (e.g., \"removing this line tightens the tension,\" \"adding a small internal reaction clarifies the protagonist's emotional state,\" or \"simplifying this technical description makes the action sequence more accessible\").\n\nEnsure that the suggested changes enhance the storyline, genre expectations and emotional stakes set out in the Overhaul Plan. If any new thematic threads can be reinforced here in alignment with the main storyline, mention them.\n\nEnd with a summarized list of recommended edits ranked by priority—High (crucial for plot coherence), Medium (important for enhancing reader experience), or Low (optional refinements). Include a specific section for jargon/specialized language revisions in this prioritized list.\n\nRemember that each chapter must open with purposeful action or dialogue that directly follows from the previous chapter's end, and close with a compelling beat that pushes the reader onward.\n\nIt's okay if you don't need to do much editing. Just be specific on anything that needs addressing. Don't deviate from the plot or add any unnecessary extra information.\n\n[BEGIN CURRENT CHAPTER]\n{{ $json.extractedChapterContent }}\n[END CURRENT CHAPTER]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        3460,
+        700
+      ],
+      "id": "de27d942-0001-4f5f-8e12-6fab724af4bb",
+      "name": "Chapter MOP Plan"
+    },
+    {
+      "parameters": {
+        "folderId": "={{ $('Set IDs1').last().json.docMap['MOP Chapter Plans'] }}",
+        "title": "=Chapter {{ $('Determine Next Chapter').last().json.nextChapterNumber }} MOP Plan"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3440,
+        860
+      ],
+      "id": "bcfa5422-541f-4010-97b3-c2d96bcead0e",
+      "name": "MOP Chapter Plan",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Chapter MOP Plan').last().json.text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3620,
+        860
+      ],
+      "id": "2ffd0df3-a05d-401d-b77d-dc61a4c24ce2",
+      "name": "Update Chapter MOP Plan",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM PERSONA]\n{{ $('Get System Instructions').last().json.content }}[END SYSTEM PERSONA]\n\n[BEGIN STORY INFORMATION]\n{{ $('Get Story Dossier').last().json.content }}[END STORY INFORMATION]\n\n[BEGIN WRITING STYLE GUIDELINES]\n{{ $('Get Writing Style Guide').last().json.content }}[END WRITING STYLE GUIDELINES]\n\nHere is the revised manuscript so far:\n\n[BEGIN CURRENT MANUSCRIPT]\n{{ $('Format MOP Context').last().json.recentChaptersText }}\n[END CURRENT MANUSCRIPT]\n\nHere are the details for the current chapter:\n\n[BEGIN CHAPTER EDITING PLAN]\n{{ $('Chapter MOP Plan').item.json.text }}\n[END CHAPTER EDITING PLAN]\n\n[BEGIN ORIGINAL CHAPTER]\n{{ $('Format MOP Context').last().json.extractedChapterContent }}\n[END ORIGINAL CHAPTER]\n\nRevise the current chapter according to the [EDITING PLAN]. Only change what is needed to suit the plan. Do not add items not mentioned in the chapter. Remove excessive metaphors and similes that make the prose sound robotic. Maintain the same tone and style per the Writing Style Guidelines. Use only nonstandard dialogue tags and avoid cliche endings.\n\nRemember that each scene/chapter must begin with an opening hook in media res, with an action or line of dialogue, immediately drawing the reader into the scene, following smoothly from the previous chapter. In addition, every scene/chapter must end with a compelling cliffhanger or resolution that flows naturally and logically into the next scene/chapter, pushing the reader to want to continue reading.\n\nTarget Word Count: 3,000 words.\n\nPlease start your chapter with the tag [BEGIN CHAPTER X] and end with [END CHAPTER X]. Use this exact configuration and numbering that matches the appropriate current chapter number. Never address me, just provide the content as requested."
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        3800,
+        860
+      ],
+      "id": "6f3dfeb3-45fc-4c45-8f51-067c009e5739",
+      "name": "Draft MOP Chapter"
+    },
+    {
+      "parameters": {
+        "folderId": "={{ $('Set IDs1').last().json.docMap['MOP Chapters'] }}",
+        "title": "=Chapter {{ $('Determine Next Chapter').last().json.nextChapterNumber }} Draft"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3800,
+        1020
+      ],
+      "id": "0ee1ccd4-d1b8-450f-a2ab-87c386df98a0",
+      "name": "MOP Chapter Doc",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Draft MOP Chapter').item.json.text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        1020
+      ],
+      "id": "41e98e4b-41e5-408c-b905-d47f6ec00809",
+      "name": "Update MOP Chapter",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get MOP Manuscript').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=\n{{ $('Draft MOP Chapter').item.json.text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3800,
+        1180
+      ],
+      "id": "1d0429e9-b374-4fab-8837-668e74b8ccef",
+      "name": "Update MOP Manuscript",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get values from the Determine Next Chapter node's output\nlet nextChapterNumber, totalChapters;\n\ntry {\n  // Get the original next chapter number from the Determine Next Chapter node\n  const determineNode = $('Determine Next Chapter');\n  if (determineNode && determineNode.item && determineNode.item.json) {\n    // This is the chapter number we just processed\n    const currentChapterNumber = determineNode.item.json.nextChapterNumber;\n    totalChapters = determineNode.item.json.totalChapters;\n    \n    // Set nextChapterNumber to the next chapter (current + 1)\n    nextChapterNumber = currentChapterNumber + 1;\n    \n    console.log(`Current chapter processed: ${currentChapterNumber}`);\n    console.log(`Next chapter will be: ${nextChapterNumber}`);\n  } else {\n    console.log(\"Could not access Determine Next Chapter node data\");\n    // Default values if we can't access the node\n    nextChapterNumber = 2; // Assume we just processed chapter 1\n    totalChapters = 11;    // Default to 11 chapters\n  }\n} catch (error) {\n  console.log(\"Error accessing Determine Next Chapter data:\", error.message);\n  // Default values if there's an error\n  nextChapterNumber = 2;\n  totalChapters = 11;\n}\n\n// Alternative approach: try to get the chapter number from the Draft MOP Chapter content\ntry {\n  const draftNode = $('Draft MOP Chapter');\n  if (draftNode && draftNode.item && draftNode.item.json && draftNode.item.json.text) {\n    const draftText = draftNode.item.json.text;\n    \n    // Try to extract chapter number from BEGIN CHAPTER tag\n    const chapterMatch = draftText.match(/\\[BEGIN CHAPTER (\\d+)\\]/i);\n    if (chapterMatch && chapterMatch[1]) {\n      const chapterFromDraft = parseInt(chapterMatch[1]);\n      console.log(`Found chapter number ${chapterFromDraft} in Draft MOP Chapter content`);\n      \n      // Use this as a cross-check\n      if (chapterFromDraft + 1 !== nextChapterNumber) {\n        console.log(`WARNING: Chapter number mismatch - Draft says ${chapterFromDraft}, Determine Next Chapter implies next is ${nextChapterNumber}`);\n        // Trust the draft content over the determine node\n        nextChapterNumber = chapterFromDraft + 1;\n      }\n    }\n  }\n} catch (error) {\n  console.log(\"Error checking Draft MOP Chapter content:\", error.message);\n}\n\n// Calculate completion status and progress\nconst isComplete = nextChapterNumber > totalChapters;\nconst progressPercent = Math.round(((nextChapterNumber - 1) / totalChapters) * 100);\n\nconsole.log(`Next chapter will be: ${nextChapterNumber}`);\nconsole.log(`Total chapters: ${totalChapters}`);\nconsole.log(`Is complete: ${isComplete}`);\nconsole.log(`Progress: ${progressPercent}%`);\n\n// Return results\nreturn {\n  json: {\n    nextChapterNumber,\n    isComplete,\n    totalChapters,\n    progressPercent\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        1180
+      ],
+      "id": "1a85c816-b3d1-42e5-b6fa-32c4a489d25d",
+      "name": "Check Chapter Count"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a180da9a-99e9-4e07-8404-c9eee265a281",
+              "leftValue": "={{ $json.isComplete }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4160,
+        1180
+      ],
+      "id": "53247392-5e16-4fa3-b49c-112cb90c5532",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "wrincher20@gmail.com",
+        "subject": "Your Book is Done",
+        "message": "Hey gorgeous,\n\nYour MOP Manuscript is done. Go check it out.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        4380,
+        1060
+      ],
+      "id": "b0612635-7ca2-41ba-bf3c-2c59ea2fc707",
+      "name": "Gmail",
+      "webhookId": "8d4a4891-bbf1-45a3-9498-c7b19bea96b3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qX8cv2R7kyfSApLS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get manuscript content from input\nlet manuscriptContent = \"\";\ntry {\n    manuscriptContent = $('Get MOP Manuscript').last().json.content || \"\";\n    console.log(`Retrieved manuscript (${manuscriptContent.length} characters)`);\n} catch (error) {\n  console.log(`Error getting manuscript: ${error.message}`);\n}\n\n// Get data from the Determine Next Chapter node\nconst determineNode = $('Determine Next Chapter');\nlet nextChapterNumber = 6; // Default fallback\nlet isFirstChapter = false;\nlet foundChapters = [];\n\ntry {\n  if (determineNode && determineNode.last() && determineNode.last().json) {\n    // Extract chapter number information\n    nextChapterNumber = determineNode.last().json.nextChapterNumber || 6;\n    isFirstChapter = determineNode.last().json.isFirstChapter || false;\n    foundChapters = determineNode.last().json.foundChapters || [];\n    \n    console.log(`Next chapter from Determine Next Chapter: ${nextChapterNumber}`);\n    console.log(`Found ${foundChapters.length} chapters in manuscript`);\n  } else {\n    console.log(\"Could not access Determine Next Chapter node data\");\n  }\n} catch (error) {\n  console.log(\"Error accessing Determine Next Chapter data:\", error.message);\n}\n\n// Determine which previous chapters to include (most recent 4 chapters)\nconst chaptersToInclude = 4;\nconst currentChapter = nextChapterNumber - 1;\nconst startChapter = Math.max(1, currentChapter - chaptersToInclude + 1);\nconst endChapter = currentChapter;\n\nconsole.log(`Including chapters ${startChapter} through ${endChapter}`);\n\n// Explicitly extract each chapter by searching for BEGIN/END markers\nconst recentChaptersContent = [];\nconst recentChapters = [];\n\nfor (let chNum = startChapter; chNum <= endChapter; chNum++) {\n  console.log(`Looking for Chapter ${chNum}`);\n  \n  const beginMarker = `[BEGIN CHAPTER ${chNum}]`;\n  const endMarker = `[END CHAPTER ${chNum}]`;\n  \n  const beginIndex = manuscriptContent.indexOf(beginMarker);\n  \n  if (beginIndex >= 0) {\n    const endIndex = manuscriptContent.indexOf(endMarker, beginIndex);\n    \n    if (endIndex >= 0) {\n      // Found both markers - extract the complete chapter\n      const chapterContent = manuscriptContent.substring(beginIndex, endIndex + endMarker.length);\n      console.log(`Found Chapter ${chNum} with BEGIN/END markers (${chapterContent.length} chars)`);\n      recentChaptersContent.push(chapterContent);\n      recentChapters.push({\n        number: chNum,\n        content: chapterContent\n      });\n    } else {\n      // Only found begin marker - look for next chapter's begin\n      console.log(`No END marker for Chapter ${chNum}, looking for next chapter start`);\n      let nextBeginIndex = manuscriptContent.length;\n      \n      for (let nextChap = chNum + 1; nextChap <= endChapter + 2; nextChap++) {\n        const nextBeginMarker = `[BEGIN CHAPTER ${nextChap}]`;\n        const tempIndex = manuscriptContent.indexOf(nextBeginMarker);\n        \n        if (tempIndex > beginIndex && tempIndex < nextBeginIndex) {\n          nextBeginIndex = tempIndex;\n          console.log(`Found next chapter ${nextChap} start at ${nextBeginIndex}`);\n          break;\n        }\n      }\n      \n      if (nextBeginIndex < manuscriptContent.length) {\n        const chapterContent = manuscriptContent.substring(beginIndex, nextBeginIndex);\n        console.log(`Found incomplete Chapter ${chNum} using next chapter marker (${chapterContent.length} chars)`);\n        const completedContent = chapterContent + `[END CHAPTER ${chNum}]`;\n        recentChaptersContent.push(completedContent);\n        recentChapters.push({\n          number: chNum,\n          content: completedContent\n        });\n      }\n    }\n  } else {\n    console.log(`Could not find BEGIN marker for Chapter ${chNum}`);\n  }\n}\n\nconsole.log(`Found ${recentChapters.length} chapters to include`);\n\n// Get the last chapter content\nlet lastChapterContent = \"\";\nif (recentChapters.length > 0) {\n  lastChapterContent = recentChapters[recentChapters.length - 1].content;\n  console.log(`Last chapter content length: ${lastChapterContent.length} chars`);\n}\n\n// Format recent chapters as context string\nlet recentChaptersText = \"### Recent Chapters for Context:\\n\\n\";\n\nif (recentChapters.length > 0) {\n  recentChapters.forEach(chapter => {\n    recentChaptersText += `Chapter ${chapter.number}:\\n${chapter.content}\\n\\n`;\n  });\n  console.log(`Generated recent chapters text: ${recentChaptersText.length} chars`);\n} else {\n  recentChaptersText += \"No recent chapters available\\n\\n\";\n  console.log(\"No chapters available for context\");\n}\n\n// Create the dynamic context - make sure it has the same format as recentChaptersText\nconst dynamicContext = recentChaptersText;\n\n// Get extracted chapter content from input if available\nlet extractedChapterContent = \"\";\ntry {\n  if ($input && $input.first() && $input.first().json) {\n    extractedChapterContent = $input.first().json.chapterContent || \"\";\n  }\n} catch (error) {\n  console.log(`Error getting extracted chapter content: ${error.message}`);\n}\n\n// Return everything with more detailed information for debugging\nreturn {\n  json: {\n    nextChapterNumber,\n    isFirstChapter,\n    recentChaptersText,\n    dynamicContext,\n    lastChapterContent,\n    extractedChapterContent,\n    recentChaptersCount: recentChapters.length,\n    totalChaptersFound: foundChapters.length,\n    debug: {\n      manuscriptLength: manuscriptContent ? manuscriptContent.length : 0,\n      determineNodeData: {\n        available: !!determineNode?.last()?.json,\n        nextChapter: determineNode?.last()?.json?.nextChapterNumber\n      }\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3280,
+        700
+      ],
+      "id": "43a36b76-5bd2-4527-9f86-8ab1dd952144",
+      "name": "Format MOP Context"
+    },
+    {
+      "parameters": {
+        "folderId": "={{ $('On form submission').last().json['Google Drive Folder'] }}",
+        "title": "MOP Manuscript"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2740,
+        340
+      ],
+      "id": "4cac22ca-6c2b-4e85-ae40-a513a0b766df",
+      "name": "Create MOP Manuscript",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "=",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json['Google Drive Folder'] }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        180,
+        -20
+      ],
+      "id": "d0845475-297b-49b8-a968-8b02c189bfd0",
+      "name": "Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GGMwsXDU5mzBg6G4",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const docMap = {};\nfor (const item of items) {\n  docMap[item.json.name] = item.json.id;\n}\nreturn [{ json: { docMap } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        -20
+      ],
+      "id": "914e068c-0bc7-4a12-8aa2-6780d579298e",
+      "name": "Get IDs"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5f3f6c72-3066-4d22-b4aa-6b902f6484fe",
+              "name": "docMap.Roster",
+              "value": "={{ $json.docMap['Character Roster'] }}",
+              "type": "string"
+            },
+            {
+              "id": "d2ff4615-e0c7-47e2-9443-c80978aba4ed",
+              "name": "docMap['Writing Style']",
+              "value": "={{ $json.docMap['Writing Style'] }}",
+              "type": "string"
+            },
+            {
+              "id": "5b0e8a1a-0c7b-4190-9001-5d49f11523e6",
+              "name": "docMap.Manuscript",
+              "value": "={{ $json.docMap.Manuscript }}",
+              "type": "string"
+            },
+            {
+              "id": "273ab7e3-e852-49b5-98e8-d1c8b191710f",
+              "name": "docMap['Story Dossier']",
+              "value": "={{ $json.docMap['Story Dossier'] }}",
+              "type": "string"
+            },
+            {
+              "id": "779336d4-5268-4073-b8fa-75984d1adc54",
+              "name": "docMap['Protagonist Profile']",
+              "value": "={{ $json.docMap['Protagonist Profile'] }}",
+              "type": "string"
+            },
+            {
+              "id": "8cec37de-032e-41fc-bfb1-12565ba947c9",
+              "name": "docMap['Deuteragonist Profile']",
+              "value": "={{ $json.docMap['Deuteragonist Profile'] }}",
+              "type": "string"
+            },
+            {
+              "id": "1c715ebe-a038-4826-a576-d0d442c9479c",
+              "name": "docMap['MOP Manuscript']",
+              "value": "={{ $json.docMap['MOP Manuscript'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e77fbfe1-18a0-41a7-b154-0de53051f243",
+              "name": "docMap['MOP Plan']",
+              "value": "={{ $json.docMap['MOP Plan'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        500,
+        -20
+      ],
+      "id": "4150292c-5c5b-4d5c-8e16-a5fea0cd60f6",
+      "name": "Set IDs"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('On form submission').last().json['System Instructions'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        680,
+        140
+      ],
+      "id": "3b209c65-5ec8-427b-a7fb-f87cd433a92f",
+      "name": "Get System Instructions",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').item.json.docMap['Story Dossier'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ],
+      "id": "f23475db-1447-4b66-ab2d-6caf4442a96e",
+      "name": "Get Story Dossier",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-3-7-sonnet-20250219",
+          "cachedResultName": "Claude 3.7 Sonnet"
+        },
+        "options": {
+          "maxTokensToSample": 8196
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        3040,
+        1160
+      ],
+      "id": "9934cb6b-df82-40d9-bb33-8819066d383c",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "gdxdG4eQPTxmJLVS",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function to extract a single chapter from the original manuscript\nfunction extractSingleChapter(items) {\n  try {\n    console.log(\"Starting chapter extraction from original manuscript\");\n    \n    // Check input from Determine Next Chapter node\n    if (!items[0].json || !items[0].json.nextChapterNumber) {\n      console.log(\"Input data check:\", JSON.stringify(items[0].json));\n      return [{\n        json: {\n          error: \"Missing input data. Expecting nextChapterNumber from Determine Next Chapter node.\",\n          chapterContent: \"\"\n        }\n      }];\n    }\n    \n    // Get the target chapter number from the previous node\n    const targetChapter = parseInt(items[0].json.nextChapterNumber, 10);\n    console.log(`Target chapter to extract: ${targetChapter}`);\n    \n    // Get the original manuscript content from Get Manuscript node\n    let originalManuscript = \"\";\n    try {\n      // Get the original manuscript (NOT the MOP manuscript)\n      originalManuscript = $('Get Manuscript').last().json.content || \"\";\n      console.log(`Original manuscript content length: ${originalManuscript.length}`);\n      \n      // Log a preview of the manuscript for debugging\n      const preview = originalManuscript.substring(0, 300);\n      console.log(`Original manuscript preview: ${preview}`);\n    } catch (nodeError) {\n      console.log(\"Error getting original manuscript:\", nodeError.message);\n      return [{\n        json: {\n          error: \"Could not get content from 'Get Manuscript' node. Check connection.\",\n          chapterContent: \"\"\n        }\n      }];\n    }\n    \n    // Find the chapter in the original manuscript using markers\n    const beginMarker = `[BEGIN CHAPTER ${targetChapter}]`;\n    const endMarker = `[END CHAPTER ${targetChapter}]`;\n    \n    const beginIndex = originalManuscript.indexOf(beginMarker);\n    if (beginIndex === -1) {\n      return [{\n        json: {\n          error: `Chapter ${targetChapter} not found in original manuscript. Missing marker: ${beginMarker}`,\n          chapterContent: \"\"\n        }\n      }];\n    }\n    \n    const endIndex = originalManuscript.indexOf(endMarker);\n    if (endIndex === -1) {\n      return [{\n        json: {\n          error: `End marker for Chapter ${targetChapter} not found in manuscript. Missing marker: ${endMarker}`,\n          chapterContent: \"\"\n        }\n      }];\n    }\n    \n    // Extract the content between markers (exclude the markers themselves)\n    const startPos = beginIndex + beginMarker.length;\n    const chapterContent = originalManuscript.substring(startPos, endIndex).trim();\n    \n    console.log(`Extracted ${chapterContent.length} characters for Chapter ${targetChapter}`);\n    \n    // Get chapter title from target name if available\n    const chapterTitle = items[0].json.targetChapterName || `Chapter ${targetChapter}`;\n    \n    // Return the extracted chapter content and metadata\n    return [{\n      json: {\n        chapterNumber: targetChapter,\n        chapterTitle: chapterTitle,\n        chapterContent: chapterContent,\n        // Pass through any other important data from input\n        totalChapters: items[0].json.totalChapters || 0,\n        completedCount: items[0].json.completedCount || 0,\n        progressPercent: items[0].json.progressPercent || 0,\n        // Include any other metadata needed by downstream nodes\n        isFirstChapter: items[0].json.isFirstChapter || false\n      }\n    }];\n    \n  } catch (error) {\n    console.log(\"Error:\", error.message);\n    return [{\n      json: {\n        error: error.message,\n        chapterContent: \"\"\n      }\n    }];\n  }\n}\n\n// Execute the function\nreturn extractSingleChapter($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3380,
+        540
+      ],
+      "id": "05d5fa6f-b84c-4a0a-afd9-2e170249635f",
+      "name": "Extract Single Chapter"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        420
+      ],
+      "id": "cdda92d7-d7bf-4a7c-a83a-222f95e1a27b",
+      "name": "Get MOP Plan",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "29bd5c74-d6a2-4afe-aba1-9665003f3ff4",
+              "name": "id",
+              "value": "={{ $('Set IDs').last().json.docMap['MOP Manuscript'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2740,
+        540
+      ],
+      "id": "d2ee9197-9243-4cce-956e-b0f059a12578",
+      "name": "Set MOP Manuscript"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0151c6a4-cb12-48f0-a24a-6847ac3d52b5",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2940,
+        340
+      ],
+      "id": "7f7b0c61-121a-4a4e-a795-1d52646d3734",
+      "name": "Set MOP Manuscript1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a0c261f4-97f5-44a9-8b8f-c9f3490dc559",
+              "leftValue": "={{ $('Set IDs').last().json.docMap['MOP Plan'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        300
+      ],
+      "id": "f180fc57-8f27-4b79-85d0-367969a5de23",
+      "name": "If MOP Plan"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a0c261f4-97f5-44a9-8b8f-c9f3490dc559",
+              "leftValue": "={{ $('Set IDs').last().json.docMap['MOP Manuscript'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2540,
+        440
+      ],
+      "id": "32520ee7-5eb8-43b8-9716-2620d33134ec",
+      "name": "If MOP Manuscript"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "56b6fbdd-2dbc-4b14-9beb-0f46f7187225",
+              "name": "id",
+              "value": "={{ $('Create MOP Plan').last().json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1240,
+        260
+      ],
+      "id": "2d4b63aa-7e1d-4160-9675-d35705229a1d",
+      "name": "Set MOP Plan1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "21979052-9453-48a9-8068-72d71c4342d0",
+              "name": "id",
+              "value": "={{ $('Set IDs').last().json.docMap['MOP Plan'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1060,
+        420
+      ],
+      "id": "e3f3e85b-7003-4ea7-b0b4-f8fd37469ed7",
+      "name": "Set MOP Plan"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a0c261f4-97f5-44a9-8b8f-c9f3490dc559",
+              "leftValue": "={{ $('Set IDs').last().json.docMap['MOP Manuscript'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        420
+      ],
+      "id": "6cdc7550-a4a6-4c74-9356-073f64911186",
+      "name": "If MOP Chapters"
+    },
+    {
+      "parameters": {
+        "jsCode": "const docMap = {};\nfor (const item of items) {\n  docMap[item.json.name] = item.json.id;\n}\nreturn [{ json: { docMap } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        440
+      ],
+      "id": "41ca2e54-680e-4568-8d5c-b1959e57258a",
+      "name": "Get IDs1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8c4cc1cd-6493-447c-a418-403f094be0a7",
+              "name": "docMap['MOP Chapter Plans']",
+              "value": "={{ $json.docMap['MOP Chapter Plans'] }}",
+              "type": "string"
+            },
+            {
+              "id": "42ef3c1a-a2ba-4742-9ec7-6ebecc235fda",
+              "name": "docMap['MOP Chapters']",
+              "value": "={{ $json.docMap['MOP Chapters'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2360,
+        440
+      ],
+      "id": "b2a11d25-6fe7-4248-a301-f98b4f050c16",
+      "name": "Set IDs1"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "MOP",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('On form submission').last().json['Google Drive Folder'] }}",
+            "mode": "id"
+          },
+          "whatToSearch": "folders"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2040,
+        440
+      ],
+      "id": "5e49c1c8-6b36-474d-bf6c-cf946c20bf69",
+      "name": "Get MOP Folders",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GGMwsXDU5mzBg6G4",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Manuscript": {
+      "main": [
+        [
+          {
+            "node": "Get System Instructions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Writing Style Guide": {
+      "main": [
+        [
+          {
+            "node": "Get Story Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create MOP Chapters Folder": {
+      "main": [
+        [
+          {
+            "node": "Create MOP Chapter Plans",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create MOP Chapter Plans": {
+      "main": [
+        [
+          {
+            "node": "Get MOP Folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Update MOP Plan": {
+      "main": [
+        [
+          {
+            "node": "Set MOP Plan1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create MOP Plan": {
+      "main": [
+        [
+          {
+            "node": "Update MOP Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manuscript Overhaul Plan": {
+      "main": [
+        [
+          {
+            "node": "Create MOP Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get MOP Manuscript": {
+      "main": [
+        [
+          {
+            "node": "Determine Next Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Determine Next Chapter": {
+      "main": [
+        [
+          {
+            "node": "Extract Single Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chapter MOP Plan": {
+      "main": [
+        [
+          {
+            "node": "MOP Chapter Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MOP Chapter Plan": {
+      "main": [
+        [
+          {
+            "node": "Update Chapter MOP Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Chapter MOP Plan": {
+      "main": [
+        [
+          {
+            "node": "Draft MOP Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft MOP Chapter": {
+      "main": [
+        [
+          {
+            "node": "MOP Chapter Doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MOP Chapter Doc": {
+      "main": [
+        [
+          {
+            "node": "Update MOP Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update MOP Chapter": {
+      "main": [
+        [
+          {
+            "node": "Update MOP Manuscript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update MOP Manuscript": {
+      "main": [
+        [
+          {
+            "node": "Check Chapter Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Chapter Count": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get MOP Manuscript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format MOP Context": {
+      "main": [
+        [
+          {
+            "node": "Chapter MOP Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create MOP Manuscript": {
+      "main": [
+        [
+          {
+            "node": "Set MOP Manuscript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Get IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get IDs": {
+      "main": [
+        [
+          {
+            "node": "Set IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set IDs": {
+      "main": [
+        [
+          {
+            "node": "Get Manuscript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get System Instructions": {
+      "main": [
+        [
+          {
+            "node": "Get Writing Style Guide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Story Dossier": {
+      "main": [
+        [
+          {
+            "node": "If MOP Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Manuscript Overhaul Plan",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Chapter MOP Plan",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Draft MOP Chapter",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Single Chapter": {
+      "main": [
+        [
+          {
+            "node": "Format MOP Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get MOP Plan": {
+      "main": [
+        [
+          {
+            "node": "If MOP Chapters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set MOP Manuscript": {
+      "main": [
+        [
+          {
+            "node": "Get MOP Manuscript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set MOP Manuscript1": {
+      "main": [
+        [
+          {
+            "node": "Get MOP Manuscript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If MOP Plan": {
+      "main": [
+        [
+          {
+            "node": "Manuscript Overhaul Plan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set MOP Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set MOP Plan": {
+      "main": [
+        [
+          {
+            "node": "Get MOP Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set MOP Plan1": {
+      "main": [
+        [
+          {
+            "node": "Get MOP Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If MOP Manuscript": {
+      "main": [
+        [
+          {
+            "node": "Create MOP Manuscript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set MOP Manuscript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If MOP Chapters": {
+      "main": [
+        [
+          {
+            "node": "Create MOP Chapters Folder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get MOP Folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get IDs1": {
+      "main": [
+        [
+          {
+            "node": "Set IDs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get MOP Folders": {
+      "main": [
+        [
+          {
+            "node": "Get IDs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set IDs1": {
+      "main": [
+        [
+          {
+            "node": "If MOP Manuscript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "7b277e7a-de03-466c-a516-b1e3dd8eb25f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ce3f5f7c2d244f2d30fc49e8c171f97691ba9f45902616b500d75b8f7ea563b1"
+  },
+  "id": "P1plGfYTXQSSNKvG",
+  "tags": []
+}

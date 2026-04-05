@@ -1,0 +1,1420 @@
+{
+  "name": "Romance Outline",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Story Starter",
+        "formDescription": "This will start the romance story with genre, details, and tropes.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Genre",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Specific Details"
+            },
+            {
+              "fieldLabel": "Tropes"
+            },
+            {
+              "fieldLabel": "Number of Chapters",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Number of Steamy Chapters",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Series Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Book Number",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Number of Epilogues",
+              "fieldType": "number",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3bcc4be4-95c9-4cae-9648-b0504a5e8d72",
+      "name": "On form submission",
+      "webhookId": "397b9e5b-bbfe-4e46-84c6-9c2652312ba5"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=We are creating a premise for a {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} genre story with the following specific details and tropes:\n[details]{{ $('On form submission').item.json['Specific Details'] }}[/details]\n[tropes]{{ $('On form submission').item.json.Tropes }}[/tropes]\n***\nHere are the ideas for story premises we have come up with:\n[premises]\n{{ $json.message.content }}\n[/premises]\n***\nEvaluate each premise based on the following criteria:\n1. Originality\n2. Emotional Impact\n3. Feasibility to develop into a full book and a series.\n4. Marketability (how likely it is to appeal to readers)\n5. Adherance to genre conventions (how well it will appeal to the well known tropes and conventions loved by readers of the genre)\n6. Pacing, Conflict, and Emotional Resonance for the Internal Conflict and the Romantic Conflict (In a romance, the romantic arc and conflict must be primary and the conflict and pacing associated with that must be the primary driver of the story)\n\nAssign a score from 1 to 10 for each criterion and inlcude a short explanation for each score."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        220,
+        220
+      ],
+      "id": "89b8cd39-f9e2-452b-98d7-82f0a7e804b1",
+      "name": "Evaluate Premises",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a creative writing assistant specializing in romance genres. \n\nPlease brainstorm details for a romance story based on the following inputs:\nGenre:  [genre]{{ $json.Genre }}[/genre]\nSpecific Details: [details]{{ $json['Specific Details'] }}[/details]\nTropes: [tropes]{{ $json.Tropes }}[/tropes]\n\nUse these inputs to generate 5 detailed and imaginative premises. The story premise should include both an internal and external conflict for characters and the romance arc along with either an antagonist or their goals should be in direct competition, creating conflict. Include at least three additional romance tropes of your choosing in each premise. Make the story ideas interesting and believable that readers would enjoy exploring. All of the stories must have enough conflict and story ideas in order to write a {{ $json['Number of Chapters'] }} chapter story. Prioritize ideas that conform to genre expectations but have unique twists, surprising elements, or something that readers will find unanticipated over other books in the genre. We are looking for the same convention with unique twists. "
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        220,
+        0
+      ],
+      "id": "abb55950-c4ac-461d-8b38-eb4461d7e32e",
+      "name": "Create 5 Premises",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      },
+      "notes": "Creates 5 premises"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please read the premises and their evaluation and scores for this {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story below:\n[premises]\n{{ $('Create 5 Premises').item.json.message.content }}\n[/premises]\n[evalutations]\n{{ $json.message.content }}\n[/evaluations]\n***\nBased on the scores and evalutaions, which premise stands out the most? Explain why this premise is the best choise and suggest any final improvements. Then implement these improvements to create a fully fleshed out premise. Also include a hook and pitch along with the selected premise. Only include information for the selected premise. Please create a story dossier with the information we have so far, including the title, tropes, hook, pitch, and premise. Tage these as [title] [/title], [tropes] [/tropes], [hook] [/hook], [pitch] [/pitch], and [premise] [/premise] respectively."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        220,
+        440
+      ],
+      "id": "ba3d3172-4a90-4849-82cf-0e6ca6076f51",
+      "name": "Choose Final Hook, Pitch, Premise",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "1AfqUl8TgWp505SKeMYhj5LZ5KOCqpplJ",
+        "title": "=03 - Architect Report for:  {{ $('On form submission').item.json['Series Name'] }} Book "
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        640,
+        400
+      ],
+      "id": "58f45eca-2120-48a3-b6a6-f3a04d380dab",
+      "name": "Create 03 Architect Report Doc",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=Here are all the premises that were created along with their evaluations:\nPremises:\n{{ $('Create 5 Premises').item.json.message.content }}\n{{ $('Evaluate Premises').item.json.message.content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        640,
+        600
+      ],
+      "id": "2d720402-7bfe-4d43-a5e0-3ee4b5171fb7",
+      "name": "Update 03 Architect Report for Premise",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "1AfqUl8TgWp505SKeMYhj5LZ5KOCqpplJ",
+        "title": "=02 Story Dossier for: {{ $('On form submission').item.json['Series Name'] }} Book {{ $('On form submission').item.json['Book Number'] }} "
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        640,
+        0
+      ],
+      "id": "88362b61-605f-4119-a9c1-aa139c776d86",
+      "name": "Create 02 Story Dossier",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=Here is the Selected Premise for this story:  {{ $('Choose Final Hook, Pitch, Premise').item.json.message.content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        640,
+        200
+      ],
+      "id": "d42ef8e2-64ab-419d-bfce-275290e957d0",
+      "name": "Update 02 Dossier for Premise",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Read the following story dossier for a  {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story:\n\n[dossier]\n{{ $json.content }}\n[/dossier]\n***\n\nPlease give me a detailed character bio for the male main character for this story. Be sure to include all important character information for him, including personality with dialogue style, backstory with wound from a specific event, flaw or trait to cover the wound, internal and external goals, how he will complement the female main character as well as be complemented by her, and physical description. Be sure to take into account all the tropes we will use in this story and how that should affect the character and his background."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        920,
+        160
+      ],
+      "id": "a7e9eef8-25f3-4e3c-93ba-6e35a8bb1bac",
+      "name": "Character Sheet - Hero",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Read the following story dossier for a  {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story:\n\n[dossier]\n{{ $('Get the Dossier').item.json.content }}\n[/dossier]\nand character bio for the male main character in this story:\n[hero]\n{{ $json.message.content }}\n[/hero]\n***\n\nPlease give me a detailed character bio for the female main character for this story. Be sure to include all important character information for her, including personality with dialogue style, backstory with wound from a specific event, flaw or trait to cover the wound, internal and external goals, how she will complement the male main character as well as be complemented by him, and physical description. Be sure to take into account all the tropes we will use in this story and how that should affect the character and her background. "
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        900,
+        360
+      ],
+      "id": "b97d1b69-31bb-4e4b-9307-01c384857053",
+      "name": "Character Sheet - Heroine",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please read the following story dossier for a {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story:\n\n[dossier]\n{{ $('Update 02 Dossier for Premise').item.json.documentId }}\n[/dossier]\n***\nNow please read the character bio sheets for the male and female romantic leads for this story:\n\n[hero]\n{{ $('Character Sheet - Hero').item.json.message.content }}\n[/hero]\n\n[heroine]\n{{ $json.message.content }}\n[/heroine]\n***\n\nPlease make a list of ways these two characters can be updated and improved in order to better complement each other in this story, specifically the romantic arc, internal conflict, and the specific tropes. Since this is a romance, the hero and heroine must find the resolution to their internal conflict and goals from their relationship with the other person. Make seperate suggestions for each character."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        920,
+        560
+      ],
+      "id": "9099b3aa-65dc-4858-a0ec-9c3f0559cb36",
+      "name": "Character Revision Suggestions",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please read this story dossier for a  {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story:\n\n[dossier]\n{{ $('Get the Dossier').item.json.content }}\n[/dossier]\n\nand the character bio for male main character and female main character:\n\n[hero]\n{{ $('Character Sheet - Hero').item.json.message.content }}\n[/hero]\n\n[heroine]\n{{ $('Character Sheet - Heroine').item.json.message.content }}\n[/heroine]\n***\n\nNow read the suggestions to improve the characters:\n\n[character improvements]\n{{ $json.message.content }}\n[/character improvements]\n\n***\nPlease expand and improve the character bio sheets to incorporate the chanages and improvements. Each character sheet should include everything necessary to write a full, well-rounded character, including the personality with dialogue style, backstory with a wound from a specific event, a flaw or trait to cover the wound, internal and external goal, how the character will complement the other, and physical descritpion and characteristics. Do this for each character. Label the male main character [hero] [/hero] and the femal main character as [heroine] [/heroine]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        920,
+        780
+      ],
+      "id": "a3fd6076-64c3-4a41-b721-df17a976fd68",
+      "name": "Final Character Sheets x2",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get the Dossier').item.json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=Here are the Character Bios for your Male and Female Main Characters:  {{ $json.message.content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        -40
+      ],
+      "id": "f380f44c-2659-47a9-b13b-5dcb6545f5db",
+      "name": "Update Dossier with Character Sheets",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Update 02 Dossier for Premise').item.json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        920,
+        -40
+      ],
+      "id": "26cd8cab-6b52-46be-9051-315c92a413e5",
+      "name": "Get the Dossier",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Read this Story Dossier, specifically paying attention to the tropes for this  {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story:\n\n[dossier]\n{{ $json.content }}\n[/dossier]\n***\n\nLet's finetune our tropes. List each trope and for each trope, list any specific scenes we need to have in the story that are must haves for each of the tropes used in this story. List each trope separately and what scenes or things we need to bring into the story that are specific to each trope."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1360,
+        160
+      ],
+      "id": "54a429fd-605f-4e7f-888e-f113384ad149",
+      "name": "Trope Scenes",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please read the following story dossier for a  {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story: \n\n[dossier]\n{{ $('Get the Dossier').item.json.content }}\n[/dossier]\n***\nNow please read the following scenes we have already plotted, based on the selected tropes for the story:\n[trope scenes]\n{{ $json.message.content }}\n[/trope scenes]\n***\n\nPlease create a list of scenes to plot out the romance and internal arc for our main characters. Only create scenes that are applicable to the internal goal or romance arc right now."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1360,
+        360
+      ],
+      "id": "8db0ef26-652c-48ea-9432-5730ab4a5b66",
+      "name": "Romance Arc Scenes",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please read the following story dossier for a  {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story: \n\n[dossier]\n{{ $('Get Dossier').item.json.content }}\n[/dossier]\n***\nNow please read the following scenes we have already plotted, based on the selected tropes and romantic arc for the story:\n[trope scenes]\n{{ $('Trope Scenes').item.json.message.content }}\n[/trope scenes]\n\n[romance arc scenes]\n{{ $('Romance Arc Scenes').item.json.message.content }}\n[/romance arc scenes]\n***\n\nPlease create a list of scenes to plot out the external goals and conflict. Only create the scenes for the external arc right now."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1360,
+        780
+      ],
+      "id": "9a268892-9f03-473e-8152-5dfc02fef93c",
+      "name": "External Goal Conflict",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        -40
+      ],
+      "id": "360b1204-b651-41f3-a34a-b79d869bd545",
+      "name": "Get Dossier",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please read the following story dossier for a  {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story: \n\n[dossier]\n{{ $('Get Dossier').item.json.content }}\n[/dossier]\n***\nNow please read the following scenes we have already plotted, based on the selected tropes, romantic arc, and external conflict for the story:\n[trope scenes]\n{{ $('Trope Scenes').item.json.message.content }}\n[/trope scenes]\n\n[romance arc scenes]\n{{ $('Romance Arc Scenes').item.json.message.content }}\n[/romance arc scenes]\n\n[external conflict scenes]\n{{ $json.message.content }}\n[/external conflict scenes]\n***\n\nPlease create a list of interesting and engaging subplot(s) that relate to the main plot and also will naturally lead into subsequent books to connect later books in the series and the scenes needed for these subplots. The scene on this list should only apply to the subplots."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1780,
+        -20
+      ],
+      "id": "85a098ff-bc5c-4bc5-bca9-1a7491b632db",
+      "name": "Subplot Scenes",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please read the following story dossier for a  {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story: \n\n[dossier]\n{{ $('Get Dossier').item.json.content }}\n[/dossier]\n\n[supporting characters]\n{{ $('Supporting Characters Pt1').item.json.message.content }}\n{{ $json.message.content }}\n[/supporting characters]\n\n***\nNow please read the following scenes we have already plotted, based on the selected tropes, romantic arc, external conflict, and subplot for the story:\n[trope scenes]\n{{ $('Trope Scenes').item.json.message.content }}\n[/trope scenes]\n\n[romance arc scenes]\n{{ $('Romance Arc Scenes').item.json.message.content }}\n[/romance arc scenes]\n\n[external conflict scenes]\n{{ $('External Goal Conflict').item.json.message.content }}\n[/external conflict scenes]\n\n[subplot scenes]\n{{ $('Subplot Scenes').item.json.message.content }}\n[/subplot scenes]\n***\n\nNow take all the scenes for this story and put as many of these scenes together into a full chapter outline as possible. You can combine multiple scenes in a chapter or add additional scenes to make smooth transitions as necessary. The full outline should be full, satisfying, and meet all genre expectations for {{ $('On form submission').item.json.Genre }} stories. The outline must include {{ $('On form submission').item.json['Number of Steamy Chapters'] }} steamy and intimate scenes. You only have to say the couple has sex or as much information as you are comfortable giving in this scene and I can add the spicy content as needed if you are not comfortable with hot and intimate details. Mark all intimate scenes with a 🌶️ emoji. We will work on epilogue ideas later. Don't include that in the outline now.  \n\nFor each chapter, make sure to include the POV character, the trope it aids, detail the conflict in that chapter, the characters involved, their goals and motivation, the setting, tone or mood, emotional arc, character decision or choice, consequence of that choice, POV character's feelings, sensory details, purpose of the scene, dialogue and body lanuage, and pacing. For each component of the scene (such as sensory details), make sure instructions are specific and tie into the larger story. The entire book should be tightly plotted and highly engaging. There should only be 1 POV character per chapter and it should alternate between the male and female main characters. Tag the output as [outline] [/outline]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1780,
+        380
+      ],
+      "id": "58a6fdde-9074-4672-bc55-7831b191090e",
+      "name": "Full Outline",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Dossier').item.json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=Supporting Characters:\n[supporting characters]\n{{ $('Supporting Characters Pt1').item.json.message.content }}\n{{ $('Supporting Characters 2').item.json.message.content }}\n[/supporting characters]\n\nHere is the outline for this story:\n\n{{ $('Full Outline').item.json.message.content }}\n{{ $('Create Epilogues').item.json.message.content }}\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2180,
+        180
+      ],
+      "id": "824cbab9-c928-41c3-bb9e-65a8198aa36e",
+      "name": "Update Dossier for Outline",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Create 03 Architect Report Doc').item.json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=Here are the scenes created for each part of the story:\n\nTropes:\n{{ $('Trope Scenes').item.json.message.content }}\n\nRomance Arc: \n{{ $('Romance Arc Scenes').item.json.message.content }}\n\nExternal Goal:\n{{ $('External Goal Conflict').item.json.message.content }}\n\nSubplot:\n{{ $('Subplot Scenes').item.json.message.content }}\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2180,
+        380
+      ],
+      "id": "ca92e4ac-e7be-403b-8728-f3466f62e5a9",
+      "name": "Update Architect All Scenes",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please read the following story dossier for a  {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story: \n\n[dossier]\n{{ $('Get Dossier').item.json.content }}\n[/dossier]\n\n[supporting characters]\n{{ $('Supporting Characters Pt1').item.json.message.content }}\n{{ $('Supporting Characters 2').item.json.message.content }}\n[/supporting characters]\n\n***\nNow please read the outline for this story:\n[outline]\n{{ $('Get Outline').item.json.content }}\n[/outline]\n\n***\nPlease give me {{ $('On form submission').item.json['Number of Epilogues'] }} ideas for an epilogue. All of the epilogues should also include an intimate scene. "
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2160,
+        -20
+      ],
+      "id": "5cc332f1-f39d-42da-98f0-ee4dfe26f9c9",
+      "name": "Create Epilogues",
+      "retryOnFail": false,
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please read the following story dossier for a  {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story: \n\n[dossier]\n{{ $('Get the Dossier').item.json.content }}\n[/dossier]\n***\nNow please read the following scenes we have already plotted, based on the selected tropes and romance trope for the story:\n[trope scenes]\n{{ $('Trope Scenes').item.json.message.content }}\n[/trope scenes]\n\n[romance arc scenes]\n{{ $json.message.content }}\n[/romance arc scenes]\n***\n\nPlease create a list of supporting characters and short bios that are required to write this story. Make sure each supporting character is important to the story and has a part in a scene that is planned out."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1360,
+        560
+      ],
+      "id": "a8718768-e059-40fc-ac33-524179095c23",
+      "name": "Supporting Characters Pt1",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please read the following story dossier for a  {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story: \n\n[dossier]\n{{ $('Get the Dossier').item.json.content }}\n[/dossier]\n***\nNow please read the following scenes we have already plotted, based on the selected tropes and romance trope for the story:\n[trope scenes]\n{{ $('Trope Scenes').item.json.message.content }}\n[/trope scenes]\n\n[romance arc scenes]\n{{ $json.message.content }}\n[/romance arc scenes]\n\n[external conflict scenes]\n{{ $('External Goal Conflict').item.json.message.content }}\n[/external conflict scenes]\n\n[subplot scenes]\n{{ $json.message.content }}\n[/subplot scenes]\n***\nNow please read this list of supporting characters we've already added:\n\n[supporting characters]\n{{ $('Supporting Characters Pt1').item.json.message.content }}\n[/supporting characters]\n\nPlease create an additional list of any supporting characters that are missing along with short bios that are required to write this story. Make sure each supporting character is important to the story and has a part in a scene that is planned out. "
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1780,
+        180
+      ],
+      "id": "5d38835a-d2cd-413e-b763-32e1da6ec1bb",
+      "name": "Supporting Characters 2",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please read the following story dossier for a {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story: \n\n[dossier]\n{{ $('Get Dossier').item.json.content }}\n[/dossier]\n\n[supporting characters]\n{{ $('Supporting Characters Pt1').item.json.message.content }}\n{{ $('Supporting Characters 2').item.json.message.content }}\n[/supporting characters]\n\n***\nNow please read the instructions that were given to create an outline:\n\n[outline instructions]\nNow take all the scenes for this story and put as many of these scenes together into a full chapter outline as possible. You can combine multiple scenes in a chapter or add additional scenes to make smooth transitions as necessary. The full outline should be full, satisfying, and meet all genre expectations for {{ $('On form submission').item.json.Genre }} stories. The outline must include {{ $('On form submission').item.json['Number of Steamy Chapters'] }} steamy and intimate scenes. You only have to say the couple has sex or as much information as you are comfortable giving in this scene and I can add the spicy content as needed if you are not comfortable with hot and intimate details. Mark all intimate scenes with a 🌶️ emoji. We will work on epilogue ideas later. Don't include that in the outline now.  \n\nFor each chapter, make sure to include the POV character, the trope it aids, detail the conflict in that chapter, the characters involved, their goals and motivation, the setting, tone or mood, emotional arc, character decision or choice, consequence of that choice, POV character's feelings, sensory details, purpose of the scene, dialogue and body lanuage, and pacing. For each component of the scene (such as sensory details), make sure instructions are specific and tie into the larger story. The entire book should be tightly plotted and highly engaging. There should only be 1 POV character per chapter and it should alternate between the male and female main characters. Tag the output as [outline] [/outline]\n[/outline instructions]\n***\n\nHere is that outline that was created from those instructions:\n\n{{ $json.content }}\n\n***\n\nPlease evaluate if the outline met all the requirements given in the instructions.\n\nIf your evaluation concludes that the outline has met the criteria of the instructions and dossier, write 'pass' and nothing else.\n\nIf your evaluation concludes that the outline has not met the criteria of the instructions and the dossier, please create a comprehensive list of exactly what would need to be corrected, edited, or fixed in order for the outline to meet the criteria."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1940,
+        780
+      ],
+      "id": "903240d9-f51b-41af-9899-955fc03b51ab",
+      "name": "Evaluate Outline",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "de4c69c8-6e46-4f44-9d1d-c3b453432716",
+              "leftValue": "={{ $json.message.content }}",
+              "rightValue": "pass",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2280,
+        880
+      ],
+      "id": "b7a84809-fba3-47c3-acec-5622d8cba712",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "o1",
+          "mode": "list",
+          "cachedResultName": "O1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please read the following story dossier for a  {{ $('On form submission').item.json['Number of Chapters'] }} chapter {{ $('On form submission').item.json.Genre }} story: \n\n[dossier]\n{{ $('Get Dossier').item.json.content }}\n[/dossier]\n\n[supporting characters]\n{{ $('Supporting Characters Pt1').item.json.message.content }}\n{{ $('Supporting Characters 2').item.json.message.content }}\n[/supporting characters]\n\n***\nNow please read the instructions that were given to create an outline:\n\n[outline instructions]\nNow take all the scenes for this story and put as many of these scenes together into a full chapter outline as possible. You can combine multiple scenes in a chapter or add additional scenes to make smooth transitions as necessary. The full outline should be full, satisfying, and meet all genre expectations for {{ $('On form submission').item.json.Genre }} stories. The outline must include {{ $('On form submission').item.json['Number of Steamy Chapters'] }} steamy and intimate scenes. You only have to say the couple has sex or as much information as you are comfortable giving in this scene and I can add the spicy content as needed if you are not comfortable with hot and intimate details. Mark all intimate scenes with a 🌶️ emoji. We will work on epilogue ideas later. Don't include that in the outline now.  \n\nFor each chapter, make sure to include the POV character, the trope it aids, detail the conflict in that chapter, the characters involved, their goals and motivation, the setting, tone or mood, emotional arc, character decision or choice, consequence of that choice, POV character's feelings, sensory details, purpose of the scene, dialogue and body lanuage, and pacing. For each component of the scene (such as sensory details), make sure instructions are specific and tie into the larger story. The entire book should be tightly plotted and highly engaging. There should only be 1 POV character per chapter and it should alternate between the male and female main characters. Tag the output as [outline] [/outline]\n[/outline instructions]\n***\n\nHere is that outline that was created from those instructions:\n\n{{ $('Get Outline').item.json.content }}\n\n***\n\nThis outline needs to be expanded and corrected in order to correctly and properly meet the criteria. Here is what needs to be updated:\n\n[evaluation]\n{{ $('Evaluate Outline').item.json.message.content }}\n[/evaluation]\n\nPlease follow the evaluation to expand and correct the outline to properly fit the requirements above."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2560,
+        940
+      ],
+      "id": "2e77103e-a696-4899-84d8-7e0484351d16",
+      "name": "Correct Outline",
+      "credentials": {
+        "openAiApi": {
+          "id": "eqvd8RAbm0bay6tQ",
+          "name": "OpenAi Stacey"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "1AfqUl8TgWp505SKeMYhj5LZ5KOCqpplJ",
+        "title": "04 Outline"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        580
+      ],
+      "id": "ca9b99b9-5f77-456f-9ee1-7a113488a749",
+      "name": "04 Create Outline Doc",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        780
+      ],
+      "id": "bd6f35e2-1562-454c-a86c-757b3fa29ba3",
+      "name": "Get Outline",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Full Outline').item.json.message.content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        580
+      ],
+      "id": "186b1304-6da8-4802-95f9-1f90533954b4",
+      "name": "Update Outline",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Create 03 Architect Report Doc').item.json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=Here's an outline that failed and the reason it failed:\n\n{{ $('Full Outline').item.json.message.content }}\n\n{{ $('Evaluate Outline').item.json.message.content }}\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1640,
+        940
+      ],
+      "id": "cff82618-9b94-4738-acae-ba7b5c9ed537",
+      "name": "Update Architect Failed Outline",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('04 Create Outline Doc').item.json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "replaceAll",
+              "text": "={{ $('Get Outline').item.json.content }}",
+              "replaceText": "={{ $('Correct Outline').item.json.message.content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        940
+      ],
+      "id": "dd785b84-2ff0-4fbe-b008-4f66176e574f",
+      "name": "Update Outline1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('04 Create Outline Doc').item.json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=Epilogue(s)\n{{ $('Create Epilogues').item.json.message.content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2340,
+        180
+      ],
+      "id": "c5b98b33-4fd4-440c-a364-b910653c9549",
+      "name": "Update Outline with Epilgoue",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vVX9eYDUv3yTlMXy",
+          "name": "Google Docs Mobi"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "On form submission": [
+      {
+        "json": {
+          "Genre": "Mountain Man Steamy Contemporary Romance",
+          "Specific Details": "Former Military Wounded Hero and Innocent Heroine with a power differential where the hero is more powerful or has something the heroine desperately needs.",
+          "Tropes": "Grumpy Sunshine, wounded hero, fake relationship, forced proximity",
+          "Number of Chapters": 25,
+          "Number of Steamy Chapters": 7,
+          "Series Name": "Her Mountain Escape",
+          "Book Number": 1,
+          "Number of Epilogues": 3,
+          "submittedAt": "2025-02-22T13:29:09.985-05:00",
+          "formMode": "test"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Create 5 Premises",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Premises": {
+      "main": [
+        [
+          {
+            "node": "Choose Final Hook, Pitch, Premise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create 5 Premises": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Premises",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choose Final Hook, Pitch, Premise": {
+      "main": [
+        [
+          {
+            "node": "Create 02 Story Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create 03 Architect Report Doc": {
+      "main": [
+        [
+          {
+            "node": "Update 03 Architect Report for Premise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update 03 Architect Report for Premise": {
+      "main": [
+        [
+          {
+            "node": "Get the Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create 02 Story Dossier": {
+      "main": [
+        [
+          {
+            "node": "Update 02 Dossier for Premise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update 02 Dossier for Premise": {
+      "main": [
+        [
+          {
+            "node": "Create 03 Architect Report Doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Character Sheet - Hero": {
+      "main": [
+        [
+          {
+            "node": "Character Sheet - Heroine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Character Sheet - Heroine": {
+      "main": [
+        [
+          {
+            "node": "Character Revision Suggestions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Character Revision Suggestions": {
+      "main": [
+        [
+          {
+            "node": "Final Character Sheets x2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Character Sheets x2": {
+      "main": [
+        [
+          {
+            "node": "Update Dossier with Character Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the Dossier": {
+      "main": [
+        [
+          {
+            "node": "Character Sheet - Hero",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Dossier with Character Sheets": {
+      "main": [
+        [
+          {
+            "node": "Get Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trope Scenes": {
+      "main": [
+        [
+          {
+            "node": "Romance Arc Scenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Romance Arc Scenes": {
+      "main": [
+        [
+          {
+            "node": "Supporting Characters Pt1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Dossier": {
+      "main": [
+        [
+          {
+            "node": "Trope Scenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "External Goal Conflict": {
+      "main": [
+        [
+          {
+            "node": "Subplot Scenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subplot Scenes": {
+      "main": [
+        [
+          {
+            "node": "Supporting Characters 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Full Outline": {
+      "main": [
+        [
+          {
+            "node": "04 Create Outline Doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Dossier for Outline": {
+      "main": [
+        [
+          {
+            "node": "Update Outline with Epilgoue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Architect All Scenes": {
+      "main": [
+        []
+      ]
+    },
+    "Supporting Characters Pt1": {
+      "main": [
+        [
+          {
+            "node": "External Goal Conflict",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supporting Characters 2": {
+      "main": [
+        [
+          {
+            "node": "Full Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Outline": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create Epilogues",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Correct Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Correct Outline": {
+      "main": [
+        [
+          {
+            "node": "Update Architect Failed Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 Create Outline Doc": {
+      "main": [
+        [
+          {
+            "node": "Update Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline": {
+      "main": [
+        [
+          {
+            "node": "Get Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Outline": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Architect Failed Outline": {
+      "main": [
+        [
+          {
+            "node": "Update Outline1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline1": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Epilogues": {
+      "main": [
+        [
+          {
+            "node": "Update Dossier for Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline with Epilgoue": {
+      "main": [
+        [
+          {
+            "node": "Update Architect All Scenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "af9ea23b-c4f8-43c9-916e-0314999388ee",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3b2afdcf1dab99230c28b13720a9c78ed49f023297158a579772e42d2c8fddd"
+  },
+  "id": "8DbX0iVq3kkSPbmG",
+  "tags": []
+}

@@ -1,0 +1,264 @@
+{
+  "name": "EPBM #2 story dossier",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "What Book do you Want?",
+        "formDescription": "Information about a book",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Tell me about the book you want",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "How many chapters?",
+              "fieldType": "number",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "26da4594-edcb-4a4c-9191-cb797ad84c5e",
+      "name": "On form submission",
+      "webhookId": "105814ab-520d-4407-9aba-5a50fc555816"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You will create a thorough story dossier of all information needed to write the following book:\n{{ $json['Tell me about the book you want'] }}\n\nwith {{ $json['How many chapters?'] }} chapters.\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        220,
+        0
+      ],
+      "id": "9c70d46d-c1f8-46ec-95ae-1362453f136c",
+      "name": "Story Dossier"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        260
+      ],
+      "id": "851a940f-acbd-45d2-ab0f-a3a291820f64",
+      "name": "OpenAI Chat Model",
+      "notesInFlow": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "M6weNM588MBgxMOF",
+          "name": "OpenAi account"
+        }
+      },
+      "notes": "4o mini"
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "Autobooks",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultName": "/ (Root folder)"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        580,
+        0
+      ],
+      "id": "1dbe50d5-9eb4-4e93-b585-43eea5ea02df",
+      "name": "Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "sBFnrUyFYrNYqBlo",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "={{ $json.id }}",
+        "title": "Cozy Mystery Story Dossier"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ],
+      "id": "5b10b41b-f7e5-47c4-aec0-d9af7e27485a",
+      "name": "Google Docs",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "QWyJkyi92PCxSeE8",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Story Dossier').item.json.text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        0
+      ],
+      "id": "ef838271-3af4-401c-b5a0-eb0f0cf95d64",
+      "name": "Google Docs1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "QWyJkyi92PCxSeE8",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "hQa5oj4bUvJVEqND",
+          "mode": "list",
+          "cachedResultName": "EPBM #2 writing"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1240,
+        0
+      ],
+      "id": "6a3891da-0170-4f69-9b26-b1ccc00b00c7",
+      "name": "Execute Workflow"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Story Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Story Dossier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Story Dossier": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Google Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Docs": {
+      "main": [
+        [
+          {
+            "node": "Google Docs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Docs1": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "067d75dc-95e2-4bf9-a651-58a0a3d3a383",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3b2afdcf1dab99230c28b13720a9c78ed49f023297158a579772e42d2c8fddd"
+  },
+  "id": "dVRA2xSgBW4UimZG",
+  "tags": []
+}

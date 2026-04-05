@@ -1,0 +1,3111 @@
+{
+  "name": "4 - Chapter Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').item.json.docMap['Story Dossier'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        -100
+      ],
+      "id": "5158b017-07c7-43c0-9f6b-eb84db9d567b",
+      "name": "Get Story Dossier",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Which fic would you like to finish?",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Book Folder ID"
+            },
+            {
+              "fieldLabel": "Total Chapters",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Chapter Length"
+            },
+            {
+              "fieldLabel": "System Instructions Document ID"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -1460,
+        -100
+      ],
+      "id": "33fddc4c-8dc5-47cb-b658-2bb9dfffc584",
+      "name": "On form submission",
+      "webhookId": "c491d6cd-d526-4fba-bd1e-bbb6d4fc4423"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Summaries').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=\n{{ $('Summaries1').last().json.text }}\n\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        560,
+        1320
+      ],
+      "id": "10668511-f4b2-4815-bcb4-6527bc90d4d3",
+      "name": "Update Summaries1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Summaries6').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $json.text }}\n\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        1460
+      ],
+      "id": "eac0113c-34eb-4f29-bed9-3b23eb06e718",
+      "name": "Update Summaries2",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        1460
+      ],
+      "id": "131bb50b-bc73-4c62-86ef-0c131a3fd9ac",
+      "name": "Get Summaries1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System').last().json.content }}\n[END SYSTEM]\n\nRead the following story information:\n\n[BEGIN STORY DOSSIER]\n{{ $('Get Story Dossier').last().json.content }}\n[END STORY DOSSIER]\n\nPlease provide a detailed narrative summary of the chapter. Be sure to include all characters involved and significant developments, as well as worldbuilding details we might need to track later. \n\nOnly write the summary, never address me or write extra comments about the task. Use the tag [CHAPTER X SUMMARY], where X is the next chapter number, at the beginning of the chapter summary.\n\n{{ $('Completed Chapter5').last().json.text }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        560,
+        1160
+      ],
+      "id": "fbe784f0-57bb-4328-a3ef-f0e89e2a32fa",
+      "name": "Summaries1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System').last().json.content }}\n[END SYSTEM]\n\nRead the following story information:\n\n{{ $('Get Story Dossier').last().json.content }}\n\nPlease provide a detailed narrative summary of the chapter. Be sure to include all characters involved and significant developments, as well as worldbuilding details we might need to track later. \n\nOnly write the summary, never address me or write extra comments about the task. Use the tag [CHAPTER X SUMMARY], where X is the next chapter number, at the beginning of the chapter summary.\n\n[BEGIN CHAPTER]\n{{ $('Completed Chapter4').last().json.text }}\n[END CHAPTER]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2480,
+        1300
+      ],
+      "id": "eada10a2-c706-4d3b-905c-2f9b53b984c8",
+      "name": "Summaries2"
+    },
+    {
+      "parameters": {
+        "content": "## Chapters 5-End",
+        "height": 660,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1780,
+        40
+      ],
+      "typeVersion": 1,
+      "id": "842715cb-b13c-4338-8f54-48bcecb80cb4",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "## Chapters 2-4\n\n",
+        "height": 640,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        60,
+        -200
+      ],
+      "typeVersion": 1,
+      "id": "4f3eb5f3-98ea-4d84-881f-69a754b68045",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-exp-03-25",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1460,
+        1000
+      ],
+      "id": "f1c67a0a-69db-46fd-8957-6110681fc7fd",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0XJKUeeULEEpGDrC",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0c6bdc74-3a65-4b29-bb08-2d7abd24609e",
+              "leftValue": "={{ $json.currentChapter }}",
+              "rightValue": 4,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        1480
+      ],
+      "id": "4a772677-51eb-42f8-8c6e-55b64c290e03",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "sendTo": "wrincher20@gmail.com",
+        "subject": "Book Done!",
+        "message": "=Hey Gorgeous,\n\nYour book is done. Check it out\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2960,
+        1420
+      ],
+      "id": "6bc809a5-1a4f-471e-8c69-c81dc6d16d75",
+      "name": "Gmail2",
+      "webhookId": "7130a5ed-5a38-48ef-b81b-f9b729c7b5f7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qX8cv2R7kyfSApLS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0c6bdc74-3a65-4b29-bb08-2d7abd24609e",
+              "leftValue": "={{ $json.currentChapter }}",
+              "rightValue": "={{ $('On form submission').last().json['Total Chapters'] }}",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2640,
+        1620
+      ],
+      "id": "2c9d67c6-a09d-4ad9-a466-f47888bf35c7",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Get IDs').item.json.docMap.Summaries }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -580,
+        220
+      ],
+      "id": "7ec46500-d9bf-4f82-9188-c2e4e64e0834",
+      "name": "Get Summaries2",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// This function creates a dynamic context using the Manuscript file and summaries\nfunction createDynamicContext(items) {\n  try {\n    console.log(\"Starting dynamic context creation...\");\n    \n    // IMPORTANT: Get the current chapter from Initialize Chapter Loop3\n    // This is the most accurate source of chapter numbers\n    let currentChapter = 0;\n    let nextChapter = 0;\n    \n    try {\n      const initLoopData = $('Initialize Chapter Loop3').last().json;\n      console.log(\"Initialize Chapter Loop3 data found:\", JSON.stringify(initLoopData).substring(0, 200) + \"...\");\n      \n      currentChapter = initLoopData.currentChapter || 0;\n      nextChapter = initLoopData.nextChapter || 0;\n      \n      console.log(`Got from Initialize Chapter Loop3: current=${currentChapter}, next=${nextChapter}`);\n      \n      // If we couldn't get the chapter numbers, fall back to items input\n      if (currentChapter === 0 || nextChapter === 0) {\n        console.log(\"Could not get valid chapter numbers from If3, using input data\");\n        currentChapter = items[0].json.currentChapter || 0;\n        nextChapter = items[0].json.nextChapter || 0;\n      }\n      \n      // If we still don't have valid numbers, try one last approach\n      if (currentChapter === 0 || nextChapter === 0) {\n        console.log(\"Still no valid chapter numbers, searching manuscript for highest chapter\");\n        // We'll scan the manuscript to find the highest chapter number\n        const manuscriptScan = $('Get Manuscript3').last().json.content || \"\";\n        \n        // Look for the highest chapter with an END marker\n        const endChapterRegex = /\\[END CHAPTER (\\d+)\\]/g;\n        let match;\n        let highestChapter = 0;\n        \n        while ((match = endChapterRegex.exec(manuscriptScan)) !== null) {\n          const chapterNum = parseInt(match[1], 10);\n          if (chapterNum > highestChapter) {\n            highestChapter = chapterNum;\n          }\n        }\n        \n        if (highestChapter > 0) {\n          currentChapter = highestChapter;\n          nextChapter = highestChapter + 1;\n          console.log(`Found highest completed chapter in manuscript: ${currentChapter}`);\n        } else {\n          // Ultimate fallback\n          console.log(\"No chapters found in manuscript, using defaults\");\n          currentChapter = 8;  // Default to Chapter 8\n          nextChapter = 9;     // Default to Chapter 9\n        }\n      }\n    } catch (error) {\n      console.log(\"Error getting chapter numbers:\", error.message);\n      // Use fallback values\n      currentChapter = 8;  // Default to Chapter 8\n      nextChapter = 9;     // Default to Chapter 9\n    }\n    \n    console.log(`Using chapter numbers: current=${currentChapter}, next=${nextChapter}`);\n    \n    // Get summaries document content\n    let summaries = \"\";\n    try {\n      summaries = $('Get Summaries6').last().json.content || \"No summaries available\";\n      console.log(`Retrieved summaries (${summaries.length} characters)`);\n    } catch (error) {\n      console.log(`Error getting summaries: ${error.message}`);\n      summaries = \"Error retrieving summaries.\";\n    }\n    \n    // Get the manuscript content\n    let manuscriptContent = \"\";\n    try {\n      manuscriptContent = $('Get Manuscript3').last().json.content || \"\";\n      console.log(`Retrieved manuscript (${manuscriptContent.length} characters)`);\n    } catch (error) {\n      console.log(`Error getting manuscript: ${error.message}`);\n    }\n    \n    // Determine which previous chapters to include (most recent chapters)\n    const chaptersToInclude = 4;\n    const startChapter = Math.max(1, currentChapter - chaptersToInclude + 1);\n    const endChapter = currentChapter;\n    \n    console.log(`Including chapters ${startChapter} through ${endChapter}`);\n    \n    // Explicitly extract each chapter by searching for BEGIN/END markers\n    const recentChaptersText = [];\n    \n    for (let chNum = startChapter; chNum <= endChapter; chNum++) {\n      console.log(`Looking for Chapter ${chNum}`);\n      \n      const beginMarker = `[BEGIN CHAPTER ${chNum}]`;\n      const endMarker = `[END CHAPTER ${chNum}]`;\n      \n      const beginIndex = manuscriptContent.indexOf(beginMarker);\n      \n      if (beginIndex >= 0) {\n        const endIndex = manuscriptContent.indexOf(endMarker, beginIndex);\n        \n        if (endIndex >= 0) {\n          // Found both markers - extract the complete chapter\n          const chapterContent = manuscriptContent.substring(beginIndex, endIndex + endMarker.length);\n          console.log(`Found Chapter ${chNum} with BEGIN/END markers (${chapterContent.length} chars)`);\n          recentChaptersText.push(chapterContent);\n        } else {\n          // Only found begin marker - look for next chapter's begin\n          console.log(`No END marker for Chapter ${chNum}, looking for next chapter start`);\n          let nextBeginIndex = manuscriptContent.length;\n          \n          for (let nextChap = chNum + 1; nextChap <= endChapter + 2; nextChap++) {\n            const nextBeginMarker = `[BEGIN CHAPTER ${nextChap}]`;\n            const tempIndex = manuscriptContent.indexOf(nextBeginMarker);\n            \n            if (tempIndex > beginIndex && tempIndex < nextBeginIndex) {\n              nextBeginIndex = tempIndex;\n              console.log(`Found next chapter ${nextChap} start at ${nextBeginIndex}`);\n              break;\n            }\n          }\n          \n          if (nextBeginIndex < manuscriptContent.length) {\n            const chapterContent = manuscriptContent.substring(beginIndex, nextBeginIndex);\n            console.log(`Found incomplete Chapter ${chNum} using next chapter marker (${chapterContent.length} chars)`);\n            recentChaptersText.push(chapterContent + `[END CHAPTER ${chNum}]`);\n          }\n        }\n      } else {\n        console.log(`Could not find BEGIN marker for Chapter ${chNum}`);\n      }\n    }\n    \n    console.log(`Found ${recentChaptersText.length} chapters to include`);\n    \n    // Create the dynamic context with literal text (no JSON parsing)\n    const dynamicContext = `\nCHAPTER SUMMARIES:\n${summaries}\n\nRECENT CHAPTERS:\n${recentChaptersText.join('\\n\\n')}\n\nNEXT CHAPTER TO WRITE: Chapter ${nextChapter}\n`;\n    \n    console.log(`Created dynamic context (${dynamicContext.length} characters)`);\n    \n    // Add the dynamic context to the output\n    items[0].json.dynamicContext = dynamicContext;\n    \n    return items;\n  } catch (error) {\n    console.log('Critical Error in Create Dynamic Context:');\n    console.log(error.message);\n    console.log(error.stack);\n    \n    // Simple fallback\n    return [{\n      json: {\n        error: `Error in dynamic context creation: ${error.message}`,\n        dynamicContext: `CHAPTER SUMMARIES:\\n${items[0].json.content ? \"Summaries available but error occurred\" : \"No summaries available\"}\\n\\nRECENT CHAPTERS:\\nError loading chapters\\n\\nNEXT CHAPTER TO WRITE: Chapter ${items[0].json.nextChapter || 9}`\n      }\n    }];\n  }\n}\n\n// Execute the function\nreturn createDynamicContext($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2040,
+        1500
+      ],
+      "id": "5e18a7f0-59b0-46dd-b9ab-25652f260636",
+      "name": "Dynamic Context Creation"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Summaries2').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $json.text }}\n\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -740,
+        1100
+      ],
+      "id": "4a3b0830-b136-41e8-a407-31cc1b2eade1",
+      "name": "Update Summaries",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -580,
+        1100
+      ],
+      "id": "c606702e-633b-4104-91a3-460cef5fbd50",
+      "name": "Get Summaries3",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System').last().json.content }}\n[END SYSTEM]\n\nRead the following story information:\n\n{{ $('Get Story Dossier').last().json.content }}\n\nPlease provide a detailed narrative summary for each chapter in the current [MANUSCRIPT] below. Be sure to include all characters involved and significant developments, as well as worldbuilding details we might need to track later. \n\nOnly write the summary, never address me or write extra comments about the task. Use the tag [CHAPTER X SUMMARY], where X is the next chapter number, at the beginning of the chapter summary.\n\n[BEGIN MANUSCRIPT]\n{{ $('Get Manuscript').last().json.content }}\n[END MANUSCRIPT]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        -740,
+        940
+      ],
+      "id": "f0cd26c3-9c85-467b-a0cb-790a97ebe815",
+      "name": "Summaries"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-exp-03-25",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        3540,
+        980
+      ],
+      "id": "07613469-5121-4ee9-a200-bc26ace5a36a",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "0XJKUeeULEEpGDrC",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "Chapters",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('On form submission').last().json['Book Folder ID'] }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -580,
+        560
+      ],
+      "id": "6c081375-4e69-4919-9694-9d07941889d5",
+      "name": "Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GGMwsXDU5mzBg6G4",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Extract Single Chapter').item.json.documentTitle }}\n\n{{ $('Extract Single Chapter').item.json.chapterOutline }}\n\n{{ $('Extract Single Chapter').item.json.chapterDetails.chapterGoal }}\n\n{{ $('Extract Single Chapter').item.json.chapterDetails.keyPlotPoints }}\n\n{{ $('Extract Single Chapter').item.json.chapterDetails.tropeElements }}\n\n{{ $('Extract Single Chapter').item.json.chapterDetails.characterDevelopment }}\n\n{{ $('Extract Single Chapter').item.json.chapterDetails.settingDetails }}\n\n{{ $('Extract Single Chapter').item.json.chapterDetails.subplotProgression }}\n\n{{ $('Extract Single Chapter').item.json.chapterDetails.chapterEnding }}\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        160,
+        940
+      ],
+      "id": "fb3d1cfe-d0b1-49b3-956a-a385534c39ae",
+      "name": "Update Chapters",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Chapter').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=\n[BEGIN CHAPTER DRAFT]\n{{ $json.text }}\n[END CHAPTER DRAFT]\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        560,
+        840
+      ],
+      "id": "c5c8410a-5e7a-4b0f-a2c5-ba1434acd34a",
+      "name": "Update Chapter",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').item.json.docMap.Outline }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -760,
+        60
+      ],
+      "id": "34905b65-61f9-401a-9b0e-949de3951d61",
+      "name": "Get Outline",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function initializeChapterLoop() {\n  console.log(\"Initializing chapter loop\");\n  \n  // Detect current chapter from manuscript\n  let currentChapter = 0; // Default fallback\n  let nextChapter = 1;\n  \n  try {\n    // Get the manuscript content\n    const manuscriptDocument = $('Get Manuscript5').last().json.content || \"\";\n    console.log(`Manuscript content length for initialization: ${manuscriptDocument.length}`);\n    \n    // Find all chapter markers\n    const chapterRegex = /\\[BEGIN CHAPTER (\\d+)\\]/g;\n    let match;\n    let highestChapter = 0;\n    let foundChapters = [];\n    \n    while ((match = chapterRegex.exec(manuscriptDocument)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      if (chapterNum > highestChapter) {\n        highestChapter = chapterNum;\n      }\n    }\n    \n    console.log(`Found chapters: ${foundChapters.join(', ')}`);\n    console.log(`Highest chapter found in manuscript: ${highestChapter}`);\n    \n    // If we found chapters, use the highest as current chapter\n    if (highestChapter > 0) {\n      currentChapter = highestChapter;\n      nextChapter = highestChapter + 1;\n    }\n  } catch (error) {\n    console.log(\"Error detecting chapters during initialization:\", error.message);\n  }\n  \n  console.log(`Using chapter numbers: current=${currentChapter}, next=${nextChapter}`);\n  \n  return [{\n    json: {\n      currentChapter: currentChapter,\n      nextChapter: nextChapter,\n      chapterNumber: nextChapter,\n      totalChaptersToCreate: parseInt($('On form submission').last().json['Total Chapters']),\n      workflowStartTime: new Date().toISOString()\n    }\n  }];\n}\n\n// Execute the function\nreturn initializeChapterLoop();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        460
+      ],
+      "id": "5b0aef01-3ce6-47a4-b891-5063bf6895d7",
+      "name": "Initialize Chapter Loop"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function to extract a single chapter from the outline document based on chapter number\nfunction extractSingleChapter(items) {\n  try {\n    // DIRECT APPROACH: Check manuscript for highest chapter\n    let manuscriptDocument = \"\";\n    \n    // Only try to get manuscript from 'Get Manuscript3' node\n    try {\n      console.log(\"Getting manuscript from 'Get Manuscript1' node\");\n      manuscriptDocument = $('Get Manuscript1').last().json.content || \"\";\n      console.log(`Manuscript content length: ${manuscriptDocument.length}`);\n    } catch (nodeError) {\n      console.log(\"Error getting manuscript from 'Get Manuscript1':\", nodeError.message);\n      return [{\n        json: {\n          error: \"Could not get manuscript from 'Get Manuscript1'. Make sure this node is connected properly and executed.\",\n          errorDetails: nodeError.message\n        }\n      }];\n    }\n    \n    let highestExistingChapter = 0;\n    let foundChapters = [];\n    \n    // Look for [BEGIN CHAPTER X] pattern in the manuscript\n    const chapterRegex = /\\[BEGIN CHAPTER (\\d+)\\]/g;\n    let match;\n    \n    while ((match = chapterRegex.exec(manuscriptDocument)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      if (chapterNum > highestExistingChapter) {\n        highestExistingChapter = chapterNum;\n      }\n    }\n    \n    // The NEXT chapter to extract is highest + 1\n    const nextChapter = highestExistingChapter + 1;\n    console.log(`Next chapter to extract: ${nextChapter} (after found highest: ${highestExistingChapter})`);\n    \n    // Get the outline document\n    let outlineDocument;\n    try {\n      console.log(\"Getting outline from 'Get Outline' node\");\n      outlineDocument = $('Get Outline').last().json.content || \"\";\n      console.log(`Outline document length: ${outlineDocument.length}`);\n    } catch (nodeError) {\n      console.log(\"Error getting outline document:\", nodeError.message);\n      return [{\n        json: {\n          error: \"Could not get outline document. Make sure 'Get Outline' node is connected properly.\",\n          errorDetails: nodeError.message,\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter,\n          chapterNumber: nextChapter\n        }\n      }];\n    }\n    \n    // Use nextChapter for all references\n    const titlePattern = new RegExp(`CHAPTER\\\\s*${nextChapter}\\\\s*:\\\\s*([^\\\\n]+)`, 'i');\n    const titleMatch = outlineDocument.match(titlePattern);\n    \n    if (!titleMatch) {\n      console.log(`ERROR: Chapter ${nextChapter} not found in outline`);\n      return [{\n        json: {\n          error: `Chapter ${nextChapter} not found in outline`,\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter,\n          chapterNumber: nextChapter,\n          highestExistingChapter: highestExistingChapter,\n          foundChapters: foundChapters\n        }\n      }];\n    }\n    \n    const chapterTitle = titleMatch[1].trim().replace(/\\*\\*/g, '');\n    console.log(`FOUND TITLE: Chapter ${nextChapter}: ${chapterTitle}`);\n    \n    // Find the chapter content using nextChapter consistently\n    const startPattern = new RegExp(`CHAPTER\\\\s*${nextChapter}\\\\s*:`, 'i');\n    const endPattern = new RegExp(`CHAPTER\\\\s*${nextChapter + 1}\\\\s*:`, 'i');\n    \n    // Find the start position\n    const startMatch = outlineDocument.match(startPattern);\n    if (!startMatch) {\n      return [{\n        json: {\n          error: `Could not determine chapter start position`,\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter,\n          chapterNumber: nextChapter,\n          chapterTitle: chapterTitle\n        }\n      }];\n    }\n    \n    const startPos = startMatch.index;\n    \n    // Find the end position (next chapter or end of document)\n    let endPos = outlineDocument.length;\n    const endMatch = outlineDocument.match(endPattern);\n    if (endMatch) {\n      endPos = endMatch.index;\n    }\n    \n    // Extract the full chapter content\n    const chapterContent = outlineDocument.substring(startPos, endPos);\n    \n    // Extract each section with simple patterns\n    const chapterDetails = {};\n    const sections = [\n      { name: \"chapterGoal\", label: \"Chapter Goal\" },\n      { name: \"keyPlotPoints\", label: \"Key Plot Points\" },\n      { name: \"romComElements\", label: \"Rom-Com Elements\" },\n      { name: \"characterDevelopment\", label: \"Character Development\" },\n      { name: \"settingDetails\", label: \"Setting Details\" },\n      { name: \"subplotProgression\", label: \"Subplot Progression\" },\n      { name: \"chapterEnding\", label: \"Chapter Ending\" }\n    ];\n    \n    for (const section of sections) {\n      const sectionPattern = new RegExp(`${section.label}\\\\s+([\\\\s\\\\S]*?)(?=##|$)`, 'i');\n      const sectionMatch = chapterContent.match(sectionPattern);\n      \n      if (sectionMatch) {\n        let content = sectionMatch[1].trim();\n        // Clean up content\n        content = content.replace(/- /g, \"• \");\n        content = content.replace(/\\*\\*/g, '');\n        chapterDetails[section.name] = content;\n      } else {\n        chapterDetails[section.name] = \"\";\n      }\n    }\n    \n    // Check if this is the last chapter\n    const hasNextChapter = endMatch !== null;\n    \n    // Format the chapter outline using nextChapter\n    const chapterOutline = `Chapter ${nextChapter}: ${chapterTitle}\nChapter Goal\n${chapterDetails.chapterGoal || \"\"}\nKey Plot Points\n${chapterDetails.keyPlotPoints || \"\"}\nRom-Com Elements\n${chapterDetails.romComElements || \"\"}\nCharacter Development\n${chapterDetails.characterDevelopment || \"\"}\nSetting Details\n${chapterDetails.settingDetails || \"\"}\nSubplot Progression\n${chapterDetails.subplotProgression || \"\"}\nChapter Ending\n${chapterDetails.chapterEnding || \"\"}\n`;\n    \n    // Get Google Drive folder ID if available\n    let folderId = \"\";\n    try {\n      folderId = $('Google Drive').first().json.id || \"\";\n    } catch (driveError) {\n      console.log(\"Could not get Google Drive folder ID:\", driveError.message);\n    }\n    \n    // Return the extracted chapter details with consistent chapter numbers\n    return [{\n      json: {\n        currentChapter: highestExistingChapter, // The current chapter in manuscript\n        nextChapter: nextChapter, // The chapter after this one\n        chapterNumber: nextChapter, // The chapter we're extracting NOW\n        chapterTitle: chapterTitle,\n        documentTitle: `Chapter ${nextChapter} - ${chapterTitle}`,\n        chapterOutline: chapterOutline,\n        chapterDetails: chapterDetails,\n        folderId: folderId,\n        isLastChapter: !hasNextChapter,\n        highestExistingChapter: highestExistingChapter,\n        foundChapters: foundChapters\n      }\n    }];\n  } catch (error) {\n    console.log(\"Error:\", error.message);\n    console.log(error.stack); // Log the stack trace for more detailed debugging\n    return [{\n      json: {\n        error: error.message,\n        stack: error.stack\n      }\n    }];\n  }\n}\n\n// Execute the function\nreturn extractSingleChapter($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        1320
+      ],
+      "id": "44787d2f-6947-4959-a61a-f175b5a3215e",
+      "name": "Chapter Loop Control"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Manuscript').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=\n{{ $('Completed Chapter5').last().json.text }}\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        560,
+        1000
+      ],
+      "id": "f8d14c64-54c3-49ef-8975-8d4bc2528812",
+      "name": "Update Manuscript",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function to extract a single chapter from the outline document based on chapter number\nfunction extractSingleChapter(items) {\n  try {\n    // DIRECT APPROACH: Check manuscript for highest chapter\n    let manuscriptDocument = \"\";\n    \n    // Only try to get manuscript from 'Get Manuscript3' node\n    try {\n      console.log(\"Getting manuscript from 'Get Manuscript2' node\");\n      manuscriptDocument = $('Get Manuscript2').last().json.content || \"\";\n      console.log(`Manuscript content length: ${manuscriptDocument.length}`);\n    } catch (nodeError) {\n      console.log(\"Error getting manuscript from 'Get Manuscript2':\", nodeError.message);\n      return [{\n        json: {\n          error: \"Could not get manuscript from 'Get Manuscript2'. Make sure this node is connected properly and executed.\",\n          errorDetails: nodeError.message\n        }\n      }];\n    }\n    \n    let highestExistingChapter = 0;\n    let foundChapters = [];\n    \n    // Look for [BEGIN CHAPTER X] pattern in the manuscript\n    const chapterRegex = /\\[BEGIN CHAPTER (\\d+)\\]/g;\n    let match;\n    \n    while ((match = chapterRegex.exec(manuscriptDocument)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      if (chapterNum > highestExistingChapter) {\n        highestExistingChapter = chapterNum;\n      }\n    }\n    \n    // The NEXT chapter to extract is highest + 1\n    const nextChapter = highestExistingChapter + 1;\n    console.log(`Next chapter to extract: ${nextChapter} (after found highest: ${highestExistingChapter})`);\n    \n    // Get the outline document\n    let outlineDocument;\n    try {\n      console.log(\"Getting outline from 'Get Outline' node\");\n      outlineDocument = $('Get Outline').last().json.content || \"\";\n      console.log(`Outline document length: ${outlineDocument.length}`);\n    } catch (nodeError) {\n      console.log(\"Error getting outline document:\", nodeError.message);\n      return [{\n        json: {\n          error: \"Could not get outline document. Make sure 'Get Outline' node is connected properly.\",\n          errorDetails: nodeError.message,\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter,\n          chapterNumber: nextChapter\n        }\n      }];\n    }\n    \n    // Use nextChapter for all references\n    const titlePattern = new RegExp(`CHAPTER\\\\s*${nextChapter}\\\\s*:\\\\s*([^\\\\n]+)`, 'i');\n    const titleMatch = outlineDocument.match(titlePattern);\n    \n    if (!titleMatch) {\n      console.log(`ERROR: Chapter ${nextChapter} not found in outline`);\n      return [{\n        json: {\n          error: `Chapter ${nextChapter} not found in outline`,\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter,\n          chapterNumber: nextChapter,\n          highestExistingChapter: highestExistingChapter,\n          foundChapters: foundChapters\n        }\n      }];\n    }\n    \n    const chapterTitle = titleMatch[1].trim().replace(/\\*\\*/g, '');\n    console.log(`FOUND TITLE: Chapter ${nextChapter}: ${chapterTitle}`);\n    \n    // Find the chapter content using nextChapter consistently\n    const startPattern = new RegExp(`CHAPTER\\\\s*${nextChapter}\\\\s*:`, 'i');\n    const endPattern = new RegExp(`CHAPTER\\\\s*${nextChapter + 1}\\\\s*:`, 'i');\n    \n    // Find the start position\n    const startMatch = outlineDocument.match(startPattern);\n    if (!startMatch) {\n      return [{\n        json: {\n          error: `Could not determine chapter start position`,\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter,\n          chapterNumber: nextChapter,\n          chapterTitle: chapterTitle\n        }\n      }];\n    }\n    \n    const startPos = startMatch.index;\n    \n    // Find the end position (next chapter or end of document)\n    let endPos = outlineDocument.length;\n    const endMatch = outlineDocument.match(endPattern);\n    if (endMatch) {\n      endPos = endMatch.index;\n    }\n    \n    // Extract the full chapter content\n    const chapterContent = outlineDocument.substring(startPos, endPos);\n    \n    // Extract each section with simple patterns\n    const chapterDetails = {};\n    const sections = [\n      { name: \"chapterGoal\", label: \"Chapter Goal\" },\n      { name: \"keyPlotPoints\", label: \"Key Plot Points\" },\n      { name: \"romComElements\", label: \"Rom-Com Elements\" },\n      { name: \"characterDevelopment\", label: \"Character Development\" },\n      { name: \"settingDetails\", label: \"Setting Details\" },\n      { name: \"subplotProgression\", label: \"Subplot Progression\" },\n      { name: \"chapterEnding\", label: \"Chapter Ending\" }\n    ];\n    \n    for (const section of sections) {\n      const sectionPattern = new RegExp(`${section.label}\\\\s+([\\\\s\\\\S]*?)(?=##|$)`, 'i');\n      const sectionMatch = chapterContent.match(sectionPattern);\n      \n      if (sectionMatch) {\n        let content = sectionMatch[1].trim();\n        // Clean up content\n        content = content.replace(/- /g, \"• \");\n        content = content.replace(/\\*\\*/g, '');\n        chapterDetails[section.name] = content;\n      } else {\n        chapterDetails[section.name] = \"\";\n      }\n    }\n    \n    // Check if this is the last chapter\n    const hasNextChapter = endMatch !== null;\n    \n    // Format the chapter outline using nextChapter\n    const chapterOutline = `Chapter ${nextChapter}: ${chapterTitle}\nChapter Goal\n${chapterDetails.chapterGoal || \"\"}\nKey Plot Points\n${chapterDetails.keyPlotPoints || \"\"}\nRom-Com Elements\n${chapterDetails.romComElements || \"\"}\nCharacter Development\n${chapterDetails.characterDevelopment || \"\"}\nSetting Details\n${chapterDetails.settingDetails || \"\"}\nSubplot Progression\n${chapterDetails.subplotProgression || \"\"}\nChapter Ending\n${chapterDetails.chapterEnding || \"\"}\n`;\n    \n    // Get Google Drive folder ID if available\n    let folderId = \"\";\n    try {\n      folderId = $('Google Drive').first().json.id || \"\";\n    } catch (driveError) {\n      console.log(\"Could not get Google Drive folder ID:\", driveError.message);\n    }\n    \n    // Return the extracted chapter details with consistent chapter numbers\n    return [{\n      json: {\n        currentChapter: highestExistingChapter, // The current chapter in manuscript\n        nextChapter: nextChapter, // The chapter after this one\n        chapterNumber: nextChapter, // The chapter we're extracting NOW\n        chapterTitle: chapterTitle,\n        documentTitle: `Chapter ${nextChapter} - ${chapterTitle}`,\n        chapterOutline: chapterOutline,\n        chapterDetails: chapterDetails,\n        folderId: folderId,\n        isLastChapter: !hasNextChapter,\n        highestExistingChapter: highestExistingChapter,\n        foundChapters: foundChapters\n      }\n    }];\n  } catch (error) {\n    console.log(\"Error:\", error.message);\n    console.log(error.stack); // Log the stack trace for more detailed debugging\n    return [{\n      json: {\n        error: error.message,\n        stack: error.stack\n      }\n    }];\n  }\n}\n\n// Execute the function\nreturn extractSingleChapter($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        1620
+      ],
+      "id": "dd9e8bf2-b105-417d-ad1e-7e75ab2114d4",
+      "name": "Chapter Loop Control1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Chapter3').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=\n[BEGIN CHAPTER DRAFT]\n{{ $json.text }}\n[END CHAPTER DRAFT]\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        980
+      ],
+      "id": "3379d4f8-e3d1-47e6-80b4-38c4167a7c50",
+      "name": "Update Chapter1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Manuscript3').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=\n{{ $('Completed Chapter4').last().json.text }}\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        1140
+      ],
+      "id": "a84d5b8d-e2ff-416d-951f-523848a8f932",
+      "name": "Update Manuscript1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Extract Single Chapter1').last().json.documentTitle }}\n\n{{ $('Extract Single Chapter1').item.json.chapterOutline }}\n\n{{ $('Extract Single Chapter1').item.json.chapterDetails.chapterGoal }}\n\n{{ $('Extract Single Chapter1').item.json.chapterDetails.keyPlotPoints }}\n\n{{ $('Extract Single Chapter1').item.json.chapterDetails.romComElements }}\n\n{{ $('Extract Single Chapter1').item.json.chapterDetails.characterDevelopment }}\n\n{{ $('Extract Single Chapter1').item.json.chapterDetails.settingDetails }}\n\n{{ $('Extract Single Chapter1').item.json.chapterDetails.subplotProgression }}\n\n{{ $('Extract Single Chapter1').item.json.chapterDetails.chapterEnding }}\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2040,
+        1180
+      ],
+      "id": "b7109cf4-e1a0-4e01-b43f-d790863dc481",
+      "name": "Update Chapters1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function to extract a single chapter from the outline document based on chapter number\nfunction extractSingleChapter(items) {\n  try {\n    // DIRECT APPROACH: Check manuscript for highest chapter\n    const manuscriptDocument = $('Get Manuscript5').last().json.content || \"\";\n    let highestExistingChapter = 0;\n    \n    // Look for [BEGIN CHAPTER X] pattern in the manuscript\n    const chapterRegex = /\\[BEGIN CHAPTER (\\d+)\\]/g;\n    let match;\n    let foundChapters = [];\n    \n    while ((match = chapterRegex.exec(manuscriptDocument)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      if (chapterNum > highestExistingChapter) {\n        highestExistingChapter = chapterNum;\n      }\n    }\n    \n    // The NEXT chapter to extract is highest + 1\n    const nextChapter = highestExistingChapter + 1;\n    console.log(`Next chapter to extract: ${nextChapter} (after found highest: ${highestExistingChapter})`);\n    \n    const outlineDocument = $('Get Outline').last().json.content || \"\";\n    \n    // Use nextChapter for all references\n    const titlePattern = new RegExp(`CHAPTER\\\\s*${nextChapter}\\\\s*:\\\\s*([^\\\\n]+)`, 'i');\n    const titleMatch = outlineDocument.match(titlePattern);\n    \n    if (!titleMatch) {\n      console.log(`ERROR: Chapter ${nextChapter} not found in outline`);\n      return [{\n        json: {\n          error: `Chapter ${nextChapter} not found in outline`,\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter,\n          chapterNumber: nextChapter, // Use nextChapter consistently\n          highestExistingChapter: highestExistingChapter,\n          foundChapters: foundChapters\n        }\n      }];\n    }\n    \n    const chapterTitle = titleMatch[1].trim().replace(/\\*\\*/g, '');\n    console.log(`FOUND TITLE: Chapter ${nextChapter}: ${chapterTitle}`);\n    \n    // Find the chapter content using nextChapter consistently\n    const startPattern = new RegExp(`CHAPTER\\\\s*${nextChapter}\\\\s*:`, 'i');\n    const endPattern = new RegExp(`CHAPTER\\\\s*${nextChapter + 1}\\\\s*:`, 'i');\n    \n    // Find the start position\n    const startMatch = outlineDocument.match(startPattern);\n    if (!startMatch) {\n      return [{\n        json: {\n          error: `Could not determine chapter start position`,\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter,\n          chapterNumber: nextChapter, // Use nextChapter consistently\n          chapterTitle: chapterTitle\n        }\n      }];\n    }\n    \n    const startPos = startMatch.index;\n    \n    // Find the end position (next chapter or end of document)\n    let endPos = outlineDocument.length;\n    const endMatch = outlineDocument.match(endPattern);\n    if (endMatch) {\n      endPos = endMatch.index;\n    }\n    \n    // Extract the full chapter content\n    const chapterContent = outlineDocument.substring(startPos, endPos);\n    \n    // Extract each section with simple patterns\n    const chapterDetails = {};\n    const sections = [\n      { name: \"povCharacter\", label: \"POV Character\" },\n      { name: \"targetChapterLength\", label: \"Target Chapter Length\" },      \n      { name: \"chapterGoal\", label: \"Chapter Goal\" },\n      { name: \"keyPlotPoints\", label: \"Key Plot Points\" },\n      { name: \"genreAndTropeElements\", label: \"Genre And Trope Elements\" },\n      { name: \"characterDevelopment\", label: \"Character Development\" },\n      { name: \"settingDetails\", label: \"Setting Details\" },\n      { name: \"subplotProgression\", label: \"Subplot Progression\" },\n      { name: \"chapterEnding\", label: \"Chapter Ending\" }\n    ];\n    \n    for (const section of sections) {\n      const sectionPattern = new RegExp(`${section.label}\\\\s+([\\\\s\\\\S]*?)(?=##|$)`, 'i');\n      const sectionMatch = chapterContent.match(sectionPattern);\n      \n      if (sectionMatch) {\n        let content = sectionMatch[1].trim();\n        // Clean up content\n        content = content.replace(/- /g, \"• \");\n        content = content.replace(/\\*\\*/g, '');\n        chapterDetails[section.name] = content;\n      } else {\n        chapterDetails[section.name] = \"\";\n      }\n    }\n    \n    // Check if this is the last chapter\n    const hasNextChapter = endMatch !== null;\n    \n    // Format the chapter outline using nextChapter\n    const chapterOutline = `Chapter ${nextChapter}: ${chapterTitle}\nPOV Character\n${chapterDetails.povCharacter || \"\"}\nTarget Chapter Length\n${chapterDetails.targetChapterLength || \"\"}\nChapter Goal\n${chapterDetails.chapterGoal || \"\"}\nKey Plot Points\n${chapterDetails.keyPlotPoints || \"\"}\nGenre And Trope Elements\n${chapterDetails.genreAndTropeElements || \"\"}\nCharacter Development\n${chapterDetails.characterDevelopment || \"\"}\nSetting Details\n${chapterDetails.settingDetails || \"\"}\nSubplot Progression\n${chapterDetails.subplotProgression || \"\"}\nChapter Ending\n${chapterDetails.chapterEnding || \"\"}\n`;\n    \n    // Return the extracted chapter details with consistent chapter numbers\n    return [{\n      json: {\n        currentChapter: highestExistingChapter, // The current chapter in manuscript\n        nextChapter: nextChapter, // The chapter after this one\n        chapterNumber: nextChapter, // The chapter we're extracting NOW\n        chapterTitle: chapterTitle,\n        documentTitle: `Chapter ${nextChapter} - ${chapterTitle}`,\n        chapterOutline: chapterOutline,\n        chapterDetails: chapterDetails,\n        folderId: $('Google Drive').first().json.id,\n        isLastChapter: !hasNextChapter,\n        highestExistingChapter: highestExistingChapter,\n        foundChapters: foundChapters\n      }\n    }];\n  } catch (error) {\n    console.log(\"Error:\", error.message);\n    return [{\n      json: {\n        error: error.message\n      }\n    }];\n  }\n}\n\n// Execute the function\nreturn extractSingleChapter($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        620
+      ],
+      "id": "760c3369-5b03-43ec-92c0-b60e57e13593",
+      "name": "Extract Single Chapter"
+    },
+    {
+      "parameters": {
+        "folderId": "={{ $('Google Drive').last().json.id }}",
+        "title": "={{ `Chapter ${$json.nextChapter}: ${$json.chapterTitle}` }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        160,
+        780
+      ],
+      "id": "07a9b1b0-7588-4c43-a924-85128e61900a",
+      "name": "Create Chapter",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "={{ $('Google Drive').last().json.id }}",
+        "title": "={{ `Chapter ${$json.nextChapter}: ${$json.chapterTitle}` }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2040,
+        1020
+      ],
+      "id": "065cdb6e-4b99-4dcc-a120-67a8ca436ab6",
+      "name": "Create Chapter1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('On form submission').last().json['System Instructions Document ID'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -760,
+        220
+      ],
+      "id": "69a56ca4-a93b-4cff-8d34-f87ac3262328",
+      "name": "Get System",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        980
+      ],
+      "id": "fefdb7c0-465b-4a13-897f-8ae481e50774",
+      "name": "Get Chapter2",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        700,
+        840
+      ],
+      "id": "d85c7bda-7491-456a-bd34-95b277c0bf05",
+      "name": "Get Chapter1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        160,
+        1100
+      ],
+      "id": "cfe48da7-57e6-464b-ab84-16e7d0fee4d7",
+      "name": "Get Chapter",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function to extract a single chapter from the outline document based on chapter number\nfunction extractSingleChapter(items) {\n  try {\n    // DIRECT APPROACH: Check manuscript for highest chapter\n    let manuscriptDocument = \"\";\n    \n    // Only try to get manuscript from 'Get Manuscript3' node\n    try {\n      console.log(\"Getting manuscript from 'Get Manuscript3' node\");\n      manuscriptDocument = $('Get Manuscript3').last().json.content || \"\";\n      \n      // ADD DEBUGGING CODE HERE\n      console.log(`Manuscript content length: ${manuscriptDocument.length}`);\n      \n      // Log the first 500 characters to see what's in the manuscript\n      const preview = manuscriptDocument.substring(0, 500);\n      console.log(`Manuscript preview: ${preview}`);\n      \n      // Log the last 500 characters to see if the file ends properly\n      const endPreview = manuscriptDocument.substring(Math.max(0, manuscriptDocument.length - 500));\n      console.log(`Manuscript end preview: ${endPreview}`);\n      \n      // Search for all chapter markers to see what's there\n      const allChapterBeginnings = Array.from(manuscriptDocument.matchAll(/\\[BEGIN CHAPTER (\\d+)\\]/g));\n      const allChapterEndings = Array.from(manuscriptDocument.matchAll(/\\[END CHAPTER (\\d+)\\]/g));\n      \n      console.log(`Found ${allChapterBeginnings.length} BEGIN markers and ${allChapterEndings.length} END markers`);\n      \n      // List all chapter markers with their positions\n      allChapterBeginnings.forEach(match => {\n        console.log(`Found [BEGIN CHAPTER ${match[1]}] at position ${match.index}`);\n      });\n      \n      allChapterEndings.forEach(match => {\n        console.log(`Found [END CHAPTER ${match[1]}] at position ${match.index}`);\n      });\n      \n      // Check for any input state from previous iterations\n      if (items[0].json) {\n        console.log(`Previous iteration data: ${JSON.stringify({\n          currentChapter: items[0].json.currentChapter,\n          nextChapter: items[0].json.nextChapter,\n          chapterNumber: items[0].json.chapterNumber\n        })}`);\n      }\n      \n    } catch (nodeError) {\n      console.log(\"Error getting manuscript from 'Get Manuscript3':\", nodeError.message);\n      return [{\n        json: {\n          error: \"Could not get manuscript from 'Get Manuscript3'. Make sure this node is connected properly and executed.\",\n          errorDetails: nodeError.message\n        }\n      }];\n    }\n    \n    let highestExistingChapter = 0;\n    let foundChapters = [];\n    \n    // Look for [BEGIN CHAPTER X] pattern in the manuscript\n    const chapterRegex = /\\[BEGIN CHAPTER (\\d+)\\]/g;\n    let match;\n    \n    while ((match = chapterRegex.exec(manuscriptDocument)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      if (chapterNum > highestExistingChapter) {\n        highestExistingChapter = chapterNum;\n      }\n    }\n    \n    console.log(`Found chapters: ${foundChapters.join(', ')}`);\n    console.log(`Highest chapter found: ${highestExistingChapter}`);\n    \n    // The NEXT chapter to extract is highest + 1\n    const nextChapter = highestExistingChapter + 1;\n    console.log(`Next chapter to extract: ${nextChapter} (after found highest: ${highestExistingChapter})`);\n    \n    // Check if we seem to be stuck in a loop\n    if (items[0].json && items[0].json.lastProcessedChapter === highestExistingChapter) {\n      console.log(`⚠️ WARNING: Possible loop detected - previously processed chapter ${items[0].json.lastProcessedChapter} matches current highest chapter`);\n    }\n    \n    // Get the outline document\n    let outlineDocument;\n    try {\n      console.log(\"Getting outline from 'Get Outline' node\");\n      outlineDocument = $('Get Outline').last().json.content || \"\";\n      console.log(`Outline document length: ${outlineDocument.length}`);\n    } catch (nodeError) {\n      console.log(\"Error getting outline document:\", nodeError.message);\n      return [{\n        json: {\n          error: \"Could not get outline document. Make sure 'Get Outline' node is connected properly.\",\n          errorDetails: nodeError.message,\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter,\n          chapterNumber: nextChapter\n        }\n      }];\n    }\n    \n    // Rest of your function code remains the same...\n    \n    // Use nextChapter for all references\n    const titlePattern = new RegExp(`CHAPTER\\\\s*${nextChapter}\\\\s*:\\\\s*([^\\\\n]+)`, 'i');\n    const titleMatch = outlineDocument.match(titlePattern);\n    \n    if (!titleMatch) {\n      console.log(`ERROR: Chapter ${nextChapter} not found in outline`);\n      return [{\n        json: {\n          error: `Chapter ${nextChapter} not found in outline`,\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter,\n          chapterNumber: nextChapter,\n          highestExistingChapter: highestExistingChapter,\n          foundChapters: foundChapters,\n          lastProcessedChapter: highestExistingChapter\n        }\n      }];\n    }\n    \n    const chapterTitle = titleMatch[1].trim().replace(/\\*\\*/g, '');\n    console.log(`FOUND TITLE: Chapter ${nextChapter}: ${chapterTitle}`);\n    \n    // Find the chapter content using nextChapter consistently\n    const startPattern = new RegExp(`CHAPTER\\\\s*${nextChapter}\\\\s*:`, 'i');\n    const endPattern = new RegExp(`CHAPTER\\\\s*${nextChapter + 1}\\\\s*:`, 'i');\n    \n    // Find the start position\n    const startMatch = outlineDocument.match(startPattern);\n    if (!startMatch) {\n      return [{\n        json: {\n          error: `Could not determine chapter start position`,\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter,\n          chapterNumber: nextChapter,\n          chapterTitle: chapterTitle,\n          lastProcessedChapter: highestExistingChapter\n        }\n      }];\n    }\n    \n    const startPos = startMatch.index;\n    \n    // Find the end position (next chapter or end of document)\n    let endPos = outlineDocument.length;\n    const endMatch = outlineDocument.match(endPattern);\n    if (endMatch) {\n      endPos = endMatch.index;\n    }\n    \n    // Extract the full chapter content\n    const chapterContent = outlineDocument.substring(startPos, endPos);\n    \n    // Extract each section with simple patterns\n    const chapterDetails = {};\n    const sections = [\n      { name: \"povCharacter\", label: \"POV Character\" },\n      { name: \"targetChapterLength\", label: \"Target Chapter Length\" },\n      { name: \"chapterGoal\", label: \"Chapter Goal\" },\n      { name: \"keyPlotPoints\", label: \"Key Plot Points\" },\n      { name: \"genreAndTropeElements\", label: \"Genre And Trope Elements\" },\n      { name: \"characterDevelopment\", label: \"Character Development\" },\n      { name: \"settingDetails\", label: \"Setting Details\" },\n      { name: \"subplotProgression\", label: \"Subplot Progression\" },\n      { name: \"chapterEnding\", label: \"Chapter Ending\" }\n    ];\n    \n    for (const section of sections) {\n      const sectionPattern = new RegExp(`${section.label}\\\\s+([\\\\s\\\\S]*?)(?=##|$)`, 'i');\n      const sectionMatch = chapterContent.match(sectionPattern);\n      \n      if (sectionMatch) {\n        let content = sectionMatch[1].trim();\n        // Clean up content\n        content = content.replace(/- /g, \"• \");\n        content = content.replace(/\\*\\*/g, '');\n        chapterDetails[section.name] = content;\n      } else {\n        chapterDetails[section.name] = \"\";\n      }\n    }\n    \n    // Check if this is the last chapter\n    const hasNextChapter = endMatch !== null;\n    \n    // Format the chapter outline using nextChapter\n    const chapterOutline = `Chapter ${nextChapter}: ${chapterTitle}\nPOV Character\n${chapterDetails.povCharacter || \"\"}\nTarget Chapter Length\n${chapterDetails.targetChapterLength || \"\"}\nChapter Goal\n${chapterDetails.chapterGoal || \"\"}\nKey Plot Points\n${chapterDetails.keyPlotPoints || \"\"}\nGenre And Trope Elements\n${chapterDetails.genreAndTropeElements || \"\"}\nCharacter Development\n${chapterDetails.characterDevelopment || \"\"}\nSetting Details\n${chapterDetails.settingDetails || \"\"}\nSubplot Progression\n${chapterDetails.subplotProgression || \"\"}\nChapter Ending\n${chapterDetails.chapterEnding || \"\"}\n`;\n    \n    // Get Google Drive folder ID if available\n    let folderId = \"\";\n    try {\n      folderId = $('Google Drive').first().json.id || \"\";\n    } catch (driveError) {\n      console.log(\"Could not get Google Drive folder ID:\", driveError.message);\n    }\n    \n    // Return the extracted chapter details with consistent chapter numbers\n    return [{\n      json: {\n        currentChapter: highestExistingChapter, // The current chapter in manuscript\n        nextChapter: nextChapter, // The chapter after this one\n        chapterNumber: nextChapter, // The chapter we're extracting NOW\n        chapterTitle: chapterTitle,\n        documentTitle: `Chapter ${nextChapter} - ${chapterTitle}`,\n        chapterOutline: chapterOutline,\n        chapterDetails: chapterDetails,\n        folderId: folderId,\n        isLastChapter: !hasNextChapter,\n        highestExistingChapter: highestExistingChapter,\n        foundChapters: foundChapters,\n        lastProcessedChapter: highestExistingChapter // Add this to track and detect loops\n      }\n    }];\n  } catch (error) {\n    console.log(\"Error:\", error.message);\n    console.log(error.stack); // Log the stack trace for more detailed debugging\n    return [{\n      json: {\n        error: error.message,\n        stack: error.stack\n      }\n    }];\n  }\n}\n\n// Execute the function\nreturn extractSingleChapter($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2040,
+        860
+      ],
+      "id": "6d4c8d66-dafb-4bf9-b1a7-0f83b32e1017",
+      "name": "Extract Single Chapter1"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.docMap.Manuscript }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -760,
+        -100
+      ],
+      "id": "03529648-08f5-44eb-b321-08043a9938cd",
+      "name": "Get Manuscript",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        700,
+        1000
+      ],
+      "id": "3ef878dd-7844-4ad4-aceb-57799601d0a5",
+      "name": "Get Manuscript1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        1140
+      ],
+      "id": "9e1060b9-8752-4e10-be05-c9fdc5e4683e",
+      "name": "Get Manuscript2",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2040,
+        1340
+      ],
+      "id": "1e486f68-49bb-4091-b44d-f33c60649a80",
+      "name": "Get Chapter3",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function initializeChapterLoop() {\n  console.log(\"Initializing chapter loop\");\n  \n  // Detect current chapter from manuscript\n  let currentChapter = 1; // Default fallback\n  let nextChapter = 2;\n  \n  try {\n    // Get the manuscript content\n    const manuscriptDocument = $('Get Manuscript').last().json.content || \"\";\n    console.log(`Manuscript content length for initialization: ${manuscriptDocument.length}`);\n    \n    // Find all chapter markers\n    const chapterRegex = /\\[BEGIN CHAPTER (\\d+)\\]/g;\n    let match;\n    let highestChapter = 0;\n    let foundChapters = [];\n    \n    while ((match = chapterRegex.exec(manuscriptDocument)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      if (chapterNum > highestChapter) {\n        highestChapter = chapterNum;\n      }\n    }\n    \n    console.log(`Found chapters: ${foundChapters.join(', ')}`);\n    console.log(`Highest chapter found in manuscript: ${highestChapter}`);\n    \n    // If we found chapters, use the highest as current chapter\n    if (highestChapter > 0) {\n      currentChapter = highestChapter;\n      nextChapter = highestChapter + 1;\n    }\n  } catch (error) {\n    console.log(\"Error detecting chapters during initialization:\", error.message);\n  }\n  \n  console.log(`Using chapter numbers: current=${currentChapter}, next=${nextChapter}`);\n  \n  return [{\n    json: {\n      currentChapter: currentChapter,\n      nextChapter: nextChapter,\n      chapterNumber: nextChapter,\n      totalChaptersToCreate: parseInt($('On form submission').last().json['Total Chapters']),\n      workflowStartTime: new Date().toISOString()\n    }\n  }];\n}\n\n// Execute the function\nreturn initializeChapterLoop();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        160
+      ],
+      "id": "f7dfaa0e-a907-49d6-bdf7-4686fd669ec1",
+      "name": "Initialize Chapter Loop3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// This function routes chapters to the appropriate processing loop\nfunction routeChapterProcessing(items) {\n  try {\n    // Get system data from the previous node\n    const systemData = items[0].json || {};\n    \n    // Get the Summaries document ID and content\n    let summariesDocId = \"\";\n    let summariesContent = \"\";\n    \n    try {\n      // Get Summaries ID from the docMap in Set IDs\n      summariesDocId = $('Set IDs').last().json.docMap.Summaries || \"\";\n      console.log(`Summaries document ID: ${summariesDocId}`);\n      \n      // Try to get the content from Get Summaries2 if it's been executed\n      try {\n        summariesContent = $('Get Summaries2').last().json.content || \"\";\n        console.log(`Retrieved summaries content length: ${summariesContent.length} characters`);\n      } catch (contentError) {\n        console.log(\"Could not access summaries content: \", contentError.message);\n      }\n    } catch (docError) {\n      console.log(\"Could not access docMap: \", docError.message);\n    }\n    \n    // Get the manuscript content to check chapter count\n    let manuscriptContent = \"\";\n    try {\n      manuscriptContent = $('Get Manuscript').last().json.content || \"\";\n      console.log(`Retrieved manuscript content length: ${manuscriptContent.length} characters`);\n    } catch (manuscriptError) {\n      console.log(\"Could not access manuscript content: \", manuscriptError.message);\n    }\n    \n    // Use regex to find all [BEGIN CHAPTER X] instances in manuscript\n    const chapterRegex = /\\[BEGIN CHAPTER (\\d+)\\]/g;\n    let match;\n    let highestChapter = 0;\n    let foundChapters = [];\n    \n    while ((match = chapterRegex.exec(manuscriptContent)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      if (chapterNum > highestChapter) {\n        highestChapter = chapterNum;\n      }\n    }\n    \n    console.log(`Found ${foundChapters.length} chapters in manuscript, highest chapter: ${highestChapter}`);\n    \n    // Check for summaries using EXACT format: [CHAPTER X SUMMARY]\n    // IMPORTANT: Use escaped brackets in regex since these are literal characters\n    const summaryRegex = /\\[CHAPTER (\\d+) SUMMARY\\]/g;\n    const existingSummaries = [];\n    \n    // Find all summaries\n    while ((match = summaryRegex.exec(summariesContent)) !== null) {\n      const summaryNum = parseInt(match[1], 10);\n      if (!isNaN(summaryNum) && !existingSummaries.includes(summaryNum)) {\n        existingSummaries.push(summaryNum);\n      }\n    }\n    \n    // Sort for cleaner logging\n    existingSummaries.sort((a, b) => a - b);\n    console.log(`Found ${existingSummaries.length} existing chapter summaries: ${existingSummaries.join(', ')}`);\n    \n    // Determine if we need to create summaries\n    const missingChapters = foundChapters.filter(ch => !existingSummaries.includes(ch));\n    const needToCreateSummaries = missingChapters.length > 0;\n    \n    // Determine routing flags based on summaries and chapter count\n    let useAdvancedLoop = false;\n    let useBasicLoop = false;\n    let createSummaries = false;\n    let routingPath = \"\";\n    \n    if (needToCreateSummaries) {\n      // Missing summaries for some chapters, create them first\n      createSummaries = true;\n      routingPath = \"createSummaries\";\n      console.log(`Missing summaries detected for chapters: ${missingChapters.join(', ')}`);\n    } else {\n      // All chapters have summaries, route based on chapter count\n      if (highestChapter >= 4) {\n        useAdvancedLoop = true;\n        routingPath = \"advanced\";\n        console.log(`All summaries found, routing to advanced loop (chapter ${highestChapter} >= 4)`);\n      } else {\n        useBasicLoop = true;\n        routingPath = \"basic\";\n        console.log(`All summaries found, routing to basic loop (chapter ${highestChapter} < 4)`);\n      }\n    }\n    \n    // FORCE ADVANCED LOOP IF 6 CHAPTERS\n    // This is a temporary workaround until we figure out the exact issue\n    if (foundChapters.length >= 6) {\n      useAdvancedLoop = true;\n      useBasicLoop = false;\n      createSummaries = false;\n      routingPath = \"advanced\";\n      console.log(\"OVERRIDE: Forcing advanced loop due to 6+ chapters being found\");\n    }\n    \n    console.log(`Routing decision: advanced=${useAdvancedLoop}, basic=${useBasicLoop}, createSummaries=${createSummaries}`);\n    \n    return [{\n      json: {\n        currentChapter: highestChapter,\n        nextChapter: highestChapter + 1,\n        useAdvancedLoop: useAdvancedLoop,\n        useBasicLoop: useBasicLoop,\n        createSummaries: createSummaries,\n        foundChapters: foundChapters,\n        existingSummaries: existingSummaries,\n        needToCreateSummaries: needToCreateSummaries,\n        routingPath: routingPath,\n        summariesDocId: summariesDocId,\n        // Include original system data to preserve it\n        ...systemData\n      }\n    }];\n  } catch (error) {\n    console.log(`Error in routing function: ${error.message}`);\n    return [{\n      json: {\n        error: error.message,\n        useAdvancedLoop: false,\n        useBasicLoop: true,\n        createSummaries: false\n      }\n    }];\n  }\n}\n\n// Execute the function\nreturn routeChapterProcessing($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -740,
+        720
+      ],
+      "id": "e05eb425-b443-4c20-b12e-f5de4c697825",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Get Manuscript').item.json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2040,
+        700
+      ],
+      "id": "ea28258e-ce5b-4925-9e72-959b52b62570",
+      "name": "Get Manuscript3",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Get Summaries').last().json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2040,
+        220
+      ],
+      "id": "edcfcbed-85eb-4197-bac1-a6383e3d245f",
+      "name": "Get Summaries4",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.useAdvancedLoop }}",
+                    "rightValue": "advanced",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "cba57277-f161-4efa-a711-2877db0ab461"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "84a1d056-0006-410a-a75d-cc161852a2e2",
+                    "leftValue": "={{ $json.useBasicLoop }}",
+                    "rightValue": "basic",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f9b922c8-66c9-4db4-afc3-147c0b3dd650",
+                    "leftValue": "={{ $json.createSummaries }}",
+                    "rightValue": "createSummaries",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -580,
+        760
+      ],
+      "id": "c635bf19-fafe-4e1e-861e-c26063f12cdd",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8ea25b9b-fbfb-44c2-b085-770940cae229",
+              "leftValue": "={{ $json.output.editReady }}",
+              "rightValue": "NO",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        380
+      ],
+      "id": "e2a91723-c4eb-453a-b771-93ad1cd8b146",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8ea25b9b-fbfb-44c2-b085-770940cae229",
+              "leftValue": "={{ $json.output.editReady }}",
+              "rightValue": "NO",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        420
+      ],
+      "id": "7d29a3e7-ada8-43f1-80a2-10e919f77999",
+      "name": "If5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8ea25b9b-fbfb-44c2-b085-770940cae229",
+              "leftValue": "={{ $json.output.editReady }}",
+              "rightValue": "NO",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2460,
+        620
+      ],
+      "id": "a1d77b47-11d4-4f9a-a4ad-9d98441c7ae6",
+      "name": "If7"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8ea25b9b-fbfb-44c2-b085-770940cae229",
+              "leftValue": "={{ $('Quality Check3').item.json.output.editReady }}",
+              "rightValue": "NO",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2920,
+        600
+      ],
+      "id": "cd97536e-6ae0-4a49-b7c8-825eddab08ad",
+      "name": "If8"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').last().json.docMap.Manuscript }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -60,
+        -80
+      ],
+      "id": "1d7fa4a5-6357-43d0-a9d4-7feab526264d",
+      "name": "Get Manuscript5",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cb51a323-0126-41fc-8a55-9c9f44e0d597",
+              "leftValue": "={{ $('Switch1').item.json.createSummaries }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1820,
+        320
+      ],
+      "id": "91438068-1308-4550-8230-6de1962ed9aa",
+      "name": "If10"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Get Summaries2').last().json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2040,
+        380
+      ],
+      "id": "37827f73-5a78-4c42-8108-66bfa5cfe942",
+      "name": "Get Summaries5",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2540,
+        500
+      ],
+      "id": "2efbae70-2cb1-4662-a92f-0ee18d9cec49",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "MQOy0ksjlWiPJNyJ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\"editReady\": \"NO\",\n\"feedback\": \"[BEGIN SUGGESTED CHANGES] Sample feedback here. [END SUGGESTED CHANGES]\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        2660,
+        500
+      ],
+      "id": "7e227434-0743-4d7b-9078-d88ce9b40787",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\"editReady\": \"NO\",\n\"feedback\": \"[BEGIN SUGGESTED CHANGES] Sample feedback here. [END SUGGESTED CHANGES]\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        3080,
+        520
+      ],
+      "id": "efc3977b-0a12-477b-a102-0694c3e754fe",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        540,
+        300
+      ],
+      "id": "fdb3019a-fba8-45ac-9ae5-cbf2ee8fcd6e",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "MQOy0ksjlWiPJNyJ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\"editReady\": \"NO\",\n\"feedback\": \"[BEGIN SUGGESTED CHANGES] Sample feedback here. [END SUGGESTED CHANGES]\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        660,
+        300
+      ],
+      "id": "0fec0c97-8775-4c87-a957-141a57dd7c9f",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\"editReady\": \"NO\",\n\"feedback\": \"[BEGIN SUGGESTED CHANGES] Sample feedback here. [END SUGGESTED CHANGES]\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        1100,
+        300
+      ],
+      "id": "68c9c4da-29b8-4588-a6ee-6b82dc1557f6",
+      "name": "Structured Output Parser3"
+    },
+    {
+      "parameters": {
+        "content": "# Templates\nhttps://faithful-bun-c21.notion.site/New-Story-N8N-1af213fcaa9d80b4b21ec7c8dd5c5e84\n\n# CREATE THE FOLLOWING DOCUMENTS:\n\n### *Use these exact names for the documents to ensure they are found correctly by the workflow.* \n\n* Manuscript\n* Story Dossier\n* Outline\n* Writing Style\n* System Instructions\n* Summaries (may be blank if no summaries exist)",
+        "height": 500,
+        "width": 480,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1460,
+        120
+      ],
+      "typeVersion": 1,
+      "id": "7cf71dbb-74ce-4550-adca-c57b2b7cfd63",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "model": "=claude-3-7-sonnet-latest",
+        "options": {
+          "maxTokensToSample": 8192
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [
+        3560,
+        1220
+      ],
+      "id": "b13db86c-6eae-4845-bc4e-c19fc885d820",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "gdxdG4eQPTxmJLVS",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "=claude-3-7-sonnet-latest",
+        "options": {
+          "maxTokensToSample": 8192
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        1820
+      ],
+      "id": "cf10b076-5682-4dcd-8dab-2cc3fede0ae6",
+      "name": "Anthropic Chat Model1",
+      "credentials": {
+        "anthropicApi": {
+          "id": "gdxdG4eQPTxmJLVS",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "wrincher20@gmail.com",
+        "subject": "Approval Required",
+        "message": "Please review and approve to continue",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        1440
+      ],
+      "id": "f7fd7036-143b-4ae6-8b30-a49164e83b6f",
+      "name": "Gmail",
+      "webhookId": "b9ed9f65-15f9-475f-acb6-eee0f3c67abf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qX8cv2R7kyfSApLS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Get Summaries2').last().json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -20
+      ],
+      "id": "0efd2e22-9168-4dd4-a0f0-88a3c8409451",
+      "name": "Get Summaries7",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cb51a323-0126-41fc-8a55-9c9f44e0d597",
+              "leftValue": "={{ $('Switch1').item.json.createSummaries }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -60,
+        80
+      ],
+      "id": "614fd1cd-cca1-4c32-a740-24209726f68e",
+      "name": "If11"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').last().json.docMap.Summaries }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        160,
+        140
+      ],
+      "id": "3fac7215-d7c6-4db4-b0b1-00d2a31810b7",
+      "name": "Get Summaries8",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').item.json.docMap['Writing Style'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -580,
+        60
+      ],
+      "id": "51e86b6d-6324-4c90-9f6a-cff6af176dae",
+      "name": "Get Writing Style",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System').last().json.content }}\n[END SYSTEM]\nRead the following story information:\n[BEGIN STORY DOSSIER]\n{{ $('Get Story Dossier').last().json.content }}\n[END STORY DOSSIER]\nRead the manuscript so far:\n[Start Manuscript]\n{{ $('Get Manuscript5').last().json.content }}\n[End Manuscript]\nHere is the plan for writing the next chapter:\n[BEGIN CHAPTER PLAN]\n{{ $('Get Chapter').last().json.content }}\n[END CHAPTER PLAN]\nHere is the proposed chapter:\n[BEGIN PROPOSED CHAPTER]\n{{ $('Write Chapter').last().json.text }}\n[END PROPOSED CHAPTER]\n[BEGIN INSTRUCTIONS]\nYou are assessing whether the proposed chapter meets quality standards based on the following criteria:\n1. **Plot & Pacing:** Does this chapter flow seamlessly from the previous chapter and make sense in the sequence of events? It must not be redundant or disrupt the story's flow.\n2. **Depth & Length:** Is this chapter similar in length and detail to prior chapters?\n3. **Characterization:** Are characters consistent with prior behavior, or is any deviation justified?\n4. **Style & Voice:** Is the chapter's tone and writing style consistent with the rest of the manuscript?\n5. **Genre Expectations:** Does this chapter align with reader expectations for this genre?\n6. **Continuity:** Are characters, settings, and story details accurate compared to prior chapters?\n\n#### **Decision Logic:**\n- If **all six criteria are met**, respond with: YES\n- If **one or more criteria fail**, respond with: NO [BEGIN SUGGESTED CHANGES] (Specify required changes here) [END SUGGESTED CHANGES]",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        520,
+        160
+      ],
+      "id": "14d9b87d-6fef-41fe-8ff6-5a6df7817956",
+      "name": "Quality Check",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System').last().json.content }}\n[END SYSTEM]\nRead the following story information:\n[BEGIN STORY DOSSIER]\n{{ $('Get Story Dossier').last().json.content }}\n[END STORY DOSSIER]\nRead the manuscript so far:\n[Start Manuscript]\n{{ $('Get Manuscript5').item.json.content }}\n[End Manuscript]\nHere is the plan for writing the next chapter:\n[BEGIN CHAPTER PLAN]\n{{ $('Get Chapter').last().json.content }}\n[END CHAPTER PLAN]\nHere is the proposed chapter:\n[BEGIN PROPOSED CHAPTER]\n{{ $('Rewrite Chapter').last().json.text }}\n[END PROPOSED CHAPTER]\n[BEGIN INSTRUCTIONS]\nYou are assessing whether the proposed chapter meets quality standards based on the following criteria:\n1. **Plot & Pacing:** Does this chapter flow seamlessly from the previous chapter and make sense in the sequence of events? It must not be redundant or disrupt the story's flow.\n2. **Depth & Length:** Is this chapter similar in length and detail to prior chapters?\n3. **Characterization:** Are characters consistent with prior behavior, or is any deviation justified?\n4. **Style & Voice:** Is the chapter's tone and writing style consistent with the rest of the manuscript?\n5. **Genre Expectations:** Does this chapter align with reader expectations for this genre?\n6. **Continuity:** Are characters, settings, and story details accurate compared to prior chapters?\n\n#### **Decision Logic:**\n- If **all six criteria are met**, respond with: YES\n- If **one or more criteria fail**, respond with: NO [BEGIN SUGGESTED CHANGES] (Specify required changes here) [END SUGGESTED CHANGES]",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        940,
+        160
+      ],
+      "id": "aedb1b7e-4421-47b3-8a90-654d4f42a796",
+      "name": "Quality Check1",
+      "retryOnFail": true,
+      "maxTries": 5,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System').last().json.content }}\n[END SYSTEM]\n\nRead the following story information:\n[BEGIN STORY DOSSIER]\n{{ $('Get Story Dossier').last().json.content }}\n[END STORY DOSSIER]\n\nRead the manuscript so far:\n[Start Manuscript]\n{{ $('Dynamic Context Creation').item.json.dynamicContext }}\n[End Manuscript]\n\nHere is the plan for writing the next chapter:\n[BEGIN CHAPTER PLAN]\n{{ $('Get Chapter3').last().json.content }}\n[END CHAPTER PLAN]\n\nHere is the proposed chapter:\n[BEGIN PROPOSED CHAPTER]\n{{ $('Write Chapter1').last().json.text }}\n[END PROPOSED CHAPTER]\n\n[BEGIN INSTRUCTIONS]\nYou are assessing whether the proposed chapter meets quality standards based on the following criteria:\n1. **Plot & Pacing:** Does this chapter flow seamlessly from the previous chapter and make sense in the sequence of events? It must not be redundant or disrupt the story's flow.\n2. **Depth & Length:** Is this chapter similar in length and detail to prior chapters?\n3. **Characterization:** Are characters consistent with prior behavior, or is any deviation justified?\n4. **Style & Voice:** Is the chapter's tone and writing style consistent with the rest of the manuscript?\n5. **Genre Expectations:** Does this chapter align with reader expectations for this genre?\n6. **Continuity:** Are characters, settings, and story details accurate compared to prior chapters?\n\n#### **Decision Logic:**\n- If **all six criteria are met**, respond with: YES\n- If **one or more criteria fail**, respond with: NO [BEGIN SUGGESTED CHANGES] (Specify required changes here) [END SUGGESTED CHANGES]",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2460,
+        380
+      ],
+      "id": "9eb88b57-5db2-42e2-9ef3-037c38134670",
+      "name": "Quality Check2",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System').last().json.content }}\n[END SYSTEM]\n\nRead the following story information:\n[BEGIN STORY DOSSIER]\n{{ $('Get Story Dossier').last().json.content }}\n[END STORY DOSSIER]\n\nRead the manuscript so far:\n[Start Manuscript]\n{{ $('Dynamic Context Creation').item.json.dynamicContext }}\n[End Manuscript]\n\nHere is the plan for writing the next chapter:\n[BEGIN CHAPTER PLAN]\n{{ $('Get Chapter3').last().json.content }}\n[END CHAPTER PLAN]\n\nHere is the proposed chapter:\n[BEGIN PROPOSED CHAPTER]\n{{ $('Write Chapter1').last().json.text }}\n[END PROPOSED CHAPTER]\n\n[BEGIN INSTRUCTIONS]\nYou are assessing whether the proposed chapter meets quality standards based on the following criteria:\n1. **Plot & Pacing:** Does this chapter flow seamlessly from the previous chapter and make sense in the sequence of events? It must not be redundant or disrupt the story's flow.\n2. **Depth & Length:** Is this chapter similar in length and detail to prior chapters?\n3. **Characterization:** Are characters consistent with prior behavior, or is any deviation justified?\n4. **Style & Voice:** Is the chapter's tone and writing style consistent with the rest of the manuscript?\n5. **Genre Expectations:** Does this chapter align with reader expectations for this genre?\n6. **Continuity:** Are characters, settings, and story details accurate compared to prior chapters?\n\n#### **Decision Logic:**\n- If **all six criteria are met**, respond with: YES\n- If **one or more criteria fail**, respond with: NO [BEGIN SUGGESTED CHANGES] (Specify required changes here) [END SUGGESTED CHANGES]\n\nCRITICAL INSTRUCTIONS:\n- Your response must be a DIRECT JSON object with no wrapper objects\n- Do NOT include {\"output\": {...}} - just return the direct object\n- Include exactly these fields: \"editReady\" and \"feedback\"\n- For \"editReady\", use only \"YES\" or \"NO\" (uppercase)\n- Example correct response: {\"editReady\":\"YES\",\"feedback\":\"No changes needed.\"}",
+        "hasOutputParser": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2900,
+        380
+      ],
+      "id": "83490aac-43a5-4734-bdcb-88d88ecae1e5",
+      "name": "Quality Check3",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "=",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json['Book Folder ID'] }}",
+            "mode": "id"
+          },
+          "whatToSearch": "files"
+        },
+        "options": {
+          "fields": [
+            "id",
+            "name"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1280,
+        -100
+      ],
+      "id": "c4a1be49-17a5-4db0-92cb-67f845949bf3",
+      "name": "Google Drive1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GGMwsXDU5mzBg6G4",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const docMap = {};\nfor (const item of items) {\n  docMap[item.json.name] = item.json.id;\n}\nreturn [{ json: { docMap } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        -100
+      ],
+      "id": "248b9a93-9ee4-4040-95c0-9ef70e2d7c10",
+      "name": "Get IDs"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f4f98593-b85e-417d-a1f8-5679b9ed1566",
+              "name": "docMap.Manuscript",
+              "value": "={{ $json.docMap.Manuscript }}",
+              "type": "string"
+            },
+            {
+              "id": "dc5a4e13-8862-4f4b-bcb5-c36a76fcdf0a",
+              "name": "docMap['Story Dossier']",
+              "value": "={{ $json.docMap['Story Dossier'] }}",
+              "type": "string"
+            },
+            {
+              "id": "7bb74ac8-df97-4fcd-ba0d-48e7b9b4f8b4",
+              "name": "docMap.Outline",
+              "value": "={{ $json.docMap.Outline }}",
+              "type": "string"
+            },
+            {
+              "id": "0fe0a3ee-728b-4420-984a-6bc4f8a9580d",
+              "name": "docMap['Writing Style']",
+              "value": "={{ $json.docMap['Writing Style'] }}",
+              "type": "string"
+            },
+            {
+              "id": "87facf42-b6fe-4d85-9cd4-43fac8cd42ec",
+              "name": "docMap.Summaries",
+              "value": "={{ $json.docMap.Summaries }}",
+              "type": "string"
+            },
+            {
+              "id": "922cd04c-8897-4960-90cc-a266180baf3f",
+              "name": "docMap['Protagonist Profile']",
+              "value": "={{ $json.docMap['Protagonist Profile'] }}",
+              "type": "string"
+            },
+            {
+              "id": "30374216-6e4b-43a3-90de-cd27da605790",
+              "name": "docMap['Deuteragonist Profile']",
+              "value": "={{ $json.docMap['Deuteragonist Profile'] }}",
+              "type": "string"
+            },
+            {
+              "id": "236f2009-9de1-4d5d-9a87-df83c221dd3a",
+              "name": "docMap['Character Roster']",
+              "value": "={{ $json.docMap['Character Roster'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -940,
+        -100
+      ],
+      "id": "a83ad0d7-d462-4937-9a10-514a1310a8d0",
+      "name": "Set IDs"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').item.json.docMap['Protagonist Profile'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -760,
+        380
+      ],
+      "id": "7e213e9d-84c3-489d-a31b-3e971c8dca6a",
+      "name": "Get Protagonist Profile",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').item.json.docMap['Deuteragonist Profile'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -580,
+        380
+      ],
+      "id": "cc62dc52-c915-43f8-869c-129f608ca7c3",
+      "name": "Get Get Deuteragonist Profile",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').item.json.docMap['Character Roster'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -740,
+        560
+      ],
+      "id": "eb89375c-f8de-480d-aa49-4dc01eea2bb2",
+      "name": "Get Character Roster",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System').last().json.content }}\n[END SYSTEM]\n\nRead the following story information:\n[BEGIN STORY DOSSIER]\n{{ $('Get Story Dossier').last().json.content }}\n[END STORY DOSSIER]\n\nHere is where the story is so far:\n[BEGIN MANUSCRIPT]\n{{ $('Get Manuscript5').last().json.content }}\n[END MANUSCRIPT]\n\nHere is the plan for writing the next chapter:\n[BEGIN CHAPTER PLAN]\n{{ $('Get Chapter').last().json.content }}\n[END CHAPTER PLAN]\n\nPlease write the final version of the chapter based on what you know, targeting a word count of {{ $('On form submission').last().json['Chapter Length'] }} words for the chapter. \n\nEnsure the chapter follows seamlessly from the previous chapter. Only write fiction, never address me or write extra comments about the task. Use the tag [BEGIN CHAPTER X], where X is the next chapter number, at the beginning of the chapter, and [END CHAPTER X], at the end of the chapter. Do not include additional tags or notes about the chapter content.\n\nMatch the tone and writing style of the chapters in the [MANUSCRIPT], following the guidelines provided below:\n\n[BEGIN WRITING STYLE]\n{{ $('Get Writing Style').last().json.content }}\n[END WRITING STYLE]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        520,
+        0
+      ],
+      "id": "4712c810-8360-45ca-ac86-77a46e88ce62",
+      "name": "Write Chapter"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System').last().json.content }}\n[END SYSTEM]\n\nRead the following story information:\n[BEGIN STORY DOSSIER]\n{{ $('Get Story Dossier').last().json.content }}\n[END STORY DOSSIER]\n\nHere is where the story is so far:\n[BEGIN MANUSCRIPT]\n{{ $json.dynamicContext }}\n[END MANUSCRIPT]\n\nHere is the plan for writing the next chapter:\n[BEGIN CHAPTER PLAN]\n{{ $('Get Chapter3').last().json.content }}\n[END CHAPTER PLAN]\n\nPlease write the final version of the chapter based on what you know, targeting a word count of {{ $('On form submission').last().json['Chapter Length'] }} words for the chapter. \n\nEnsure the chapter follows seamlessly from the previous chapter. Only write fiction, never address me or write extra comments about the task. Use the tag [BEGIN CHAPTER X], where X is the next chapter number, at the beginning of the chapter, and [END CHAPTER X], at the end of the chapter. Do not include additional tags or notes about the chapter content.\n\nMatch the tone and writing style of the chapters in the [MANUSCRIPT], following the guidelines provided below:\n\n[BEGIN WRITING STYLE]\n{{ $('Get Writing Style').last().json.content }}\n[END WRITING STYLE]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2460,
+        220
+      ],
+      "id": "97a6af4b-aa4a-49f1-aa29-7735666b2fbc",
+      "name": "Write Chapter1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System').last().json.content }}\n[END SYSTEM]\n\nRead the following story information:\n[BEGIN STORY DOSSIER]\n{{ $('Get Story Dossier').last().json.content }}\n[END STORY DOSSIER]\n\nRead the manuscript so far:\n[START MANUSCRIPT]\n{{ $('Get Manuscript5').last().json.content }}\n[END MANUSCRIPT]\n\nHere is the plan for writing the next chapter:\n[BEGIN CHAPTER PLAN]\n{{ $('Get Chapter').last().json.content }}\n[END CHAPTER PLAN]\n\nHere is the original proposed chapter that needs revision:\n[BEGIN ORIGINAL CHAPTER]\n{{ $('Write Chapter').last().json.text }}\n[END ORIGINAL CHAPTER]\n\nHere is the feedback on why the chapter needs revision:\n[BEGIN FEEDBACK]\n{{ $json.output.feedback }}\n[END FEEDBACK]\n\n[BEGIN INSTRUCTIONS]\nYour job is to rewrite the chapter to address the specific issues mentioned in the feedback. Pay special attention to:\n\n1. Plot and pacing consistency with the rest of the manuscript\n2. Maintaining similar length and depth to previous chapters\n3. Consistent characterization\n4. Matching the writing style and voice of earlier chapters\n5. Meeting genre expectations\n6. Ensuring continuity with previous events\n\nRewrite the chapter completely while preserving the core story progression. Do not simply edit small parts - provide a fully revised chapter that resolves all the issues identified in the feedback.\n\nEnsure the chapter follows seamlessly from the previous chapter. Match the tone and writing style of the chapters in the [MANUSCRIPT], following the guidelines provided below:\n\n[BEGIN WRITING STYLE]\n{{ $('Get Writing Style').last().json.content }}\n[END WRITING STYLE]\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        920,
+        0
+      ],
+      "id": "a73ed8b2-b969-4224-a07d-7fcb487959f4",
+      "name": "Rewrite Chapter"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System').last().json.content }}\n[END SYSTEM]\n\nRead the following story information:\n[BEGIN STORY DOSSIER]\n{{ $('Get Story Dossier').last().json.content }}\n[END STORY DOSSIER]\n\nRead the manuscript so far:\n[START MANUSCRIPT]\n{{ $('Dynamic Context Creation').last().json.dynamicContext }}\n[END MANUSCRIPT]\n\nHere is the plan for writing the next chapter:\n[BEGIN CHAPTER PLAN]\n{{ $('Get Chapter3').last().json.content }}\n[END CHAPTER PLAN]\n\nHere is the original proposed chapter that needs revision:\n[BEGIN ORIGINAL CHAPTER]\n{{ $('Write Chapter1').last().json.text }}\n[END ORIGINAL CHAPTER]\n\nHere is the feedback on why the chapter needs revision:\n[BEGIN FEEDBACK]\n{{ $json.output.feedback }}\n[END FEEDBACK]\n\n[BEGIN INSTRUCTIONS]\nYour job is to rewrite the chapter to address the specific issues mentioned in the feedback. Pay special attention to:\n\n1. Plot and pacing consistency with the rest of the manuscript\n2. Maintaining similar length and depth to previous chapters\n3. Consistent characterization\n4. Matching the writing style and voice of earlier chapters\n5. Meeting genre expectations\n6. Ensuring continuity with previous events\n\nRewrite the chapter completely while preserving the core story progression. Do not simply edit small parts - provide a fully revised chapter that resolves all the issues identified in the feedback.\n\nEnsure the chapter follows seamlessly from the previous chapter. Match the tone and writing style of the chapters in the [MANUSCRIPT], following the guidelines provided below:\n\n[BEGIN WRITING STYLE]\n{{ $('Get Writing Style').last().json.content }}\n[END WRITING STYLE]\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2880,
+        220
+      ],
+      "id": "6023f98e-3b26-43bb-ba0c-ecaf870ad5ee",
+      "name": "Rewrite Chapter1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a64ab38a-9b49-4ec7-bf25-a8b308b9a3c0",
+              "name": "text",
+              "value": "={{ $('Write Chapter').last().json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        680,
+        440
+      ],
+      "id": "d13e5dfa-d3c2-4d7e-a97e-8ba872d85156",
+      "name": "Completed Chapter"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a64ab38a-9b49-4ec7-bf25-a8b308b9a3c0",
+              "name": "text",
+              "value": "={{ $('Rewrite Chapter').last().json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1140,
+        440
+      ],
+      "id": "bd38abeb-bf3e-4284-aeb5-6b557eac56ba",
+      "name": "Completed Chapter1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ce20aa0a-df38-4dcb-8b0b-f53eedc6f7e4",
+              "name": "documentId",
+              "value": "={{ $json.documentId }}",
+              "type": "string"
+            },
+            {
+              "id": "f67517bc-6483-4b13-ba52-3ec5746d09c0",
+              "name": "content",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        160,
+        300
+      ],
+      "id": "3ce64b12-aa69-46b2-bb1e-cad8518a89f5",
+      "name": "Get Summaries"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ce20aa0a-df38-4dcb-8b0b-f53eedc6f7e4",
+              "name": "documentId",
+              "value": "={{ $json.documentId }}",
+              "type": "string"
+            },
+            {
+              "id": "f67517bc-6483-4b13-ba52-3ec5746d09c0",
+              "name": "content",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2040,
+        540
+      ],
+      "id": "52d69cfa-cab0-4270-a110-98f8e3fba6c9",
+      "name": "Get Summaries6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a64ab38a-9b49-4ec7-bf25-a8b308b9a3c0",
+              "name": "text",
+              "value": "={{ $('Write Chapter1').last().json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2620,
+        640
+      ],
+      "id": "f67125a8-b293-4e3b-a312-fd26853071d2",
+      "name": "Completed Chapter2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a64ab38a-9b49-4ec7-bf25-a8b308b9a3c0",
+              "name": "text",
+              "value": "={{ $('Rewrite Chapter1').last().json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3100,
+        640
+      ],
+      "id": "484040f6-6dcf-44cb-84c7-a4735852bd5e",
+      "name": "Completed Chapter3"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1340,
+        740
+      ],
+      "id": "e2613724-72c0-4a07-bca6-2d6b5646f082",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "MQOy0ksjlWiPJNyJ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a64ab38a-9b49-4ec7-bf25-a8b308b9a3c0",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2560,
+        820
+      ],
+      "id": "fa96aa5e-0a94-45bc-bdb6-2f0746938bd4",
+      "name": "Completed Chapter4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a64ab38a-9b49-4ec7-bf25-a8b308b9a3c0",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        620,
+        680
+      ],
+      "id": "506db9b0-1bbe-447c-83cf-239ed65aa4bf",
+      "name": "Completed Chapter5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Story Dossier": {
+      "main": [
+        [
+          {
+            "node": "Get Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Google Drive1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Summaries1": {
+      "main": [
+        [
+          {
+            "node": "Chapter Loop Control",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Summaries2": {
+      "main": [
+        [
+          {
+            "node": "Get Summaries1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Summaries1": {
+      "main": [
+        [
+          {
+            "node": "Chapter Loop Control1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summaries1": {
+      "main": [
+        [
+          {
+            "node": "Update Summaries1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summaries2": {
+      "main": [
+        [
+          {
+            "node": "Update Summaries2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summaries",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Summaries1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Summaries2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Manuscript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Gmail2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Initialize Chapter Loop3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Summaries2": {
+      "main": [
+        [
+          {
+            "node": "Get Protagonist Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dynamic Context Creation": {
+      "main": [
+        [
+          {
+            "node": "Write Chapter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Summaries": {
+      "main": [
+        [
+          {
+            "node": "Get Summaries3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Summaries3": {
+      "main": [
+        [
+          {
+            "node": "Get Manuscript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summaries": {
+      "main": [
+        [
+          {
+            "node": "Update Summaries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Chapters": {
+      "main": [
+        [
+          {
+            "node": "Get Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Chapter": {
+      "main": [
+        [
+          {
+            "node": "Get Chapter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Outline": {
+      "main": [
+        [
+          {
+            "node": "Get Writing Style",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initialize Chapter Loop": {
+      "main": [
+        [
+          {
+            "node": "Extract Single Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chapter Loop Control": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Manuscript": {
+      "main": [
+        [
+          {
+            "node": "Get Manuscript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chapter Loop Control1": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Chapter1": {
+      "main": [
+        [
+          {
+            "node": "Get Chapter2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Manuscript1": {
+      "main": [
+        [
+          {
+            "node": "Get Manuscript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Chapters1": {
+      "main": [
+        [
+          {
+            "node": "Get Chapter3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Single Chapter": {
+      "main": [
+        [
+          {
+            "node": "Create Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Chapter": {
+      "main": [
+        [
+          {
+            "node": "Update Chapters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Chapter1": {
+      "main": [
+        [
+          {
+            "node": "Update Chapters1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get System": {
+      "main": [
+        [
+          {
+            "node": "Get Summaries2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Chapter2": {
+      "main": [
+        [
+          {
+            "node": "Update Manuscript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Chapter1": {
+      "main": [
+        [
+          {
+            "node": "Update Manuscript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Chapter": {
+      "main": [
+        [
+          {
+            "node": "Write Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Single Chapter1": {
+      "main": [
+        [
+          {
+            "node": "Create Chapter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Manuscript": {
+      "main": [
+        [
+          {
+            "node": "Get Story Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Manuscript1": {
+      "main": [
+        [
+          {
+            "node": "Summaries1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Manuscript2": {
+      "main": [
+        [
+          {
+            "node": "Summaries2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Chapter3": {
+      "main": [
+        [
+          {
+            "node": "Dynamic Context Creation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initialize Chapter Loop3": {
+      "main": [
+        [
+          {
+            "node": "If10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Manuscript3": {
+      "main": [
+        [
+          {
+            "node": "Extract Single Chapter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Summaries4": {
+      "main": [
+        [
+          {
+            "node": "Get Summaries6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Initialize Chapter Loop3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Manuscript5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Summaries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "Rewrite Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Completed Chapter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If5": {
+      "main": [
+        [
+          {
+            "node": "Rewrite Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Completed Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If7": {
+      "main": [
+        [
+          {
+            "node": "Rewrite Chapter1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Completed Chapter2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If8": {
+      "main": [
+        [
+          {
+            "node": "Rewrite Chapter1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Completed Chapter3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Manuscript5": {
+      "main": [
+        [
+          {
+            "node": "If11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If10": {
+      "main": [
+        [
+          {
+            "node": "Get Summaries4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Summaries5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Summaries5": {
+      "main": [
+        [
+          {
+            "node": "Get Summaries6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Quality Check2",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Quality Check3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Quality Check2",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Quality Check3",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Quality Check",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Quality Check1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Quality Check",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser3": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Quality Check1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "Gmail": {
+      "main": [
+        [
+          {
+            "node": "Initialize Chapter Loop3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Summaries7": {
+      "main": [
+        [
+          {
+            "node": "Get Summaries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If11": {
+      "main": [
+        [
+          {
+            "node": "Get Summaries7",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Summaries8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Summaries8": {
+      "main": [
+        [
+          {
+            "node": "Get Summaries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Writing Style": {
+      "main": [
+        [
+          {
+            "node": "Get System",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality Check": {
+      "main": [
+        [
+          {
+            "node": "If5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality Check1": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality Check2": {
+      "main": [
+        [
+          {
+            "node": "If7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality Check3": {
+      "main": [
+        [
+          {
+            "node": "If8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive1": {
+      "main": [
+        [
+          {
+            "node": "Get IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get IDs": {
+      "main": [
+        [
+          {
+            "node": "Set IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set IDs": {
+      "main": [
+        [
+          {
+            "node": "Get Manuscript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Protagonist Profile": {
+      "main": [
+        [
+          {
+            "node": "Get Get Deuteragonist Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Get Deuteragonist Profile": {
+      "main": [
+        [
+          {
+            "node": "Get Character Roster",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Character Roster": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Chapter": {
+      "main": [
+        [
+          {
+            "node": "Quality Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Chapter1": {
+      "main": [
+        [
+          {
+            "node": "Quality Check2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rewrite Chapter": {
+      "main": [
+        [
+          {
+            "node": "Quality Check1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rewrite Chapter1": {
+      "main": [
+        [
+          {
+            "node": "Quality Check3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completed Chapter": {
+      "main": [
+        [
+          {
+            "node": "Completed Chapter5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completed Chapter1": {
+      "main": [
+        [
+          {
+            "node": "Completed Chapter5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Summaries": {
+      "main": [
+        [
+          {
+            "node": "Initialize Chapter Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Summaries6": {
+      "main": [
+        [
+          {
+            "node": "Get Manuscript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completed Chapter2": {
+      "main": [
+        [
+          {
+            "node": "Completed Chapter4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completed Chapter3": {
+      "main": [
+        [
+          {
+            "node": "Completed Chapter4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Rewrite Chapter",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Write Chapter",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Write Chapter1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Rewrite Chapter1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completed Chapter4": {
+      "main": [
+        [
+          {
+            "node": "Update Chapter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Completed Chapter5": {
+      "main": [
+        [
+          {
+            "node": "Update Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9b3e23c0-6cf6-4ae5-9e91-5c4813a2ad07",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ce3f5f7c2d244f2d30fc49e8c171f97691ba9f45902616b500d75b8f7ea563b1"
+  },
+  "id": "7TMl5PxuqYrZmTMf",
+  "tags": []
+}

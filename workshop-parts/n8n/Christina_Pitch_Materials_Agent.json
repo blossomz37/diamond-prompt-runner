@@ -1,0 +1,596 @@
+{
+  "name": "2. Pitch Materials Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "bookTitle"
+            },
+            {
+              "name": "authorName"
+            },
+            {
+              "name": "content"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1120,
+        380
+      ],
+      "id": "dc65151a-5363-4c04-b078-594714261cdd",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-thinking-exp",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        0,
+        80
+      ],
+      "id": "f63a4a59-493b-4ed0-bded-9aa9c7c753db",
+      "name": "Gemini 2.0 Thinking",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "NLVYQzusncskwE9L",
+          "name": "Google Gemini(PaLM) Api account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1120,
+        200
+      ],
+      "id": "d2c41a1a-a30c-4007-b6e8-4006a83fefd8",
+      "name": "When chat message received",
+      "webhookId": "586ab0d7-6b3b-44a8-8215-a8c5a904dd24"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simply pass through the search query from the previous node\nconst result = {};\n\nif (items[0].json.searchQuery) {\n  result.searchQuery = items[0].json.searchQuery;\n} else {\n  result.searchQuery = \"No valid search query found\";\n}\n\nreturn {json: result};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        280
+      ],
+      "id": "0e9c52a0-cf44-4af9-a2fb-d8f92420c294",
+      "name": "Get IDs"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4dc1f21e-652a-4429-8549-8ff7203720ed",
+              "name": "bookTitle",
+              "value": "={{ $('Code').item.json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "a77aa207-0120-4db0-9c3a-d1c97009d884",
+              "name": "authorName",
+              "value": "={{ $('Code').item.json.author }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -560,
+        280
+      ],
+      "id": "2728283c-c171-454e-b1d6-c9597444c591",
+      "name": "Set IDs"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "https://drive.google.com/drive/u/1/folders/1mL_NFeCfY4ru-fHoss3i6_St6KLgVnz4",
+            "mode": "url"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -880,
+        480
+      ],
+      "id": "7347aea9-ca93-4a9d-9656-e4dc09b46cf8",
+      "name": "Access Book Database",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "JEJSVcyrivvBmlge",
+          "name": "Google Drive account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $node[\"Access Book Database\"].json[\"id\"] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        480
+      ],
+      "id": "b7016645-00d1-4fbf-af3c-e17101f8bece",
+      "name": "Get Book File",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "Vixr1uQWILjkvc9i",
+          "name": "Google Docs account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "=You are a professional publishing assistant creating pitch materials for a book.  \n\n<<<BOOK_START>>>\n{{ String($json.content) }}\n<<<BOOK_END>>>\n\nNow, use these known values:\n- Book Title: {{ $('Code').item.json.title }}\n- Author Name: {{ $('Code').item.json.author }}\n\nDo not modify the book title or author name in your analysis.\n\n---\n\n📋 Your task:  \nRead the manuscript and generate multiple compelling pitch materials options. Create 5-10 unique options for each category that capture the book's essence, appeal, and marketability. Focus on making each option distinct while maintaining the book's genre, tone, and unique selling points.\n\nReturn the pitch materials in the following **structured, markdown-formatted text block**. Do **not** return JSON or code blocks. Just use clean markdown formatting.\n\n---\n\nFormat Template (fill in with multiple options for each category):\n\n## PITCH MATERIALS\n\n### LOGLINES (5-10 options):\n- [One-sentence summary that hooks readers with character, conflict, and stakes]\n- [Another logline option]\n\n### ELEVATOR PITCHES (5-10 options, 2-3 sentences each):\n- [Brief but compelling summary that could sell the book in 30 seconds]\n- [Another elevator pitch option]\n\n### TAGLINES (5-10 options):\n- [Short, catchy phrase that captures the book's essence]\n- [Another tagline option]\n\n### HOOK STATEMENTS (5-10 options):\n- [Question or statement that intrigues the reader and makes them want to know more]\n- [Another hook statement option]\n\n---\n\n💡 **Guidelines for Effective Pitch Materials:**\n\n**Loglines:**\n- One sentence that captures character, conflict, stakes\n- Includes the main character's goal and the primary obstacle\n- Hints at what makes this story unique\n\n**Elevator Pitches:**\n- 2-3 sentences that expand on the logline\n- Includes main character, central conflict, and stakes\n- Conveys tone and appeal of the book\n\n**Taglines:**\n- Short, memorable phrases (typically 5-10 words)\n- Captures emotional hook or unique selling point\n- Often uses clever wordplay, contrast, or intrigue\n\n**Hook Statements:**\n- Often phrased as questions or provocative statements\n- Creates curiosity gap that makes readers want to learn more\n- Highlights the book's most compelling elements\n\nMake each option distinct and compelling, focusing on different aspects of the story to give marketing teams multiple angles to work with. Ensure all options accurately represent the book's genre, tone, and content.\n",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"formattedMarkdown\": { \"type\": \"string\" },\n    \"loglines\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"elevatorPitches\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"taglines\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"hookStatements\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    }\n  },\n  \"required\": [\n    \"formattedMarkdown\",\n    \"loglines\",\n    \"elevatorPitches\",\n    \"taglines\",\n    \"hookStatements\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1,
+      "position": [
+        -900,
+        680
+      ],
+      "id": "725d13a8-2a92-4547-948c-7578c45811a9",
+      "name": "Information Extractor"
+    },
+    {
+      "parameters": {
+        "jsCode": "// The message is in item.chatInput based on your debug output\nconst item = items[0].json;\nlet message = '';\n\n// Specifically check for chatInput field first\nif (item.chatInput) {\n  message = item.chatInput;\n} else if (item.messageText) {\n  message = item.messageText;\n} else if (item.text) {\n  message = item.text;\n} else if (item.message) {\n  message = item.message;\n} else if (item.content) {\n  message = item.content;\n} else {\n  message = '';\n}\n\nconst bookInfo = {};\n\n// Only proceed with parsing if we have a message\nif (message && typeof message === 'string') {\n  if (message.toLowerCase().includes(\" by \")) {\n    const parts = message.toLowerCase().split(\" by \");\n    // Remove question marks, periods, and other ending punctuation\n    bookInfo.title = parts[0].replace(/can i get information about|info on|details for/gi, \"\").trim();\n    bookInfo.author = parts[1].replace(/\\?|\\.|\\!|\\,$/, \"\").trim();\n    \n    // Format for Google Drive - clean up any unwanted punctuation\n    bookInfo.searchQuery = `${bookInfo.title} - ${bookInfo.author}`;\n  } else if (message.includes(\" - \")) {\n    // Handle already formatted as \"Title - Author\"\n    const parts = message.split(\" - \");\n    bookInfo.title = parts[0].trim();\n    bookInfo.author = parts[1].replace(/\\?|\\.|\\!|\\,$/, \"\").trim();\n    bookInfo.searchQuery = `${bookInfo.title} - ${bookInfo.author}`;\n  } else {\n    // Treat the whole message as a search term\n    bookInfo.searchTerm = message;\n    bookInfo.searchQuery = message.replace(/\\?|\\.|\\!|\\,$/, \"\").trim();\n  }\n} else {\n  bookInfo.searchTerm = \"No valid message found\";\n  bookInfo.searchQuery = \"No valid message found\";\n}\n\nreturn {json: bookInfo};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        280
+      ],
+      "id": "697c00df-0e61-4b9c-9a18-091d9eca9274",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "=name = '{{ $(\"Code\").item.json.author }}' and mimeType = 'application/vnd.google-apps.folder'",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -300,
+        280
+      ],
+      "id": "ef42b9ee-a464-402e-9830-a30c77ebffb2",
+      "name": "Access Author Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "JEJSVcyrivvBmlge",
+          "name": "Google Drive account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Search for Marketing Doc').item.json.id }}\n"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        480
+      ],
+      "id": "af25765c-eeb2-41d2-97e7-8192a28f3dda",
+      "name": "Get Marketing Bible",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "Vixr1uQWILjkvc9i",
+          "name": "Google Docs account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const metadata = $json.output || $json;\n\nconst formatList = (arr) => arr?.map(item => `• ${item}`).join('\\n') || '';\n\nconst formatted = `\n## PITCH MATERIALS\n\n### LOGLINES:\n${formatList(metadata.loglines)}\n\n### ELEVATOR PITCHES:\n${formatList(metadata.elevatorPitches)}\n\n### TAGLINES:\n${formatList(metadata.taglines)}\n\n### HOOK STATEMENTS:\n${formatList(metadata.hookStatements)}\n`;\n\nreturn [{\n  json: {\n    ...metadata,\n    formattedText: formatted.trim()\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -580,
+        680
+      ],
+      "id": "2bab16c2-428c-42a7-92e4-a0d2a986633b",
+      "name": "JSON Translator"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "=name = 'Marketing Bible - {{ $('Code').item.json.title }}' and mimeType = 'application/vnd.google-apps.document'",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $json.id }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -80,
+        280
+      ],
+      "id": "91c98bd7-5880-4c65-be2a-0981b4fac3e8",
+      "name": "Search for Marketing Doc",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "JEJSVcyrivvBmlge",
+          "name": "Google Drive account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Search for Marketing Doc').item.json.id }}\n",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=## PITCH MATERIALS\n\n### LOGLINES:\n{{ $(\"JSON Translator\").item.json.loglines.map(l => \"• \" + l).join(\"\\n\") }}\n\n### ELEVATOR PITCHES:\n{{ $(\"JSON Translator\").item.json.elevatorPitches.map(p => \"• \" + p).join(\"\\n\") }}\n\n### TAGLINES:\n{{ $(\"JSON Translator\").item.json.taglines.map(t => \"• \" + t).join(\"\\n\") }}\n\n### HOOK STATEMENTS:\n{{ $(\"JSON Translator\").item.json.hookStatements.map(h => \"• \" + h).join(\"\\n\") }}\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        480
+      ],
+      "id": "e77cce95-5cb9-43d0-b3cb-f9a9ec5893ae",
+      "name": "Update Marketing Bible",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "Vixr1uQWILjkvc9i",
+          "name": "Google Docs account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6ce59abe-6dc1-43a3-b3b0-79dedafe741f",
+              "leftValue": "={{ $('JSON Translator').item.json.formattedMarkdown }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -300,
+        700
+      ],
+      "id": "86eeecfe-f734-45ba-a347-9849f48641c1",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "content": "Generating Pitch Materials\n(Loglines, Elevator Pitches, Taglines, Hook Statements)",
+        "height": 800,
+        "width": 600
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        120
+      ],
+      "id": "42f6d243-992e-41e8-8f9c-fbf8a5c4e687",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Your message must contain the book title BY the author name.",
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1260,
+        140
+      ],
+      "id": "a68c8966-9224-4142-ad55-0f9955d5f339",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "This will be called by the Publisher Brain after the Metadata Agent has run.",
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1340,
+        360
+      ],
+      "id": "d92ab7a0-5f93-4fa8-84ba-6e43dda1d8c8",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro-exp-03-25",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        80
+      ],
+      "id": "324b77f0-35c0-48e9-8124-944ab13b337b",
+      "name": "Gemini 2.5 pro",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "NLVYQzusncskwE9L",
+          "name": "Google Gemini(PaLM) Api account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "14d9076e-27ea-4846-8b44-f83cf4022b9e",
+              "name": "response",
+              "value": "=The below pitch materials were added to the Google Doc. Proceed to the next step.\n{{ $('JSON Translator').item.json.formattedMarkdown }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -20,
+        680
+      ],
+      "id": "d9dcf352-37f0-4198-9f97-e88061e15c66",
+      "name": "Response"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini 2.0 Thinking": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get IDs": {
+      "main": [
+        [
+          {
+            "node": "Set IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set IDs": {
+      "main": [
+        [
+          {
+            "node": "Access Book Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Access Book Database": {
+      "main": [
+        [
+          {
+            "node": "Get Book File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Book File": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Get IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "JSON Translator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Access Author Folder": {
+      "main": [
+        [
+          {
+            "node": "Search for Marketing Doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Marketing Bible": {
+      "main": [
+        [
+          {
+            "node": "Update Marketing Bible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON Translator": {
+      "main": [
+        [
+          {
+            "node": "Access Author Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search for Marketing Doc": {
+      "main": [
+        [
+          {
+            "node": "Get Marketing Bible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Marketing Bible": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "Gemini 2.5 pro": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9cdd0285-acd4-413d-bd20-29de312fd4ea",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3b2afdcf1dab99230c28b13720a9c78ed49f023297158a579772e42d2c8fddd"
+  },
+  "id": "hnhvdRMd4r3zF8h3",
+  "tags": []
+}

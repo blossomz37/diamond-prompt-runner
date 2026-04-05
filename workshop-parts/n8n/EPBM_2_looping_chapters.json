@@ -1,0 +1,480 @@
+{
+  "name": "EPBM #2 looping chapters",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.2,
+      "position": [
+        -420,
+        200
+      ],
+      "id": "716fbec6-1dee-43d8-9f82-7b6cef673044",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "Kso4r37FNcBwblpQ",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Where in the Google?",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Folder ID",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Story Dossier Link",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Manuscript Link",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Chapters",
+              "fieldType": "number",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -520,
+        -80
+      ],
+      "id": "de5e6e8d-2591-4fff-8abf-f9625728e852",
+      "name": "On form submission",
+      "webhookId": "2ec4122d-3717-4e98-8fab-3dd36dc8061e"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('On form submission').item.json['Story Dossier Link'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        -80
+      ],
+      "id": "b8bffa6b-45f8-4777-be63-8c13c409c6c2",
+      "name": "Story Dossier Get",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "QWyJkyi92PCxSeE8",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('On form submission').item.json['Manuscript Link'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -140,
+        -80
+      ],
+      "id": "002aad67-75de-439a-b3ca-bc689ea769f4",
+      "name": "Manuscript Get",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "QWyJkyi92PCxSeE8",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Read the following story information:\n\n{{ $('Story Dossier Get').item.json.content }}\n\nHere is where the story is so far:\n{{ $('Manuscript Get').item.json.content }}\n\n\nFigure out what the next chapter is to write, and make a plan to write that chapter. Only make the plan."
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        140,
+        -80
+      ],
+      "id": "6577941c-98a1-4e09-932e-faaa622f59e6",
+      "name": "Plan Next Chapter"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Read the following story information:\n\n{{ $('Story Dossier Get').item.json.content }}\n\nHere is where the story is so far:\n{{ $('Manuscript Get').item.json.content }}\n\n\n\nHere is the plan for writing the next chapter:\n{{ $('Plan Next Chapter').item.json.text }}\n\n\nNow write a draft of the next chapter."
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        240,
+        80
+      ],
+      "id": "7ee21c1c-8750-4faa-af70-a636cf4af6ab",
+      "name": "Draft Next Chapter"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Read the following story information:\n\n{{ $('Story Dossier Get').item.json.content }}\n\nHere is where the story is so far:\n{{ $('Manuscript Get').item.json.content }}\n\n\n\nHere is the plan for writing the next chapter:\n{{ $('Plan Next Chapter').item.json.text }}\n\n\nHere is the draft of the next chapter:\n{{ $('Draft Next Chapter').item.json.text }}\n\n\nPlease make a detailed editing plan for the draft of the next chapter above."
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        320,
+        220
+      ],
+      "id": "33643f32-1680-4cf5-bd3e-c644aa0eb59e",
+      "name": "Edit Next Chapter"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Read the following story information:\n\n{{ $('Story Dossier Get').item.json.content }}\n\nHere is where the story is so far:\n{{ $('Manuscript Get').item.json.content }}\n\n\n\nHere is the plan for writing the next chapter:\n{{ $('Plan Next Chapter').item.json.text }}\n\n\nHere is the draft of the next chapter:\n{{ $('Draft Next Chapter').item.json.text }}\n\nHere is the editing plan of the next chapter:\n{{ $('Edit Next Chapter').item.json.text }}\n\n\nNow write the final version of the next chapter so it works as a final draft. Only write fiction, never address me or write extra comments about the task. Only write the next chapter's final draft.\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        340,
+        380
+      ],
+      "id": "5b37d93b-0fbc-4c0d-8883-ecde6483dfb3",
+      "name": "Next Chapter Final"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Read the following manuscript:\n\n{{ $('Get Current Manuscript').item.json.content }}\n\nDoes the manuscript have\n{{ $('On form submission').item.json.Chapters }} chapters written in it?\n\nAnswer\n\nYES\n\nor \n\nNO",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1160,
+        380
+      ],
+      "id": "0375f1f6-613c-46cf-89ca-c087831e1444",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('On form submission').item.json['Manuscript Link'] }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Next Chapter Final').item.json.text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        720,
+        380
+      ],
+      "id": "19c6efbf-a573-4fb3-9c36-6e13dc621a55",
+      "name": "Update Manuscript",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "QWyJkyi92PCxSeE8",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('On form submission').item.json['Manuscript Link'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        940,
+        380
+      ],
+      "id": "0523086e-0d05-4910-a8ff-099f201c9d68",
+      "name": "Get Current Manuscript",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "QWyJkyi92PCxSeE8",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        600
+      ],
+      "id": "d35a30a2-1833-4610-be0f-faaf38be9ccb",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "M6weNM588MBgxMOF",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0c6bdc74-3a65-4b29-bb08-2d7abd24609e",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "YES",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1520,
+        380
+      ],
+      "id": "20f4ed26-92cf-44a4-8931-bc8e96473aa0",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "writer@elizabethannwest.com",
+        "subject": "Book Done!",
+        "message": "=Hey Gorgeous,\n\nYour book is done. Check it out\n\n{{ $('On form submission').item.json['Manuscript Link'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1780,
+        280
+      ],
+      "id": "ad25c3b8-a83a-40f8-b0bb-21e0192b5875",
+      "name": "Gmail",
+      "webhookId": "3f88ff6a-6a8a-4f7f-8992-1eaf721047cb",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Q1c7tQ6bEhhN4tMe",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Plan Next Chapter",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Draft Next Chapter",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Edit Next Chapter",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Next Chapter Final",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Story Dossier Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Story Dossier Get": {
+      "main": [
+        [
+          {
+            "node": "Manuscript Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manuscript Get": {
+      "main": [
+        [
+          {
+            "node": "Plan Next Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Next Chapter": {
+      "main": [
+        [
+          {
+            "node": "Draft Next Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Next Chapter": {
+      "main": [
+        [
+          {
+            "node": "Edit Next Chapter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Next Chapter": {
+      "main": [
+        [
+          {
+            "node": "Next Chapter Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Next Chapter Final": {
+      "main": [
+        [
+          {
+            "node": "Update Manuscript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Manuscript": {
+      "main": [
+        [
+          {
+            "node": "Get Current Manuscript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Current Manuscript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Manuscript Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "41e6b652-e62c-46d4-947a-1a66da1b4e9a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3b2afdcf1dab99230c28b13720a9c78ed49f023297158a579772e42d2c8fddd"
+  },
+  "id": "bQLIit8GKEBq3GP8",
+  "tags": []
+}

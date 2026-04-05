@@ -1,0 +1,2907 @@
+{
+  "name": "3 - Develop Outline",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System Instructions').last().json.content }}\n[END SYSTEM]\n\n{{ $('On form submission').last().json['Series Dossier Document ID'] }}\n{{ $('Get Story Data').last().json.content }}\n\n[BEGIN OVERVIEW]\n{{ $('Set IDs').item.json.docMap.Overview }}\n[END FULL OVERVIEW]\n\n[BEGIN STORY DOSSIER TEMPLATE]\n{{ $json.content }}\n[END STORY DOSSIER TEMPLATE]\n\n[BEGIN INSTRUCTIONS]\nPlease develop a thorough story dossier with all information needed to write the novel using the [STORY DOSSIER TEMPLATE]. Be sure to reference the [BOOK METADATA] for additional details about the novel.\n\nPlease be sure to reference the [CHARACTERS] for this story.\n\nOnly write the story dossier; never address me or write extra comments about the task.\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        3580,
+        1480
+      ],
+      "id": "098d14df-50a7-4c3d-855e-f3b3345bdeea",
+      "name": "Story Dossier"
+    },
+    {
+      "parameters": {
+        "folderId": "={{ $('On form submission').last().json['Book Folder ID'] }}",
+        "title": "Story Dossier"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3580,
+        1640
+      ],
+      "id": "2d20689e-9fc9-4d6e-b6fe-13b5844b7e73",
+      "name": "Create Story Dossier",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=[BEGIN STORY DOSSIER]\n{{ $('Story Dossier').item.json.text }}\n[END STORY DOSSIER]\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3740,
+        1640
+      ],
+      "id": "6b64597f-0587-4084-9099-a933c329b522",
+      "name": "Update Story Dossier",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## The Story Dossier\n\n\n",
+        "height": 620,
+        "width": 360
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3540,
+        1380
+      ],
+      "typeVersion": 1,
+      "id": "cf8bb691-91b8-40a0-bab7-3c0b9e13b63e",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "## Chapter Outlines\n\n\n",
+        "height": 1360,
+        "width": 1560
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1520,
+        100
+      ],
+      "typeVersion": 1,
+      "id": "f480d7a6-0368-414e-b623-7afd4ba74a3f",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Outline5').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $json.text }}\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1880,
+        180
+      ],
+      "id": "c8e60f90-44e9-4b46-8fb5-81791caf0039",
+      "name": "Update Outline",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        180
+      ],
+      "id": "209cc8f0-e128-493e-bf44-2d21f9050fc2",
+      "name": "Get Outline",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System Instructions').last().json.content }}\n[END SYSTEM]\n\n{{ $('Get Story Data').last().json.content }}\n[BEGIN SERIES WRITING GUIDE]\n{{ $('Get Writing Guide').last().json.content }}\n[END SERIES WRITING GUIDE]\n\n[BEGIN CHARACTERS]\n{{ $('Get Protagonist Profile').item.json.content }}\n{{ $('Get Deuteragonist Profile').item.json.content }}\n{{ $('Get Character Roster').item.json.content }}\n[END CHARACTERS]\n\n[BEGIN OVERVIEW]\n{{ $('Get Overview').last().json.content }}\n[END OVERVIEW]\n\n[BEGIN CHAPTER OUTLINE TEMPLATE]\n{{ $('Get Chapter Outline Template').last().json.content }}\n[END CHAPTER OUTLINE TEMPLATE]\n\n[BEGIN INSTRUCTIONS]\nUsing the [CHAPTER OUTLINE TEMPLATE], please use the planned content from the [OVERVIEW] to create a detailed outline for Chapter {{ $('Act Completion Check5').last().json.nextChapter }} from Act I. \n\nOnly write the chapter outline; never address me or write extra comments about the task. DO NOT DEVIATE FROM THE [CHAPTER OUTLINE TEMPLATE].\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        1580,
+        180
+      ],
+      "id": "fb2d7fa4-8a26-4740-a304-482901d8a8ca",
+      "name": "Create Act I"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System Instructions').last().json.content }}\n[END SYSTEM]\n\n{{ $('Get Story Data').last().json.content }}\n[BEGIN SERIES WRITING GUIDE]\n{{ $('Get Writing Guide').last().json.content }}\n[END SERIES WRITING GUIDE]\n\n[BEGIN CHARACTERS]\n{{ $('Get Protagonist Profile').last().json.content }}\n{{ $('Get Deuteragonist Profile').last().json.content }}\n{{ $('Get Character Roster').last().json.content }}\n[END CHARACTERS]\n\n{{ $('Get Overview').last().json.content }}\n[BEGIN CHAPTER OUTLINE TEMPLATE]\n{{ $('Get Chapter Outline Template').last().json.content }}\n[END CHAPTER OUTLINE TEMPLATE]\n\n[BEGIN CHAPTER OUTLINE]\n{{ $('Get Outline5').last().json.content }}\n[END CHAPTER OUTLINE]\n\n[BEGIN INSTRUCTIONS]\nUsing the [CHAPTER OUTLINE TEMPLATE], please use the planned content from the [OVERVIEW] to create a detailed outline for Chapter {{ $('Act Completion Check5').last().json.nextChapter }} from Act II. Ensure the chapter continues seamlessly from the previous chapter and does not contain repetitive content.\n\nOnly write the chapter outline; never address me or write extra comments about the task. DO NOT DEVIATE FROM THE [CHAPTER OUTLINE TEMPLATE].\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        1580,
+        460
+      ],
+      "id": "c12fb396-b3bd-4b41-9651-64f442ee36a8",
+      "name": "Create Act II"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System Instructions').last().json.content }}\n[END SYSTEM]\n\n{{ $('Get Story Data').last().json.content }}\n[BEGIN SERIES WRITING GUIDE]\n{{ $('Get Writing Guide').last().json.content }}\n[END SERIES WRITING GUIDE]\n\n[BEGIN CHARACTERS]\n{{ $('Get Protagonist Profile').last().json.content }}\n{{ $('Get Deuteragonist Profile').last().json.content }}\n{{ $('Get Character Roster').last().json.content }}\n[END CHARACTERS]\n\n{{ $('Get Overview').last().json.content }}\n[BEGIN CHAPTER OUTLINE TEMPLATE]\n{{ $('Get Chapter Outline Template').last().json.content }}\n[END CHAPTER OUTLINE TEMPLATE]\n\n[BEGIN CHAPTER OUTLINE]\n{{ $('Get Outline5').last().json.content }}\n[END CHAPTER OUTLINE]\n\n[BEGIN INSTRUCTIONS]\nUsing the [CHAPTER OUTLINE TEMPLATE], please use the planned content from the [OVERVIEW] to create a detailed outline for Chapter {{ $('Act Completion Check5').last().json.nextChapter }}  from Act III. Ensure the chapter continues seamlessly from the previous chapter and does not contain repetitive content.\n\nOnly write the chapter outline; never address me or write extra comments about the task. DO NOT DEVIATE FROM THE [CHAPTER OUTLINE TEMPLATE].\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        1580,
+        740
+      ],
+      "id": "7676fdc3-2594-4e1d-88c3-b2ac39a80d07",
+      "name": "Create Act III"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System Instructions').last().json.content }}\n[END SYSTEM]\n\n{{ $('Get Story Data').last().json.content }}\n[BEGIN SERIES WRITING GUIDE]\n{{ $('Get Writing Guide').last().json.content }}\n[END SERIES WRITING GUIDE]\n\n[BEGIN CHARACTERS]\n{{ $('Get Protagonist Profile').last().json.content }}\n{{ $('Get Deuteragonist Profile').last().json.content }}\n{{ $('Get Character Roster').last().json.content }}\n[END CHARACTERS]\n\n{{ $('Get Overview').last().json.content }}\n[BEGIN CHAPTER OUTLINE TEMPLATE]\n{{ $('Get Chapter Outline Template').last().json.content }}\n[END CHAPTER OUTLINE TEMPLATE]\n\n[BEGIN CHAPTER OUTLINE]\n{{ $('Get Outline5').last().json.content }}\n[END CHAPTER OUTLINE]\n\n[BEGIN INSTRUCTIONS]\nUsing the [CHAPTER OUTLINE TEMPLATE], please use the planned content from the [OVERVIEW] to create a detailed outline for Chapter {{ $('Act Completion Check5').last().json.nextChapter }}  from Act IV. Ensure the chapter continues seamlessly from the previous chapter and does not contain repetitive content.\n\nOnly write the chapter outline; never address me or write extra comments about the task. DO NOT DEVIATE FROM THE [CHAPTER OUTLINE TEMPLATE].\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        1580,
+        1020
+      ],
+      "id": "e2983137-1ea1-4338-92f2-ca2b72ef344a",
+      "name": "Create Act IV"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System Instructions').last().json.content }}\n[END SYSTEM]\n\n{{ $('Get Story Data').last().json.content }}\n[BEGIN SERIES WRITING GUIDE]\n{{ $('Get Writing Guide').last().json.content }}\n[END SERIES WRITING GUIDE]\n\n[BEGIN CHARACTERS]\n{{ $('Get Protagonist Profile').last().json.content }}\n{{ $('Get Deuteragonist Profile').last().json.content }}\n{{ $('Get Character Roster').last().json.content }}\n[END CHARACTERS]\n\n{{ $('Get Overview').last().json.content }}\n[BEGIN CHAPTER OUTLINE TEMPLATE]\n{{ $('Get Chapter Outline Template').last().json.content }}\n[END CHAPTER OUTLINE TEMPLATE]\n\n[BEGIN CHAPTER OUTLINE]\n{{ $('Get Outline5').last().json.content }}\n[END CHAPTER OUTLINE]\n\n[BEGIN INSTRUCTIONS]\nUsing the [CHAPTER OUTLINE TEMPLATE], please use the planned content from the [OVERVIEW] to create a detailed outline for Chapter {{ $('Act Completion Check5').last().json.nextChapter }}  from Act V. Ensure the chapter continues seamlessly from the previous chapter and does not contain repetitive content.\n\nOnly write the chapter outline; never address me or write extra comments about the task. DO NOT DEVIATE FROM THE [CHAPTER OUTLINE TEMPLATE].\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        1580,
+        1300
+      ],
+      "id": "3dc1ac7f-d237-4f47-b10a-950e60d8e269",
+      "name": "Create Act V"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Outline5').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=[END ACT I]\n\n[BEGIN ACT II]\n{{ $json.text }}\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1880,
+        460
+      ],
+      "id": "dce6feb5-9b94-4c0b-bc77-635e71fdfbb4",
+      "name": "Update Outline1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        460
+      ],
+      "id": "518a1d2d-f4d1-45b1-8579-5bfba194ce97",
+      "name": "Get Outline1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Outline5').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=\n{{ $json.text }}\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1880,
+        740
+      ],
+      "id": "8b87b945-167b-459c-8abc-f6af574b9c2f",
+      "name": "Update Outline2",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        740
+      ],
+      "id": "a0d81dc8-b8b6-4485-8f5c-3348ba4b2502",
+      "name": "Get Outline2",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Outline5').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=\n{{ $json.text }}\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1880,
+        1020
+      ],
+      "id": "6cbafb7b-9d4c-49e8-8ae1-b495ccfbbf12",
+      "name": "Update Outline3",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        1020
+      ],
+      "id": "a00117b0-3226-48a8-be19-cf168682c931",
+      "name": "Get Outline3",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Outline5').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=\n{{ $json.text }}\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1880,
+        1300
+      ],
+      "id": "de61cf51-69a6-49ff-8f0c-57005e03bd07",
+      "name": "Update Outline4",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        1300
+      ],
+      "id": "db9c0c97-657f-4be1-b726-24fac472304c",
+      "name": "Get Outline4",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "=17BfuesPn7qMz1Wd8aDV-b8hmo21yC354S8k-PgrJ0Mg"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3380,
+        1480
+      ],
+      "id": "0cadbcdc-6594-4da4-99e0-8569205add6f",
+      "name": "Get Story Dossier Template",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-3-7-sonnet-20250219",
+          "cachedResultName": "Claude 3.7 Sonnet"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        2260,
+        1760
+      ],
+      "id": "fe184b94-ebdd-4bf2-88c4-87f4210e9a15",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "gdxdG4eQPTxmJLVS",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eb3f5266-20ec-42a7-b746-455a1435b19b",
+              "leftValue": "={{ $json.currentChapter }}",
+              "rightValue": "={{ $json.actLastChapter }}",
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        180
+      ],
+      "id": "cb4b7645-d5ee-43ed-a1ea-69057660b3e4",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').item.json.docMap.Overview }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        220,
+        800
+      ],
+      "id": "9e353d10-2802-4dd7-8f66-4532931ad8ca",
+      "name": "Get Overview",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "=1iZv8nneDd9oo0V1vJ3wemodsC1nPh57E5sd35J-5QBA"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        580,
+        800
+      ],
+      "id": "97b14896-a87d-44f0-8c92-8b34952ced9b",
+      "name": "Get Chapter Outline Template",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "={{ $('On form submission').last().json['Book Folder ID'] }}",
+        "title": "Outline"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        580,
+        1520
+      ],
+      "id": "90f311c7-00a5-4dc3-b34c-c0606f311cc6",
+      "name": "Create Outline",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('On form submission').last().json['Series Dossier Document ID'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        400,
+        800
+      ],
+      "id": "1528c915-9622-4245-b655-4f716276dd3e",
+      "name": "Get Series Dossier",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('On form submission').item.json['System Instructions Document ID'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        220,
+        320
+      ],
+      "id": "31e1c878-10cb-4bc8-a3fc-fd10372faf6c",
+      "name": "Get System Instructions",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Book in Series Outline Creation",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Book Folder ID"
+            },
+            {
+              "fieldLabel": "Series Dossier Document ID"
+            },
+            {
+              "fieldLabel": "System Instructions Document ID"
+            },
+            {
+              "fieldLabel": "Writing Guide Document ID"
+            },
+            {
+              "fieldLabel": "Book Number in Series"
+            },
+            {
+              "fieldLabel": "Primary Genre",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Fantasy"
+                  },
+                  {
+                    "option": "Mystery/Thriller/Suspense"
+                  },
+                  {
+                    "option": "Romance"
+                  },
+                  {
+                    "option": "Women's Fiction"
+                  },
+                  {
+                    "option": "Other"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -40,
+        320
+      ],
+      "id": "8077b5f1-afe2-4fe6-b1e9-0abd33991843",
+      "name": "On form submission",
+      "webhookId": "f7b2835c-8cbb-4dfc-a92c-5e7454d715fa"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.docMap['Story Data'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        400,
+        480
+      ],
+      "id": "b7a46c92-016f-46cd-970b-89c61a41ed1b",
+      "name": "Get Story Data",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "=",
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "={{ $('On form submission').item.json['Book Folder ID'] }}",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        400,
+        320
+      ],
+      "id": "dbe5b231-4cb8-4a03-9b21-3e3fadcb514d",
+      "name": "Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "GGMwsXDU5mzBg6G4",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const docMap = {};\nfor (const item of items) {\n  docMap[item.json.name] = item.json.id;\n}\nreturn [{ json: { docMap } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        320
+      ],
+      "id": "211724ba-0026-4dab-acb8-fae8cd2cc0a0",
+      "name": "Get IDs"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4b49edc5-55fa-4585-81a5-fad2cdde8c7a",
+              "name": "docMap.Overview",
+              "value": "={{ $json.docMap.Overview }}",
+              "type": "string"
+            },
+            {
+              "id": "3ab8db46-6f71-4336-a8b6-11dbf3175326",
+              "name": "docMap['Story Data']",
+              "value": "={{ $json.docMap['Story Data'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f4ba7f52-2d77-43ab-b41a-9f0e8b861e98",
+              "name": "docMap['Character Roster']",
+              "value": "={{ $json.docMap['Character Roster'] }}",
+              "type": "string"
+            },
+            {
+              "id": "137422e1-89d0-4b6c-a373-a3707e1a8fb2",
+              "name": "docMap['Protagonist Profile']",
+              "value": "={{ $json.docMap['Protagonist Profile'] }}",
+              "type": "string"
+            },
+            {
+              "id": "b8e4a9e3-e067-456d-88ce-6d0160e75418",
+              "name": "docMap['Deuteragonist Profile']",
+              "value": "={{ $json.docMap['Deuteragonist Profile'] }}",
+              "type": "string"
+            },
+            {
+              "id": "b6c6e51f-6608-4814-9c05-242fb72dd2fb",
+              "name": "docMap['Outline']",
+              "value": "={{ $json.docMap['Outline'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        480
+      ],
+      "id": "43e8b644-4ebe-46fd-aab1-c01987178bd9",
+      "name": "Set IDs"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System Instructions').last().json.content }}\n[END SYSTEM]\n\n{{ $('Get Story Data').last().json.content }}\n[BEGIN SERIES WRITING GUIDE]\n{{ $('Get Writing Guide').last().json.content }}\n[END SERIES WRITING GUIDE]\n\n[BEGIN CHARACTERS]\n{{ $('Get Protagonist Profile').last().json.content }}\n{{ $('Get Deuteragonist Profile').last().json.content }}\n{{ $('Get Character Roster').last().json.content }}\n[END CHARACTERS]\n\n{{ $('Get Overview').last().json.content }}\n\n[BEGIN CHAPTER OUTLINE TEMPLATE]\n{{ $('Get Chapter Outline Template').item.json.content }}\n[END CHAPTER OUTLINE TEMPLATE]\n\n[BEGIN CHAPTER OUTLINE]\n{{ $('Get Outline').last().json.content }}\n[END CHAPTER OUTLINE]\n\n[BEGIN INSTRUCTIONS]\nUsing the [CHAPTER OUTLINE TEMPLATE], please use the planned content from the [OVERVIEW] to create a detailed outline for Chapter {{ $json.nextChapter }} from Act I. Ensure the chapter continues seamlessly from the previous chapter and does not contain repetitive content.\n\nOnly write the chapter outline; never address me or write extra comments about the task. DO NOT DEVIATE FROM THE [CHAPTER OUTLINE TEMPLATE].\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2580,
+        160
+      ],
+      "id": "6693130c-f28d-43d3-9066-3cd7554fb694",
+      "name": "Create Act I1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Act Completion Check - Using Act Structure Output\nfunction checkActCompletion(items) {\n  try {\n    // Get the outline document\n    const doc = $('Get Outline1').last().json.content;\n    \n    // Get the act structure from the previous node\n    const actStructure = $('Act Structure').last().json;\n    console.log(\"Act structure received:\", JSON.stringify(actStructure, null, 2));\n    \n    // Find existing chapters\n    const chapterRegex = /# Chapter (\\d+):/g;\n    let foundChapters = [];\n    let highestExistingChapter = 0;\n    let match;\n    \n    while ((match = chapterRegex.exec(doc)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      \n      if (chapterNum > highestExistingChapter) {\n        highestExistingChapter = chapterNum;\n      }\n    }\n    \n    console.log(`Highest chapter found: ${highestExistingChapter}`);\n    \n    // Simple next chapter calculation\n    const nextChapter = highestExistingChapter + 1;\n    \n    // Find which act contains the current chapter using the act structure\n    let currentAct = null;\n    \n    // Use the chapterToActMap from actStructure\n    const actNumber = actStructure.chapterToActMap[highestExistingChapter];\n    if (actNumber) {\n      currentAct = actStructure.acts.find(act => act.actNumber === actNumber);\n    }\n    \n    // If we couldn't find an act (unlikely), try manual search through acts array\n    if (!currentAct && actStructure.acts && actStructure.acts.length > 0) {\n      for (const act of actStructure.acts) {\n        if (highestExistingChapter >= act.firstChapter && highestExistingChapter <= act.lastChapter) {\n          currentAct = act;\n          break;\n        }\n      }\n    }\n    \n    // If still no act found, use a default\n    if (!currentAct && actStructure.acts && actStructure.acts.length > 0) {\n      currentAct = actStructure.acts[0];\n      console.log(\"Warning: Could not determine current act, using first act as default\");\n    } else if (!currentAct) {\n      console.log(\"Error: No act structure available\");\n      return {\n        json: {\n          error: \"No act structure available\",\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter\n        }\n      };\n    }\n    \n    console.log(`Current act: ${currentAct.actNumber}, chapters ${currentAct.firstChapter}-${currentAct.lastChapter}`);\n    \n    // Check if act is complete\n    const isActComplete = highestExistingChapter >= currentAct.lastChapter;\n    \n    console.log(`Is current act complete: ${isActComplete}`);\n    console.log(`Next chapter: ${nextChapter}`);\n    \n    // Return values\n    return {\n      json: {\n        actNumber: currentAct.actNumber,\n        actFirstChapter: currentAct.firstChapter,\n        actLastChapter: currentAct.lastChapter,\n        currentChapter: highestExistingChapter,\n        nextChapter: nextChapter,\n        foundChapters: foundChapters,\n        isComplete: isActComplete\n      }\n    };\n  } catch (error) {\n    console.log(\"Error:\", error.message);\n    return {\n      json: {\n        error: error.message,\n        currentChapter: 0,\n        nextChapter: 1,\n        isComplete: false\n      }\n    };\n  }\n}\n\n// Execute the function\nreturn checkActCompletion($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        460
+      ],
+      "id": "7ddf9cbe-1037-4203-9adb-37dc1cae1b95",
+      "name": "Act Completion Check1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eb3f5266-20ec-42a7-b746-455a1435b19b",
+              "leftValue": "={{ $json.currentChapter }}",
+              "rightValue": "={{ $json.actLastChapter }}",
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        460
+      ],
+      "id": "1f41f9f3-d110-4523-be7b-7f94eff7424d",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System Instructions').last().json.content }}\n[END SYSTEM]\n\n{{ $('Get Story Data').last().json.content }}\n[BEGIN SERIES WRITING GUIDE]\n{{ $('Get Writing Guide').last().json.content }}\n[END SERIES WRITING GUIDE]\n\n[BEGIN CHARACTERS]\n{{ $('Get Protagonist Profile').last().json.content }}\n{{ $('Get Deuteragonist Profile').last().json.content }}\n{{ $('Get Character Roster').last().json.content }}\n[END CHARACTERS]\n\n{{ $('Get Overview').last().json.content }}\n[BEGIN CHAPTER OUTLINE TEMPLATE]\n{{ $('Get Chapter Outline Template').item.json.content }}\n[END CHAPTER OUTLINE TEMPLATE]\n\n[BEGIN CHAPTER OUTLINE]\n{{ $('Get Outline1').last().json.content }}\n[END CHAPTER OUTLINE]\n\n[BEGIN INSTRUCTIONS]\nUsing the [CHAPTER OUTLINE TEMPLATE], please use the planned content from the [OVERVIEW] to create a detailed outline for Chapter {{ $json.nextChapter }} from Act II. Ensure the chapter continues seamlessly from the previous chapter and does not contain repetitive content.\n\nOnly write the chapter outline; never address me or write extra comments about the task. DO NOT DEVIATE FROM THE [CHAPTER OUTLINE TEMPLATE].\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2580,
+        440
+      ],
+      "id": "956b2449-f97f-4fdd-a8d6-8290964ac878",
+      "name": "Create Act II1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Act Completion Check - Using Act Structure Output\nfunction checkActCompletion(items) {\n  try {\n    // Get the outline document\n    const doc = $('Get Outline2').last().json.content;\n    \n    // Get the act structure from the previous node\n    const actStructure = $('Act Structure').last().json;\n    console.log(\"Act structure received:\", JSON.stringify(actStructure, null, 2));\n    \n    // Find existing chapters\n    const chapterRegex = /# Chapter (\\d+):/g;\n    let foundChapters = [];\n    let highestExistingChapter = 0;\n    let match;\n    \n    while ((match = chapterRegex.exec(doc)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      \n      if (chapterNum > highestExistingChapter) {\n        highestExistingChapter = chapterNum;\n      }\n    }\n    \n    console.log(`Highest chapter found: ${highestExistingChapter}`);\n    \n    // Simple next chapter calculation\n    const nextChapter = highestExistingChapter + 1;\n    \n    // Find which act contains the current chapter using the act structure\n    let currentAct = null;\n    \n    // Use the chapterToActMap from actStructure\n    const actNumber = actStructure.chapterToActMap[highestExistingChapter];\n    if (actNumber) {\n      currentAct = actStructure.acts.find(act => act.actNumber === actNumber);\n    }\n    \n    // If we couldn't find an act (unlikely), try manual search through acts array\n    if (!currentAct && actStructure.acts && actStructure.acts.length > 0) {\n      for (const act of actStructure.acts) {\n        if (highestExistingChapter >= act.firstChapter && highestExistingChapter <= act.lastChapter) {\n          currentAct = act;\n          break;\n        }\n      }\n    }\n    \n    // If still no act found, use a default\n    if (!currentAct && actStructure.acts && actStructure.acts.length > 0) {\n      currentAct = actStructure.acts[0];\n      console.log(\"Warning: Could not determine current act, using first act as default\");\n    } else if (!currentAct) {\n      console.log(\"Error: No act structure available\");\n      return {\n        json: {\n          error: \"No act structure available\",\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter\n        }\n      };\n    }\n    \n    console.log(`Current act: ${currentAct.actNumber}, chapters ${currentAct.firstChapter}-${currentAct.lastChapter}`);\n    \n    // Check if act is complete\n    const isActComplete = highestExistingChapter >= currentAct.lastChapter;\n    \n    console.log(`Is current act complete: ${isActComplete}`);\n    console.log(`Next chapter: ${nextChapter}`);\n    \n    // Return values\n    return {\n      json: {\n        actNumber: currentAct.actNumber,\n        actFirstChapter: currentAct.firstChapter,\n        actLastChapter: currentAct.lastChapter,\n        currentChapter: highestExistingChapter,\n        nextChapter: nextChapter,\n        foundChapters: foundChapters,\n        isComplete: isActComplete\n      }\n    };\n  } catch (error) {\n    console.log(\"Error:\", error.message);\n    return {\n      json: {\n        error: error.message,\n        currentChapter: 0,\n        nextChapter: 1,\n        isComplete: false\n      }\n    };\n  }\n}\n\n// Execute the function\nreturn checkActCompletion($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        740
+      ],
+      "id": "48aba146-2f81-40c9-a72e-aad54c90bf86",
+      "name": "Act Completion Check2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eb3f5266-20ec-42a7-b746-455a1435b19b",
+              "leftValue": "={{ $json.currentChapter }}",
+              "rightValue": "={{ $json.actLastChapter }}",
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        740
+      ],
+      "id": "6b521a81-6653-4e3f-908c-a9795a8b6969",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System Instructions').last().json.content }}\n[END SYSTEM]\n\n{{ $('Get Story Data').last().json.content }}\n[BEGIN SERIES WRITING GUIDE]\n{{ $('Get Writing Guide').last().json.content }}\n[END SERIES WRITING GUIDE]\n\n[BEGIN CHARACTERS]\n{{ $('Get Protagonist Profile').last().json.content }}\n{{ $('Get Deuteragonist Profile').last().json.content }}\n{{ $('Get Character Roster').last().json.content }}\n[END CHARACTERS]\n\n{{ $('Get Overview').last().json.content }}\n[BEGIN CHAPTER OUTLINE TEMPLATE]\n{{ $('Get Chapter Outline Template').item.json.content }}\n[END CHAPTER OUTLINE TEMPLATE]\n\n[BEGIN CHAPTER OUTLINE]\n{{ $('Get Outline2').last().json.content }}\n[END CHAPTER OUTLINE]\n\n[BEGIN INSTRUCTIONS]\nUsing the [CHAPTER OUTLINE TEMPLATE], please use the planned content from the [OVERVIEW] to create a detailed outline for Chapter {{ $json.nextChapter }} from Act III. Ensure the chapter continues seamlessly from the previous chapter and does not contain repetitive content.\n\nOnly write the chapter outline; never address me or write extra comments about the task. DO NOT DEVIATE FROM THE [CHAPTER OUTLINE TEMPLATE].\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2580,
+        720
+      ],
+      "id": "12269289-3836-40f2-95af-6b68ee9278ed",
+      "name": "Create Act III1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System Instructions').last().json.content }}\n[END SYSTEM]\n\n{{ $('Get Story Data').last().json.content }}\n[BEGIN SERIES WRITING GUIDE]\n{{ $('Get Writing Guide').last().json.content }}\n[END SERIES WRITING GUIDE]\n\n[BEGIN CHARACTERS]\n{{ $('Get Protagonist Profile').last().json.content }}\n{{ $('Get Deuteragonist Profile').last().json.content }}\n{{ $('Get Character Roster').last().json.content }}\n[END CHARACTERS]\n\n{{ $('Get Overview').last().json.content }}\n[BEGIN CHAPTER OUTLINE TEMPLATE]\n{{ $('Get Chapter Outline Template').item.json.content }}\n[END CHAPTER OUTLINE TEMPLATE]\n\n[BEGIN CHAPTER OUTLINE]\n{{ $('Get Outline3').last().json.content }}\n[END CHAPTER OUTLINE]\n\n[BEGIN INSTRUCTIONS]\nUsing the [CHAPTER OUTLINE TEMPLATE], please use the planned content from the [OVERVIEW] to create a detailed outline for Chapter {{ $json.nextChapter }} from Act IV. Ensure the chapter continues seamlessly from the previous chapter and does not contain repetitive content.\n\nOnly write the chapter outline; never address me or write extra comments about the task. DO NOT DEVIATE FROM THE [CHAPTER OUTLINE TEMPLATE].\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2580,
+        1000
+      ],
+      "id": "e29299e7-770a-40ae-b854-288651266689",
+      "name": "Create Act IV1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Act Completion Check - Using Act Structure Output\nfunction checkActCompletion(items) {\n  try {\n    // Get the outline document\n    const doc = $('Get Outline3').last().json.content;\n    \n    // Get the act structure from the previous node\n    const actStructure = $('Act Structure').last().json;\n    console.log(\"Act structure received:\", JSON.stringify(actStructure, null, 2));\n    \n    // Find existing chapters\n    const chapterRegex = /# Chapter (\\d+):/g;\n    let foundChapters = [];\n    let highestExistingChapter = 0;\n    let match;\n    \n    while ((match = chapterRegex.exec(doc)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      \n      if (chapterNum > highestExistingChapter) {\n        highestExistingChapter = chapterNum;\n      }\n    }\n    \n    console.log(`Highest chapter found: ${highestExistingChapter}`);\n    \n    // Simple next chapter calculation\n    const nextChapter = highestExistingChapter + 1;\n    \n    // Find which act contains the current chapter using the act structure\n    let currentAct = null;\n    \n    // Use the chapterToActMap from actStructure\n    const actNumber = actStructure.chapterToActMap[highestExistingChapter];\n    if (actNumber) {\n      currentAct = actStructure.acts.find(act => act.actNumber === actNumber);\n    }\n    \n    // If we couldn't find an act (unlikely), try manual search through acts array\n    if (!currentAct && actStructure.acts && actStructure.acts.length > 0) {\n      for (const act of actStructure.acts) {\n        if (highestExistingChapter >= act.firstChapter && highestExistingChapter <= act.lastChapter) {\n          currentAct = act;\n          break;\n        }\n      }\n    }\n    \n    // If still no act found, use a default\n    if (!currentAct && actStructure.acts && actStructure.acts.length > 0) {\n      currentAct = actStructure.acts[0];\n      console.log(\"Warning: Could not determine current act, using first act as default\");\n    } else if (!currentAct) {\n      console.log(\"Error: No act structure available\");\n      return {\n        json: {\n          error: \"No act structure available\",\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter\n        }\n      };\n    }\n    \n    console.log(`Current act: ${currentAct.actNumber}, chapters ${currentAct.firstChapter}-${currentAct.lastChapter}`);\n    \n    // Check if act is complete\n    const isActComplete = highestExistingChapter >= currentAct.lastChapter;\n    \n    console.log(`Is current act complete: ${isActComplete}`);\n    console.log(`Next chapter: ${nextChapter}`);\n    \n    // Return values\n    return {\n      json: {\n        actNumber: currentAct.actNumber,\n        actFirstChapter: currentAct.firstChapter,\n        actLastChapter: currentAct.lastChapter,\n        currentChapter: highestExistingChapter,\n        nextChapter: nextChapter,\n        foundChapters: foundChapters,\n        isComplete: isActComplete\n      }\n    };\n  } catch (error) {\n    console.log(\"Error:\", error.message);\n    return {\n      json: {\n        error: error.message,\n        currentChapter: 0,\n        nextChapter: 1,\n        isComplete: false\n      }\n    };\n  }\n}\n\n// Execute the function\nreturn checkActCompletion($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        1020
+      ],
+      "id": "4be69926-eca3-4467-a943-17a1a6aa1c75",
+      "name": "Act Completion Check3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eb3f5266-20ec-42a7-b746-455a1435b19b",
+              "leftValue": "={{ $json.currentChapter }}",
+              "rightValue": "={{ $json.actLastChapter }}",
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        1020
+      ],
+      "id": "79ecb48a-2daf-4c3e-a925-664592d81450",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=[BEGIN SYSTEM]\n{{ $('Get System Instructions').last().json.content }}\n[END SYSTEM]\n\n{{ $('Get Story Data').last().json.content }}\n[BEGIN SERIES WRITING GUIDE]\n{{ $('Get Writing Guide').last().json.content }}\n[END SERIES WRITING GUIDE]\n\n[BEGIN CHARACTERS]\n{{ $('Get Protagonist Profile').last().json.content }}\n{{ $('Get Deuteragonist Profile').last().json.content }}\n{{ $('Get Character Roster').last().json.content }}\n[END CHARACTERS]\n\n{{ $('Get Overview').last().json.content }}\n[BEGIN CHAPTER OUTLINE TEMPLATE]\n{{ $('Get Chapter Outline Template').item.json.content }}\n[END CHAPTER OUTLINE TEMPLATE]\n\n[BEGIN CHAPTER OUTLINE]\n{{ $('Get Outline4').last().json.content }}\n[END CHAPTER OUTLINE]\n\n[BEGIN INSTRUCTIONS]\nUsing the [CHAPTER OUTLINE TEMPLATE], please use the planned content from the [OVERVIEW] to create a detailed outline for Chapter {{ $json.nextChapter }} from Act V. Ensure the chapter continues seamlessly from the previous chapter and does not contain repetitive content.\n\nOnly write the chapter outline; never address me or write extra comments about the task. DO NOT DEVIATE FROM THE [CHAPTER OUTLINE TEMPLATE].\n[END INSTRUCTIONS]"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        2580,
+        1280
+      ],
+      "id": "b712898e-5eca-4f05-9048-4d56c3a00475",
+      "name": "Create Act V1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Act Completion Check - Using Act Structure Output\nfunction checkActCompletion(items) {\n  try {\n    // Get the outline document\n    const doc = $('Get Outline4').last().json.content;\n    \n    // Get the act structure from the previous node\n    const actStructure = $('Act Structure').last().json;\n    console.log(\"Act structure received:\", JSON.stringify(actStructure, null, 2));\n    \n    // Find existing chapters\n    const chapterRegex = /# Chapter (\\d+):/g;\n    let foundChapters = [];\n    let highestExistingChapter = 0;\n    let match;\n    \n    while ((match = chapterRegex.exec(doc)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      \n      if (chapterNum > highestExistingChapter) {\n        highestExistingChapter = chapterNum;\n      }\n    }\n    \n    console.log(`Highest chapter found: ${highestExistingChapter}`);\n    \n    // Simple next chapter calculation\n    const nextChapter = highestExistingChapter + 1;\n    \n    // Find which act contains the current chapter using the act structure\n    let currentAct = null;\n    \n    // Use the chapterToActMap from actStructure\n    const actNumber = actStructure.chapterToActMap[highestExistingChapter];\n    if (actNumber) {\n      currentAct = actStructure.acts.find(act => act.actNumber === actNumber);\n    }\n    \n    // If we couldn't find an act (unlikely), try manual search through acts array\n    if (!currentAct && actStructure.acts && actStructure.acts.length > 0) {\n      for (const act of actStructure.acts) {\n        if (highestExistingChapter >= act.firstChapter && highestExistingChapter <= act.lastChapter) {\n          currentAct = act;\n          break;\n        }\n      }\n    }\n    \n    // If still no act found, use a default\n    if (!currentAct && actStructure.acts && actStructure.acts.length > 0) {\n      currentAct = actStructure.acts[0];\n      console.log(\"Warning: Could not determine current act, using first act as default\");\n    } else if (!currentAct) {\n      console.log(\"Error: No act structure available\");\n      return {\n        json: {\n          error: \"No act structure available\",\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter\n        }\n      };\n    }\n    \n    console.log(`Current act: ${currentAct.actNumber}, chapters ${currentAct.firstChapter}-${currentAct.lastChapter}`);\n    \n    // Check if act is complete\n    const isActComplete = highestExistingChapter >= currentAct.lastChapter;\n    \n    console.log(`Is current act complete: ${isActComplete}`);\n    console.log(`Next chapter: ${nextChapter}`);\n    \n    // Return values\n    return {\n      json: {\n        actNumber: currentAct.actNumber,\n        actFirstChapter: currentAct.firstChapter,\n        actLastChapter: currentAct.lastChapter,\n        currentChapter: highestExistingChapter,\n        nextChapter: nextChapter,\n        foundChapters: foundChapters,\n        isComplete: isActComplete\n      }\n    };\n  } catch (error) {\n    console.log(\"Error:\", error.message);\n    return {\n      json: {\n        error: error.message,\n        currentChapter: 0,\n        nextChapter: 1,\n        isComplete: false\n      }\n    };\n  }\n}\n\n// Execute the function\nreturn checkActCompletion($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        1300
+      ],
+      "id": "a692e9f0-f495-49b9-b8cc-6c231680ea6f",
+      "name": "Act Completion Check4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eb3f5266-20ec-42a7-b746-455a1435b19b",
+              "leftValue": "={{ $json.currentChapter }}",
+              "rightValue": "={{ $json.actLastChapter }}",
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2400,
+        1300
+      ],
+      "id": "51ba5f68-38b6-4cf4-afcd-21e912ec9220",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-3-7-sonnet-20250219",
+          "cachedResultName": "Claude 3.7 Sonnet"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        4080,
+        800
+      ],
+      "id": "e5ffb83b-2b10-4223-8149-7efdaac4eadf",
+      "name": "Anthropic Chat Model1",
+      "credentials": {
+        "anthropicApi": {
+          "id": "gdxdG4eQPTxmJLVS",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Outline').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $json.text }}\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        160
+      ],
+      "id": "c87b09ab-e23d-4685-85eb-07fe9e650116",
+      "name": "Update Outline5",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Outline1').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $json.text }}\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        440
+      ],
+      "id": "a408a2af-920d-40f3-b723-9d91bdf96e3b",
+      "name": "Update Outline6",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Outline2').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $json.text }}\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        720
+      ],
+      "id": "cd2eed0a-20cf-4c53-a421-19ffea30fd07",
+      "name": "Update Outline7",
+      "retryOnFail": true,
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Outline4').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $json.text }}\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        1280
+      ],
+      "id": "8dbeed2f-5608-4388-a515-8ca507673d87",
+      "name": "Update Outline9",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "wrincher20@gmail.com",
+        "subject": "Check Outline - Act II Complete",
+        "message": "=Check Outline",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3080,
+        520
+      ],
+      "id": "41fbf824-51e6-472a-9d78-909dbc8b69d5",
+      "name": "Act II Complete",
+      "webhookId": "b90f2c51-221a-4307-85fb-0030d0f31120",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qX8cv2R7kyfSApLS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "wrincher20@gmail.com",
+        "subject": "Check Outline - Act I Complete",
+        "message": "=Check Outline\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3080,
+        240
+      ],
+      "id": "c7d53d54-b1d2-46ff-934a-a2e5cc921f4f",
+      "name": "Act I Complete",
+      "webhookId": "b90f2c51-221a-4307-85fb-0030d0f31120",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qX8cv2R7kyfSApLS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "wrincher20@gmail.com",
+        "subject": "Check Outline - Act III Complete",
+        "message": "Check Outline",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3080,
+        800
+      ],
+      "id": "b899e919-c2b2-42f1-a66c-0a9a914926a1",
+      "name": "Act III Complete",
+      "webhookId": "b90f2c51-221a-4307-85fb-0030d0f31120",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qX8cv2R7kyfSApLS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "wrincher20@gmail.com",
+        "subject": "Check Outline - Act IV Complete",
+        "message": "=Check Outline",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3080,
+        1080
+      ],
+      "id": "c75c4af8-72f6-4853-88ce-cfd4a101e294",
+      "name": "Act IV Complete",
+      "webhookId": "b90f2c51-221a-4307-85fb-0030d0f31120",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qX8cv2R7kyfSApLS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "wrincher20@gmail.com",
+        "subject": "Check Outline - Act V Complete",
+        "message": "=Check Outline\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3080,
+        1360
+      ],
+      "id": "8b2b5a16-359f-4738-9f62-03eaa51accb7",
+      "name": "Act V Complete",
+      "webhookId": "b90f2c51-221a-4307-85fb-0030d0f31120",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qX8cv2R7kyfSApLS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "wrincher20@gmail.com",
+        "subject": "Outline and Story DossierDone",
+        "message": "=Outline and Story Dossier complete - go look!\n[BEGIN STORY DOSSIER]\n{{ $('Get Story Dossier').last().json.content }}\n[END STORY DOSSIER]\n\n[BEGIN OUTLINE]\n{{ $('Get Outline4').last().json.content }}\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3960,
+        1800
+      ],
+      "id": "24769e98-dd88-43e5-afd6-0288cba111cb",
+      "name": "Outline Complete",
+      "webhookId": "e0569271-c7d0-4230-b400-9d1ca68136bf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "qX8cv2R7kyfSApLS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('On form submission').last().json['Primary Genre'] }}",
+                    "rightValue": "Romance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "e9771b41-43e4-4f25-a4d1-ef68eccb8912"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ab5c71cb-bfd9-49b5-80bc-1e9ab814e0aa",
+                    "leftValue": "={{ $('On form submission').last().json['Primary Genre'] }}",
+                    "rightValue": "Romance",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        220,
+        1100
+      ],
+      "id": "91859ca1-d82e-4dc4-b097-a8e4d0649f8f",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "1642tPEtq16bqW5EKJjfVtkd9D9LHH-N8PocngPu0e5I"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1020
+      ],
+      "id": "de4e6fd5-c014-418a-8b81-98c7afdc6381",
+      "name": "Get Romance Structure",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "1eTTvYKRkU3Ez1nXd03VmG5Lnubm3BSyJMfpY7hUsoBg"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        400,
+        1180
+      ],
+      "id": "c6f080a6-a803-48ad-b74f-dce517a6646b",
+      "name": "Get General 5 Act Structure",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3740,
+        1800
+      ],
+      "id": "91e2ca6e-d847-4b1b-901b-fc6c3a6faac7",
+      "name": "Get Story Dossier",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Act Completion Check - Using Act Structure Output\nfunction checkActCompletion(items) {\n  try {\n    // Get the outline document\n    const doc = $('Get Outline').last().json.content;\n    \n    // Get the act structure from the previous node\n    const actStructure = $('Act Structure').last().json;\n    console.log(\"Act structure received:\", JSON.stringify(actStructure, null, 2));\n    \n    // Find existing chapters\n    const chapterRegex = /# Chapter (\\d+):/g;\n    let foundChapters = [];\n    let highestExistingChapter = 0;\n    let match;\n    \n    while ((match = chapterRegex.exec(doc)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      \n      if (chapterNum > highestExistingChapter) {\n        highestExistingChapter = chapterNum;\n      }\n    }\n    \n    console.log(`Highest chapter found: ${highestExistingChapter}`);\n    \n    // Simple next chapter calculation\n    const nextChapter = highestExistingChapter + 1;\n    \n    // Find which act contains the current chapter using the act structure\n    let currentAct = null;\n    \n    // Use the chapterToActMap from actStructure\n    const actNumber = actStructure.chapterToActMap[highestExistingChapter];\n    if (actNumber) {\n      currentAct = actStructure.acts.find(act => act.actNumber === actNumber);\n    }\n    \n    // If we couldn't find an act (unlikely), try manual search through acts array\n    if (!currentAct && actStructure.acts && actStructure.acts.length > 0) {\n      for (const act of actStructure.acts) {\n        if (highestExistingChapter >= act.firstChapter && highestExistingChapter <= act.lastChapter) {\n          currentAct = act;\n          break;\n        }\n      }\n    }\n    \n    // If still no act found, use a default\n    if (!currentAct && actStructure.acts && actStructure.acts.length > 0) {\n      currentAct = actStructure.acts[0];\n      console.log(\"Warning: Could not determine current act, using first act as default\");\n    } else if (!currentAct) {\n      console.log(\"Error: No act structure available\");\n      return {\n        json: {\n          error: \"No act structure available\",\n          currentChapter: highestExistingChapter,\n          nextChapter: nextChapter\n        }\n      };\n    }\n    \n    console.log(`Current act: ${currentAct.actNumber}, chapters ${currentAct.firstChapter}-${currentAct.lastChapter}`);\n    \n    // Check if act is complete\n    const isActComplete = highestExistingChapter >= currentAct.lastChapter;\n    \n    console.log(`Is current act complete: ${isActComplete}`);\n    console.log(`Next chapter: ${nextChapter}`);\n    \n    // Return values\n    return {\n      json: {\n        actNumber: currentAct.actNumber,\n        actFirstChapter: currentAct.firstChapter,\n        actLastChapter: currentAct.lastChapter,\n        currentChapter: highestExistingChapter,\n        nextChapter: nextChapter,\n        foundChapters: foundChapters,\n        isComplete: isActComplete\n      }\n    };\n  } catch (error) {\n    console.log(\"Error:\", error.message);\n    return {\n      json: {\n        error: error.message,\n        currentChapter: 0,\n        nextChapter: 1,\n        isComplete: false\n      }\n    };\n  }\n}\n\n// Execute the function\nreturn checkActCompletion($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        180
+      ],
+      "id": "5d4a86e8-5172-46db-a301-ade94b23b7f1",
+      "name": "Act Completion Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Act Structure Extractor with dynamic chapter handling\nfunction extractActStructure(items) {\n  try {\n    const overviewDocument = $('Get Overview').last().json.content || \"\";\n    console.log(\"Overview document loaded, length:\", overviewDocument.length);\n    \n    // Define base act patterns from the document structure\n    const baseActPatterns = [\n      { name: \"ACT 1\", endChapter: 7 },\n      { name: \"ACT 2\", endChapter: 12 },\n      { name: \"ACT 3\", endChapter: 17 }, \n      { name: \"ACT 4\", endChapter: 24 },\n      { name: \"ACT 5\", endChapter: 27 }\n    ];\n    \n    // Try to find the highest chapter mentioned in the overview document\n    // This regex looks for any mention of \"Chapter X\" or similar patterns\n    const chapterPattern = /Chapter\\s+(\\d+)|chapter\\s+(\\d+)/g;\n    let match;\n    let highestChapterInDoc = 27; // Default based on our known structure\n    \n    while ((match = chapterPattern.exec(overviewDocument)) !== null) {\n      const chapterNum = parseInt(match[1] || match[2], 10);\n      if (chapterNum > highestChapterInDoc) {\n        highestChapterInDoc = chapterNum;\n      }\n    }\n    \n    console.log(`Highest chapter found in document: ${highestChapterInDoc}`);\n    \n    // Adjust act patterns if necessary\n    let actPatterns = [...baseActPatterns];\n    \n    // If we found chapters beyond act 5, create additional acts\n    if (highestChapterInDoc > 27) {\n      // If there are additional chapters, we'll assume similar chapter counts per act\n      // as in the base structure (roughly 5-7 chapters per act)\n      let lastActEnd = 27;\n      let nextActNumber = 6;\n      \n      while (lastActEnd < highestChapterInDoc) {\n        // Calculate next act end (approximately 5-7 chapters per act)\n        const nextActEnd = Math.min(lastActEnd + 6, highestChapterInDoc);\n        \n        actPatterns.push({\n          name: `ACT ${nextActNumber}`,\n          endChapter: nextActEnd\n        });\n        \n        lastActEnd = nextActEnd;\n        nextActNumber++;\n      }\n    }\n    \n    // Create the act structure\n    const actInfo = [];\n    for (let i = 0; i < actPatterns.length; i++) {\n      const current = actPatterns[i];\n      \n      const startChapter = i === 0 ? 1 : actPatterns[i-1].endChapter + 1;\n      const endChapter = current.endChapter;\n      \n      actInfo.push({\n        actNumber: i + 1,\n        title: current.name,\n        firstChapter: startChapter,\n        lastChapter: endChapter\n      });\n    }\n    \n    console.log(\"Final act structure:\", JSON.stringify(actInfo, null, 2));\n    \n    // Create a chapter-to-act mapping\n    const chapterToActMap = {};\n    actInfo.forEach(act => {\n      for (let i = act.firstChapter; i <= act.lastChapter; i++) {\n        chapterToActMap[i] = act.actNumber;\n      }\n    });\n    \n    // Return the structured data\n    return [{\n      json: {\n        acts: actInfo,\n        chapterToActMap: chapterToActMap,\n        totalActs: actInfo.length\n      }\n    }];\n  } catch (error) {\n    console.log(\"Error:\", error.message);\n    return [{\n      json: {\n        error: error.message\n      }\n    }];\n  }\n}\n\n// Execute the function\nreturn extractActStructure($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        1100
+      ],
+      "id": "77b5dd07-82dc-4af8-9202-fecb52144283",
+      "name": "Act Structure"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ae101aa3-95a8-4502-a8f9-177d939962f1",
+              "leftValue": "={{ $('Set IDs').last().json.docMap.Outline }}",
+              "rightValue": false,
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        360,
+        1440
+      ],
+      "id": "9294d16a-b012-4fb2-9e08-996de4dd4a97",
+      "name": "If5"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        820,
+        1420
+      ],
+      "id": "63b3c08f-221d-4483-a51b-67e9855c513f",
+      "name": "Get Outline5",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Act Completion Check - Extremely Simple Approach\nfunction checkActCompletion(items) {\n  try {\n    // Get the outline document\n    const doc = $('Get Outline5').last().json.content;\n    \n    // Extract act number from node name\n    const nodeName = items[0]?.node?.name || '';\n    console.log(\"Node name:\", nodeName);\n    const actNumberMatch = nodeName.match(/Check(\\d+)/i);\n    const currentActNumber = actNumberMatch ? parseInt(actNumberMatch[1], 10) : 1;\n    \n    // Get act structure for reference only\n    const actStructure = $('Act Structure').last().json;\n    const currentAct = actStructure.acts.find(act => act.actNumber === currentActNumber);\n    \n    // Find highest existing chapter\n    const chapterRegex = /# Chapter (\\d+):/g;\n    let foundChapters = [];\n    let highestExistingChapter = 0;\n    let match;\n    \n    while ((match = chapterRegex.exec(doc)) !== null) {\n      const chapterNum = parseInt(match[1], 10);\n      foundChapters.push(chapterNum);\n      \n      if (chapterNum > highestExistingChapter) {\n        highestExistingChapter = chapterNum;\n      }\n    }\n    \n    // Next chapter is ALWAYS current + 1\n    const nextChapter = highestExistingChapter + 1;\n    \n    // Act completion check\n    const isActComplete = currentAct && highestExistingChapter >= currentAct.lastChapter;\n    \n    console.log(`Current chapter: ${highestExistingChapter}, Next chapter: ${nextChapter}`);\n    console.log(`Is Act ${currentActNumber} complete: ${isActComplete}`);\n    \n    // Return values\n    return {\n      json: {\n        actNumber: currentActNumber,\n        actFirstChapter: currentAct ? currentAct.firstChapter : null,\n        actLastChapter: currentAct ? currentAct.lastChapter : null,\n        currentChapter: highestExistingChapter,\n        nextChapter: nextChapter, // Simply current + 1\n        foundChapters: foundChapters,\n        isComplete: isActComplete\n      }\n    };\n  } catch (error) {\n    console.log(\"Error:\", error.message);\n    return {\n      json: {\n        error: error.message,\n        isComplete: false\n      }\n    };\n  }\n}\n\n// Execute the function\nreturn checkActCompletion($input.all());"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        1420
+      ],
+      "id": "a0b9ed20-9db8-4622-a629-4a161dd15f7d",
+      "name": "Act Completion Check5"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.nextChapter }}",
+                    "rightValue": "={{ $('If5').item.json.acts[0].lastChapter }}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    },
+                    "id": "4277d586-4d7c-403b-9c99-3271cfef869a"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0e684e45-232c-4e75-8f64-ccba53efc0ed",
+                    "leftValue": "={{ $json.nextChapter }}",
+                    "rightValue": "={{ $('If5').item.json.acts[1].lastChapter }}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e83f2aa3-dbd9-49ac-a302-8f3182008943",
+                    "leftValue": "={{ $json.nextChapter }}",
+                    "rightValue": "={{ $('If5').item.json.acts[2].lastChapter }}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "37e78595-366e-486f-b05a-b8e4e92be138",
+                    "leftValue": "={{ $json.nextChapter }}",
+                    "rightValue": "={{ $('If5').item.json.acts[3].lastChapter }}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e90b5c2c-6e33-43a6-b4b1-b1f11bedb231",
+                    "leftValue": "={{ $json.nextChapter }}",
+                    "rightValue": "={{ $('If5').item.json.acts[4].lastChapter }}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2df92d6a-1ec9-4361-9969-7eeda9dd3a32",
+                    "leftValue": "={{ $('If5').item.json.acts[4].lastChapter }}",
+                    "rightValue": 27,
+                    "operator": {
+                      "type": "number",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1200,
+        1360
+      ],
+      "id": "2948f592-a4b0-489a-8149-37d4fcc4e759",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Get Outline3').last().json.documentId }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $json.text }}\n\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        1000
+      ],
+      "id": "30f07033-3bbe-48ce-9f5f-701f51212ef7",
+      "name": "Update Outline8",
+      "retryOnFail": true,
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1840,
+        1740
+      ],
+      "id": "fa1fe0bf-f4b1-44fb-8be2-b65b0a393b94",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "MQOy0ksjlWiPJNyJ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        3040,
+        1920
+      ],
+      "id": "898c2acb-a5d8-4677-9d85-e6151abf85f6",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "MQOy0ksjlWiPJNyJ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f5921a01-036f-481e-96f5-75e4bcae2e87",
+              "name": "id",
+              "value": "={{ $json.documentId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3640,
+        640
+      ],
+      "id": "21e37dac-127c-4eb6-8e60-8eb242a1eb86",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "931b1ec0-0066-42b3-9fb3-6516a20a794f",
+              "name": "id",
+              "value": "={{ $('Get IDs').last().json.docMap.Outline }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        580,
+        1360
+      ],
+      "id": "bd4edf28-073d-4378-9c8a-67cfac0e525f",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').last().json.docMap['Protagonist Profile'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        220,
+        640
+      ],
+      "id": "c7566976-1af1-4fb9-8728-d2241b9da3bc",
+      "name": "Get Protagonist Profile",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').item.json.docMap['Deuteragonist Profile'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        400,
+        640
+      ],
+      "id": "8b502468-72f6-48ee-8181-eeea13d9c6f1",
+      "name": "Get Deuteragonist Profile",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Set IDs').item.json.docMap['Character Roster'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        580,
+        640
+      ],
+      "id": "e8319ab3-b4b4-4c3e-82cb-84d3f644dfbc",
+      "name": "Get Character Roster",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Get Outline5').last().json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3260,
+        240
+      ],
+      "id": "b618387f-124a-4884-895d-de8156402247",
+      "name": "Get Outline7",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Get Outline5').last().json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3260,
+        520
+      ],
+      "id": "511656fe-4c5c-4adf-8553-468d9db359e3",
+      "name": "Get Outline8",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Get Outline5').last().json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3260,
+        800
+      ],
+      "id": "1fb1fee2-ea30-4e36-9f4c-ca6a0b27ddd3",
+      "name": "Get Outline9",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('Get Outline5').last().json.documentId }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3260,
+        1080
+      ],
+      "id": "50778761-d366-49f3-94b5-4825f65c683c",
+      "name": "Get Outline10",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $('On form submission').last().json['Writing Guide Document ID'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        580,
+        480
+      ],
+      "id": "b134e93c-cdca-4b85-afc4-129c9e9053a3",
+      "name": "Get Writing Guide",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vYcvkkZ3m98K0fGe",
+          "name": "Google Docs account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Story Dossier": {
+      "main": [
+        [
+          {
+            "node": "Create Story Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Story Dossier": {
+      "main": [
+        [
+          {
+            "node": "Update Story Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Story Dossier": {
+      "main": [
+        [
+          {
+            "node": "Get Story Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline": {
+      "main": [
+        [
+          {
+            "node": "Get Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Outline": {
+      "main": [
+        [
+          {
+            "node": "Act Completion Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Act I": {
+      "main": [
+        [
+          {
+            "node": "Update Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Act II": {
+      "main": [
+        [
+          {
+            "node": "Update Outline1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Act III": {
+      "main": [
+        [
+          {
+            "node": "Update Outline2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Act IV": {
+      "main": [
+        [
+          {
+            "node": "Update Outline3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Act V": {
+      "main": [
+        [
+          {
+            "node": "Update Outline4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline1": {
+      "main": [
+        [
+          {
+            "node": "Get Outline1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Outline1": {
+      "main": [
+        [
+          {
+            "node": "Act Completion Check1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline2": {
+      "main": [
+        [
+          {
+            "node": "Get Outline2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Outline2": {
+      "main": [
+        [
+          {
+            "node": "Act Completion Check2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline3": {
+      "main": [
+        [
+          {
+            "node": "Get Outline3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Outline3": {
+      "main": [
+        [
+          {
+            "node": "Act Completion Check3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline4": {
+      "main": [
+        [
+          {
+            "node": "Get Outline4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Outline4": {
+      "main": [
+        [
+          {
+            "node": "Act Completion Check4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Story Dossier Template": {
+      "main": [
+        [
+          {
+            "node": "Story Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create Act I1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Act I Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Overview": {
+      "main": [
+        [
+          {
+            "node": "Get Series Dossier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Chapter Outline Template": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Outline": {
+      "main": [
+        [
+          {
+            "node": "Get Outline5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Series Dossier": {
+      "main": [
+        [
+          {
+            "node": "Get Chapter Outline Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get System Instructions": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Get System Instructions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Story Data": {
+      "main": [
+        [
+          {
+            "node": "Get Writing Guide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Get IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get IDs": {
+      "main": [
+        [
+          {
+            "node": "Set IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set IDs": {
+      "main": [
+        [
+          {
+            "node": "Get Story Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Act I1": {
+      "main": [
+        [
+          {
+            "node": "Update Outline5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act Completion Check1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Create Act II1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Act II Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Act II1": {
+      "main": [
+        [
+          {
+            "node": "Update Outline6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act Completion Check2": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Create Act III1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Act III Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Act III1": {
+      "main": [
+        [
+          {
+            "node": "Update Outline7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Act IV1": {
+      "main": [
+        [
+          {
+            "node": "Update Outline8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act Completion Check3": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Create Act IV1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Act IV Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Act V1": {
+      "main": [
+        [
+          {
+            "node": "Update Outline9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act Completion Check4": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "Create Act V1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Act V Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline5": {
+      "main": [
+        [
+          {
+            "node": "Get Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline6": {
+      "main": [
+        [
+          {
+            "node": "Get Outline1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline7": {
+      "main": [
+        [
+          {
+            "node": "Get Outline2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline9": {
+      "main": [
+        [
+          {
+            "node": "Get Outline4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act II Complete": {
+      "main": [
+        [
+          {
+            "node": "Get Outline8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act I Complete": {
+      "main": [
+        [
+          {
+            "node": "Get Outline7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act III Complete": {
+      "main": [
+        [
+          {
+            "node": "Get Outline9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act IV Complete": {
+      "main": [
+        [
+          {
+            "node": "Get Outline10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act V Complete": {
+      "main": [
+        [
+          {
+            "node": "Get Story Dossier Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Get Romance Structure",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get General 5 Act Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Romance Structure": {
+      "main": [
+        [
+          {
+            "node": "Act Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get General 5 Act Structure": {
+      "main": [
+        [
+          {
+            "node": "Act Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Story Dossier": {
+      "main": [
+        [
+          {
+            "node": "Outline Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act Completion Check": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act Structure": {
+      "main": [
+        [
+          {
+            "node": "If5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If5": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Outline5": {
+      "main": [
+        [
+          {
+            "node": "Act Completion Check5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Act Completion Check5": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Create Act I",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Act II",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Act III",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Act IV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Act V",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Story Dossier Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Outline8": {
+      "main": [
+        [
+          {
+            "node": "Get Outline3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Create Act V",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Create Act IV",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Create Act III",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Create Act II",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Create Act I",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Create Act I1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Create Act II1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Create Act III1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Create Act IV1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Create Act V1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Story Dossier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Get Outline5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Get Outline5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Deuteragonist Profile": {
+      "main": [
+        [
+          {
+            "node": "Get Character Roster",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Protagonist Profile": {
+      "main": [
+        [
+          {
+            "node": "Get Deuteragonist Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Character Roster": {
+      "main": [
+        [
+          {
+            "node": "Get Overview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Outline7": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Outline8": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Outline9": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Outline10": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Writing Guide": {
+      "main": [
+        [
+          {
+            "node": "Get Protagonist Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "58b1c0da-57c9-479d-857c-55a334b92802",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ce3f5f7c2d244f2d30fc49e8c171f97691ba9f45902616b500d75b8f7ea563b1"
+  },
+  "id": "107XRwx3aexRfO0Q",
+  "tags": []
+}
