@@ -833,7 +833,7 @@
   .viewer-wrap {
     display: grid;
     min-height: 0;
-    overflow: hidden;
+    overflow-y: auto;
   }
 
   /* ── Bottom panel ── */

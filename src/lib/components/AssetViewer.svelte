@@ -209,7 +209,7 @@
 
   textarea {
     width: 100%;
-    min-height: 14rem;
+    min-height: 30rem;
     flex: 1 1 auto;
     resize: none;
     border-radius: 18px;
