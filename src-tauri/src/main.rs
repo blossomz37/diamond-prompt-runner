@@ -1,4 +1,5 @@
 mod project_store;
+mod types;
 
 use std::path::PathBuf;
 

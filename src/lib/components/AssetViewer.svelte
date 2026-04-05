@@ -2,6 +2,7 @@
   import { marked } from 'marked';
   import { ONLINE_PROMPT_DIRECTIVE, promptUsesOnlineResearch } from '$lib/promptExecution';
   import type { PromptExecutionResult, WorkspaceTab } from '$lib/types/project';
+  import FindBar from '$lib/components/FindBar.svelte';
 
   // Disable raw HTML passthrough for safety
   marked.use({ renderer: { html: () => '' } });
@@ -19,108 +20,14 @@
   let { tab, onDraftChange, onSave, onReload, onExecute, execution, executionLoading }: Props = $props();
 
   let previewMode = $state(false);
-
-  // Find / Replace state
-  let showFind = $state(false);
-  let showReplace = $state(false);
-  let findText = $state('');
-  let replaceText = $state('');
-  let caseSensitive = $state(false);
-  let matchIndex = $state(0);
   let editorEl: HTMLTextAreaElement | undefined = $state();
-  let findInputEl: HTMLInputElement | undefined = $state();
+  let findBar: FindBar | undefined = $state();
 
-  function getMatches(content: string, query: string): number[] {
-    if (!query) return [];
-    const hay = caseSensitive ? content : content.toLowerCase();
-    const needle = caseSensitive ? query : query.toLowerCase();
-    const positions: number[] = [];
-    let idx = 0;
-    while ((idx = hay.indexOf(needle, idx)) !== -1) {
-      positions.push(idx);
-      idx += 1;
-    }
-    return positions;
-  }
-
-  const matches = $derived(
-    tab && findText ? getMatches(tab.draftContent ?? tab.content, findText) : []
-  );
-
-  function selectMatch(index: number): void {
-    if (!editorEl || matches.length === 0) return;
-    const pos = matches[index];
-    editorEl.focus();
-    editorEl.setSelectionRange(pos, pos + findText.length);
-  }
-
-  function findNext(): void {
-    if (matches.length === 0) return;
-    matchIndex = (matchIndex + 1) % matches.length;
-    selectMatch(matchIndex);
-  }
-
-  function findPrev(): void {
-    if (matches.length === 0) return;
-    matchIndex = (matchIndex - 1 + matches.length) % matches.length;
-    selectMatch(matchIndex);
-  }
-
-  function replaceCurrent(): void {
-    if (!tab || matches.length === 0) return;
-    const pos = matches[matchIndex];
-    const content = tab.draftContent;
-    const updated = content.substring(0, pos) + replaceText + content.substring(pos + findText.length);
-    onDraftChange(tab.path, updated);
-    // After replacement, stay at same index (or clamp)
-    if (matchIndex >= matches.length - 1) matchIndex = Math.max(0, matches.length - 2);
-    // Queue selection after Svelte updates the textarea
-    queueMicrotask(() => selectMatch(matchIndex));
-  }
-
-  function replaceAll(): void {
-    if (!tab || matches.length === 0 || !findText) return;
-    const content = tab.draftContent;
-    const flags = caseSensitive ? 'g' : 'gi';
-    const escaped = findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const updated = content.replace(new RegExp(escaped, flags), replaceText);
-    onDraftChange(tab.path, updated);
-    matchIndex = 0;
-  }
-
-  function openFind(): void {
-    showFind = true;
-    showReplace = false;
-    queueMicrotask(() => findInputEl?.focus());
-  }
-
-  function openFindReplace(): void {
-    showFind = true;
-    showReplace = true;
-    queueMicrotask(() => findInputEl?.focus());
-  }
-
-  function closeFind(): void {
-    showFind = false;
-    showReplace = false;
-    findText = '';
-    replaceText = '';
-    matchIndex = 0;
-  }
-
-  // Jump to first match when search text changes
-  $effect(() => {
-    if (matches.length > 0) {
-      matchIndex = 0;
-      selectMatch(0);
-    }
-  });
-
-  // Reset preview mode when switching tabs
+  // Reset preview mode and close find bar when switching tabs
   $effect(() => {
     if (tab?.path) {
       previewMode = false;
-      closeFind();
+      findBar?.close();
     }
   });
 
@@ -128,24 +35,10 @@
     const mod = event.metaKey || event.ctrlKey;
     if (mod && event.key === 'f') {
       event.preventDefault();
-      openFind();
+      findBar?.open(false);
     } else if (mod && event.key === 'h') {
       event.preventDefault();
-      openFindReplace();
-    }
-  }
-
-  function handleFindKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      closeFind();
-      editorEl?.focus();
-    } else if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      findNext();
-    } else if (event.key === 'Enter' && event.shiftKey) {
-      event.preventDefault();
-      findPrev();
+      findBar?.open(true);
     }
   }
 
@@ -233,47 +126,12 @@
       <!-- eslint-disable-next-line svelte/no-at-html-tags -- marked with raw HTML disabled -->
       <div class="markdown-preview">{@html renderedMarkdown}</div>
     {:else}
-      {#if showFind}
-        <div class="find-bar">
-          <div class="find-row">
-            <input
-              bind:this={findInputEl}
-              type="text"
-              bind:value={findText}
-              placeholder="Find"
-              class="find-input"
-              onkeydown={handleFindKeydown}
-            />
-            <span class="match-count">{matches.length > 0 ? `${matchIndex + 1} of ${matches.length}` : findText ? 'No matches' : ''}</span>
-            <button type="button" class="find-btn" onclick={findPrev} disabled={matches.length === 0} title="Previous (Shift+Enter)">▲</button>
-            <button type="button" class="find-btn" onclick={findNext} disabled={matches.length === 0} title="Next (Enter)">▼</button>
-            <button
-              type="button"
-              class="find-btn case-btn"
-              class:active={caseSensitive}
-              onclick={() => caseSensitive = !caseSensitive}
-              title="Match case"
-            >Aa</button>
-            {#if !showReplace}
-              <button type="button" class="find-btn" onclick={() => showReplace = true} title="Show Replace">⇄</button>
-            {/if}
-            <button type="button" class="find-btn close-btn" onclick={closeFind} title="Close (Escape)">✕</button>
-          </div>
-          {#if showReplace}
-            <div class="find-row">
-              <input
-                type="text"
-                bind:value={replaceText}
-                placeholder="Replace"
-                class="find-input"
-                onkeydown={handleFindKeydown}
-              />
-              <button type="button" class="find-btn replace-btn" onclick={replaceCurrent} disabled={matches.length === 0} title="Replace">Replace</button>
-              <button type="button" class="find-btn replace-btn" onclick={replaceAll} disabled={matches.length === 0} title="Replace All">All</button>
-            </div>
-          {/if}
-        </div>
-      {/if}
+      <FindBar
+        bind:this={findBar}
+        editorEl={editorEl}
+        content={tab.draftContent}
+        onContentChange={(newContent) => onDraftChange(tab.path, newContent)}
+      />
       <textarea
         bind:this={editorEl}
         data-testid="asset-editor"
@@ -432,84 +290,6 @@
 
   .editable header {
     flex: 0 0 auto;
-  }
-
-  .find-bar {
-    flex: 0 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 0.5rem 0.6rem;
-    border-radius: 12px;
-    background: rgba(15, 20, 35, 0.92);
-    border: 1px solid rgba(157, 180, 255, 0.18);
-  }
-
-  .find-row {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-  }
-
-  .find-input {
-    flex: 1;
-    min-height: 1.8rem;
-    border-radius: 6px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(7, 11, 20, 0.9);
-    color: var(--text);
-    padding: 0.25rem 0.5rem;
-    font-size: 0.82rem;
-    outline: none;
-  }
-
-  .find-input:focus {
-    border-color: rgba(139, 177, 255, 0.4);
-  }
-
-  .match-count {
-    font-size: 0.75rem;
-    color: var(--text-soft);
-    min-width: 5.5em;
-    text-align: center;
-    white-space: nowrap;
-  }
-
-  .find-btn {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(157, 180, 255, 0.14);
-    color: var(--text-soft);
-    border-radius: 6px;
-    padding: 0.2rem 0.45rem;
-    font-size: 0.78rem;
-    cursor: pointer;
-    min-height: 1.8rem;
-    line-height: 1;
-  }
-
-  .find-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--text);
-  }
-
-  .find-btn:disabled {
-    opacity: 0.35;
-    cursor: default;
-  }
-
-  .case-btn.active {
-    background: rgba(132, 173, 255, 0.2);
-    border-color: rgba(139, 177, 255, 0.35);
-    color: var(--accent);
-  }
-
-  .close-btn {
-    margin-left: auto;
-  }
-
-  .replace-btn {
-    font-size: 0.78rem;
-    padding: 0.2rem 0.55rem;
   }
 
   .toggle-preview {
