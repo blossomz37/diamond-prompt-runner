@@ -230,6 +230,7 @@
       </div>
     </header>
     {#if previewMode && isMarkdown}
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -- marked with raw HTML disabled -->
       <div class="markdown-preview">{@html renderedMarkdown}</div>
     {:else}
       {#if showFind}
@@ -290,6 +291,7 @@
       <h2>{tab.title}</h2>
     </header>
     {#if isMarkdown}
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -- marked with raw HTML disabled -->
       <div class="markdown-preview">{@html marked.parse(tab.content)}</div>
     {:else}
       <pre>{tab.content}</pre>
