@@ -1,0 +1,9 @@
+{
+  "bundleName": "pipeline-create-story-dossier",
+  "bundlePath": "exports/pipeline-create-story-dossier",
+  "exportedAt": "2026-04-05T18:48:11Z",
+  "paths": [
+    "prompts/generate-story-dossier.tera"
+  ],
+  "projectName": "EPBM 2 - Story Dossier"
+}
