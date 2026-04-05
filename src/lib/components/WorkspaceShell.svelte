@@ -10,6 +10,7 @@
   import AssetViewer from '$lib/components/AssetViewer.svelte';
   import InspectorPanel from '$lib/components/InspectorPanel.svelte';
   import PipelineEditorTab from '$lib/components/PipelineEditorTab.svelte';
+  import PromptBlockEditorTab from '$lib/components/PromptBlockEditorTab.svelte';
   import SidebarDocuments from '$lib/components/SidebarDocuments.svelte';
   import SidebarExports from '$lib/components/SidebarExports.svelte';
   import SidebarHelp from '$lib/components/SidebarHelp.svelte';
@@ -19,7 +20,8 @@
   import SidebarPrompts from '$lib/components/SidebarPrompts.svelte';
   import SidebarRuns from '$lib/components/SidebarRuns.svelte';
   import SidebarSettings from '$lib/components/SidebarSettings.svelte';
-  import SidebarVariables from '$lib/components/SidebarVariables.svelte';
+  import SidebarGlobalVariables from '$lib/components/SidebarGlobalVariables.svelte';
+  import SidebarWorkspaceVariables from '$lib/components/SidebarWorkspaceVariables.svelte';
   import ValidationPanel from '$lib/components/ValidationPanel.svelte';
   import type {
     ExportBundleResult,
@@ -97,7 +99,7 @@
     onDeleteDocument: (relativePath: string) => Promise<void>;
     onRenameDocument: (relativePath: string, newName: string) => Promise<void>;
     credentialState: ExecutionCredentialStatus | null;
-    onOpenHelp: (key: string) => void;
+    onOpenHelpFile: (node: ProjectAssetNode) => void;
   }
 
   let {
@@ -154,7 +156,7 @@
     onDeleteRun,
     onDeleteDocument,
     onRenameDocument,
-    onOpenHelp
+    onOpenHelpFile
   }: Props = $props();
 
   const activeTab = $derived(tabs.find((tab) => tab.path === activePath) ?? null);
@@ -164,7 +166,8 @@
 
   // Sidebar section collapse states (workflow order)
   let modelsOpen = $state(false);
-  let variablesOpen = $state(false);
+  let globalVarsOpen = $state(false);
+  let workspaceVarsOpen = $state(false);
   let promptsOpen = $state(false);
   let promptBlocksOpen = $state(false);
   let pipelinesOpen = $state(false);
@@ -193,6 +196,34 @@
   function closePipelineEditor(): void {
     pipelineEditorActive = false;
     pipelineEditorTarget = null;
+  }
+
+  // Block editor virtual tab state
+  let blockEditorActive = $state(false);
+  let blockEditorTarget = $state<ProjectPromptBlock | null>(null);
+
+  const blockEditorTitle = $derived(
+    blockEditorTarget ? `Block: ${blockEditorTarget.name}` : 'Prompt Block'
+  );
+
+  // Keep blockEditorTarget in sync when promptBlocks list refreshes
+  $effect(() => {
+    if (blockEditorTarget) {
+      const fresh = promptBlocks.find((b) => b.blockId === blockEditorTarget!.blockId);
+      if (fresh) blockEditorTarget = fresh;
+      else { blockEditorActive = false; blockEditorTarget = null; }
+    }
+  });
+
+  function openBlockEditor(block: ProjectPromptBlock): void {
+    blockEditorTarget = block;
+    blockEditorActive = true;
+    pipelineEditorActive = false;
+  }
+
+  function closeBlockEditor(): void {
+    blockEditorActive = false;
+    blockEditorTarget = null;
   }
 
   async function handlePipelineSave(
@@ -254,18 +285,33 @@
         {/if}
       </div>
 
-      <!-- 2. Variables -->
-      <div class="sidebar-section" class:collapsed={!variablesOpen}>
-        <button type="button" class="sidebar-header" onclick={() => (variablesOpen = !variablesOpen)}>
-          <span>Variables</span>
-          <span class="toggle">{variablesOpen ? '▾' : '▸'}</span>
+      <!-- 2a. Global Variables -->
+      <div class="sidebar-section" class:collapsed={!globalVarsOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (globalVarsOpen = !globalVarsOpen)}>
+          <span>Global Variables</span>
+          <span class="toggle">{globalVarsOpen ? '▾' : '▸'}</span>
         </button>
-        {#if variablesOpen}
+        {#if globalVarsOpen}
           <div class="sidebar-body">
-            <SidebarVariables
-              {summary}
+            <SidebarGlobalVariables
               {globalVariables}
+              projectVariables={summary.variables}
               {onSetGlobalVariables}
+            />
+          </div>
+        {/if}
+      </div>
+
+      <!-- 2b. Workspace Variables -->
+      <div class="sidebar-section" class:collapsed={!workspaceVarsOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (workspaceVarsOpen = !workspaceVarsOpen)}>
+          <span>Workspace Variables</span>
+          <span class="toggle">{workspaceVarsOpen ? '▾' : '▸'}</span>
+        </button>
+        {#if workspaceVarsOpen}
+          <div class="sidebar-body">
+            <SidebarWorkspaceVariables
+              {summary}
               {onSetProjectVariables}
             />
           </div>
@@ -301,11 +347,8 @@
           <div class="sidebar-body">
             <SidebarPromptBlocks
               {promptBlocks}
-              {modelPresets}
-              {onDeletePromptBlock}
-              {onSetBlockPreset}
-              {onSetBlockOutputTarget}
-              onOpenTemplate={(path) => onSelectAsset({ name: path.split('/').pop() ?? path, path, kind: 'tera', isDirectory: false, children: [] })}
+              activeBlockId={blockEditorActive ? blockEditorTarget?.blockId ?? null : null}
+              onSelectBlock={openBlockEditor}
             />
           </div>
         {/if}
@@ -400,13 +443,8 @@
           <div class="sidebar-body">
             <SidebarSettings
               {summary}
-              presets={modelPresets}
               credentialStatus={credentialState}
               {onRenameProject}
-              {onSetDefaultPreset}
-              {onCreatePreset}
-              {onDeletePreset}
-              {onOpenPresetFile}
             />
           </div>
         {/if}
@@ -420,7 +458,11 @@
         </button>
         {#if helpOpen}
           <div class="sidebar-body">
-            <SidebarHelp {onOpenHelp} />
+            <SidebarHelp
+              {nodes}
+              activePath={blockEditorActive || pipelineEditorActive ? null : activePath}
+              onSelectPath={onOpenHelpFile}
+            />
           </div>
         {/if}
       </div>
@@ -428,12 +470,12 @@
 
     <main class="editor panel">
       <div class="tabs" data-testid="workspace-tabs">
-        {#if tabs.length === 0 && !pipelineEditorActive}
+        {#if tabs.length === 0 && !pipelineEditorActive && !blockEditorActive}
           <div class="empty-tab">No tabs open</div>
         {:else}
           {#each tabs as tab (tab.path)}
-            <div class:active={tab.path === activePath && !pipelineEditorActive} class="tab">
-              <button type="button" onclick={() => { pipelineEditorActive = false; onSelectTab(tab.path); }}>
+            <div class:active={tab.path === activePath && !pipelineEditorActive && !blockEditorActive} class="tab">
+              <button type="button" onclick={() => { pipelineEditorActive = false; blockEditorActive = false; onSelectTab(tab.path); }}>
                 {tab.title}{tab.draftContent !== tab.savedContent ? ' *' : ''}
               </button>
               <button
@@ -459,6 +501,19 @@
               </button>
             </div>
           {/if}
+          {#if blockEditorActive}
+            <div class="tab active">
+              <button type="button">{blockEditorTitle}</button>
+              <button
+                class="close"
+                type="button"
+                aria-label="Close block editor"
+                onclick={closeBlockEditor}
+              >
+                ×
+              </button>
+            </div>
+          {/if}
         {/if}
       </div>
 
@@ -467,7 +522,20 @@
       {/if}
 
       <div class="viewer-wrap">
-        {#if pipelineEditorActive}
+        {#if blockEditorActive && blockEditorTarget}
+          <PromptBlockEditorTab
+            block={blockEditorTarget}
+            {modelPresets}
+            {onSetBlockPreset}
+            {onSetBlockOutputTarget}
+            {onDeletePromptBlock}
+            onOpenTemplate={(path) => {
+              blockEditorActive = false;
+              onSelectAsset({ name: path.split('/').pop() ?? path, path, kind: 'tera', isDirectory: false, children: [] });
+            }}
+            onClose={closeBlockEditor}
+          />
+        {:else if pipelineEditorActive}
           <PipelineEditorTab
             existingPipeline={pipelineEditorTarget}
             {promptBlocks}
