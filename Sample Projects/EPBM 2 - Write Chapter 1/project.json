@@ -1,0 +1,59 @@
+{
+  "projectId": "3ba62a39-f7fa-4d95-8fe9-3dfa614c2442",
+  "projectName": "EPBM 2 - Write Chapter 1",
+  "createdAt": "2026-04-05T17:28:05Z",
+  "updatedAt": "2026-04-05T18:02:14Z",
+  "defaultModelPreset": "models/default.yaml",
+  "variables": {},
+  "promptBlocks": [
+    {
+      "blockId": "plan-chapter-1",
+      "name": "Plan Chapter 1",
+      "templateSource": "prompts/plan-chapter-1.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "replace_document"
+    },
+    {
+      "blockId": "draft-chapter-1",
+      "name": "Draft Chapter 1",
+      "templateSource": "prompts/draft-chapter-1.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "replace_document"
+    },
+    {
+      "blockId": "edit-chapter-1",
+      "name": "Edit Chapter 1",
+      "templateSource": "prompts/edit-chapter-1.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "replace_document"
+    },
+    {
+      "blockId": "final-chapter-1",
+      "name": "Final Chapter 1",
+      "templateSource": "prompts/final-chapter-1.tera",
+      "inputBindings": [],
+      "modelPreset": null,
+      "outputTarget": "replace_document"
+    }
+  ],
+  "pipelines": [
+    {
+      "pipelineId": "write-chapter-1",
+      "name": "Write Chapter 1",
+      "orderedBlocks": [
+        "plan-chapter-1",
+        "draft-chapter-1",
+        "edit-chapter-1",
+        "final-chapter-1"
+      ],
+      "executionMode": "sequential"
+    }
+  ],
+  "uiPreferences": {
+    "density": "dense",
+    "theme": "ide-pass"
+  }
+}

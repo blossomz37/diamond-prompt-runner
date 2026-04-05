@@ -1,0 +1,6 @@
+# Higher-effort planning model carried forward from the workshop routing.
+model: openai/gpt-5.2
+reasoning:
+  effort: high
+temperature: 1
+max_completion_tokens: 65000

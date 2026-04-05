@@ -1,0 +1,23 @@
+You will create a thorough story dossier of all information needed to write the following book:
+
+{{ book_description }}
+
+with {{ chapter_count }} chapters.
+
+The dossier should include:
+
+## Required Sections
+
+1. **Genre & Subgenre** — primary genre, subgenres, comparable titles
+2. **Premise** — one-paragraph hook that captures the core conflict and stakes
+3. **Setting** — time period, location(s), world details, atmosphere
+4. **Protagonist** — name, age, background, personality, motivation, internal conflict, character arc
+5. **Supporting Cast** — for each significant character: name, role, relationship to protagonist, distinguishing traits, what they want
+6. **Antagonist / Opposing Force** — who or what stands in the protagonist's way, their motivation
+7. **Central Conflict** — the story question the reader needs answered
+8. **Themes** — 2–4 thematic threads woven through the narrative
+9. **Tone & Voice** — POV, tense, narrative voice qualities, emotional register
+10. **Chapter-by-Chapter Outline** — for each of the {{ chapter_count }} chapters: chapter title, key events, character appearances, emotional beats, clues or plot threads advanced
+11. **Story Arc Structure** — how the narrative maps to a dramatic structure (e.g., three-act, five-act, Save the Cat, etc.)
+12. **Key Scenes** — 3–5 pivotal moments described in detail
+13. **Resolution** — how the central conflict resolves, character transformation, final image

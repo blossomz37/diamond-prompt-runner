@@ -1,0 +1,17 @@
+Read the following story information:
+
+{{ doc("Story Dossier.md") }}
+
+Here is the plan for writing Chapter 1:
+
+{{ doc("plan-chapter-1.md") }}
+
+Here is the draft of Chapter 1:
+
+{{ doc("draft-chapter-1.md") }}
+
+Here is the editing plan for Chapter 1:
+
+{{ doc("edit-chapter-1.md") }}
+
+Now write the final version of Chapter 1 so it works as a final draft. Apply every revision from the editing plan. Only write fiction, never address me or write extra comments about the task. Only write Chapter 1 final draft.

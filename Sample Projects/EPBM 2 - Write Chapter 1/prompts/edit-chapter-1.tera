@@ -1,0 +1,22 @@
+Read the following story information:
+
+{{ doc("Story Dossier.md") }}
+
+Here is the plan for writing Chapter 1:
+
+{{ doc("plan-chapter-1.md") }}
+
+Here is the draft of Chapter 1:
+
+{{ doc("draft-chapter-1.md") }}
+
+Now make an editing plan to make Chapter 1 better writing. Evaluate:
+- Prose quality: sentence variety, unnecessary adverbs, cliché phrases
+- Pacing: does the opening breathe before the inciting incident? Does tension build after?
+- Voice: is Josie's narration consistent—wry, warm, observant?
+- Dialogue: does each character sound distinct? Is subtext present?
+- Sensory grounding: are sights, sounds, and smells specific (not generic)?
+- Mystery craft: is the clue planted naturally? Is Clementine's line suspicious without being a neon sign?
+- Closing hook: does the final image make the reader turn the page?
+
+For each area, note what works well, what needs revision, and provide specific line-level suggestions where possible.
