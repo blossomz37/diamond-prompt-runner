@@ -254,6 +254,14 @@ export async function setBlockOutputTarget(
   return invoke<ProjectSummary>('set_block_output_target', { rootPath, blockId, target });
 }
 
+export async function setBlockOutputFilename(
+  rootPath: string,
+  blockId: string,
+  filename: string | null
+): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>('set_block_output_filename', { rootPath, blockId, filename });
+}
+
 export async function renameProject(
   rootPath: string,
   newName: string

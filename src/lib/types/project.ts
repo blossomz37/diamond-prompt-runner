@@ -15,6 +15,7 @@ export interface ProjectCounts {
   runs: number;
   exports: number;
   help: number;
+  variables: number;
 }
 
 export interface ProjectSummary {
@@ -155,6 +156,7 @@ export interface ProjectPipelineBlock {
   templateSource: string;
   modelPreset: string;
   outputTarget: string;
+  outputFilename: string | null;
 }
 
 export type ProjectPromptBlock = ProjectPipelineBlock;

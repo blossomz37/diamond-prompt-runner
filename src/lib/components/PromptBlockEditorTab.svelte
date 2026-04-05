@@ -9,6 +9,7 @@
     modelPresets: ModelPresetSummary[];
     onSetBlockPreset: (blockId: string, presetPath: string | null) => Promise<void>;
     onSetBlockOutputTarget: (blockId: string, target: string) => Promise<void>;
+    onSetBlockOutputFilename: (blockId: string, filename: string | null) => Promise<void>;
     onDeletePromptBlock: (blockId: string) => Promise<void>;
     onOpenTemplate: (path: string) => void;
     onClose: () => void;
@@ -19,6 +20,7 @@
     modelPresets,
     onSetBlockPreset,
     onSetBlockOutputTarget,
+    onSetBlockOutputFilename,
     onDeletePromptBlock,
     onOpenTemplate,
     onClose
@@ -27,6 +29,26 @@
   let saving = $state(false);
   let deleteConfirm = $state(false);
   let error = $state('');
+  // eslint-disable-next-line svelte/prefer-writable-derived -- needs to be writable for bind:value
+  let filenameInput = $state(block.outputFilename ?? '');
+
+  // Keep filenameInput in sync when the block prop refreshes (e.g. after save)
+  $effect(() => {
+    filenameInput = block.outputFilename ?? '';
+  });
+
+  const showsDocument = $derived(
+    block.outputTarget === 'replace_document' || block.outputTarget === 'append_document'
+    || block.outputTarget === 'document' || block.outputTarget === 'both'
+  );
+
+  function slugify(name: string): string {
+    return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'prompt';
+  }
+
+  const resolvedFilename = $derived(
+    block.outputFilename || `${slugify(block.name)}.md`
+  );
 
   async function handlePresetChange(event: Event): Promise<void> {
     const select = event.target as HTMLSelectElement;
@@ -48,6 +70,21 @@
     error = '';
     try {
       await onSetBlockOutputTarget(block.blockId, select.value);
+    } catch (e) {
+      error = String(e);
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function handleFilenameBlur(): Promise<void> {
+    const trimmed = filenameInput.trim();
+    const newValue = trimmed || null;
+    if (newValue === (block.outputFilename ?? null)) return;
+    saving = true;
+    error = '';
+    try {
+      await onSetBlockOutputFilename(block.blockId, newValue);
     } catch (e) {
       error = String(e);
     } finally {
@@ -130,12 +167,38 @@
         disabled={saving}
         aria-label="Output strategy"
       >
-        <option value="run_artifact">Run Artifact</option>
+        <option value="replace_document">Create / Replace Document</option>
         <option value="append_document">Append to Document</option>
-        <option value="replace_document">Replace Document</option>
+        <option value="run_artifact">Run History Only</option>
       </select>
-      <p class="field-hint">Controls where execution output is stored.</p>
+      <p class="field-hint">
+        {#if block.outputTarget === 'run_artifact' || block.outputTarget === 'history_only'}
+          Output is saved to run history only. Other blocks cannot reference it.
+        {:else if block.outputTarget === 'append_document'}
+          Output is appended to <code>documents/{resolvedFilename}</code>. Use <code>&lbrace;&lbrace; doc("{resolvedFilename}") &rbrace;&rbrace;</code> in other prompts to reference it.
+        {:else}
+          Output is written to <code>documents/{resolvedFilename}</code>. Use <code>&lbrace;&lbrace; doc("{resolvedFilename}") &rbrace;&rbrace;</code> in other prompts to reference it.
+        {/if}
+      </p>
     </div>
+
+    {#if showsDocument}
+      <div class="field">
+        <span>Output Filename</span>
+        <input
+          type="text"
+          class="field-input"
+          placeholder={`${slugify(block.name)}.md`}
+          bind:value={filenameInput}
+          onblur={handleFilenameBlur}
+          disabled={saving}
+          aria-label="Output filename"
+        />
+        <p class="field-hint">
+          Leave blank to auto-generate from the block name. The file is always written to <code>documents/</code>.
+        </p>
+      </div>
+    {/if}
 
     <!-- Danger Zone -->
     <div class="danger-zone">
@@ -222,10 +285,38 @@
     outline: none;
   }
 
+  .field-input {
+    min-height: 2.4rem;
+    border-radius: 10px;
+    border: 1px solid rgba(157, 180, 255, 0.16);
+    background: rgba(7, 11, 20, 0.82);
+    color: var(--text);
+    padding: 0.5rem 0.7rem;
+    font-size: 0.88rem;
+    font-family: var(--mono, monospace);
+  }
+
+  .field-input:focus {
+    border-color: rgba(139, 177, 255, 0.35);
+    outline: none;
+  }
+
+  .field-input::placeholder {
+    color: var(--text-soft);
+    opacity: 0.6;
+  }
+
   .field-hint {
     margin: 0;
     font-size: 0.76rem;
     color: var(--text-soft);
+  }
+
+  .field-hint code {
+    font-size: 0.74rem;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
   }
 
   .template-row {

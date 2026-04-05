@@ -30,6 +30,7 @@
     renameProject,
     saveExecutionApiKey,
     setBlockModelPreset,
+    setBlockOutputFilename,
     setBlockOutputTarget,
     setDefaultModelPreset,
     setGlobalVariables,
@@ -751,6 +752,12 @@
     projectPromptBlocks = await listProjectPromptBlocks(workspace.rootPath);
   }
 
+  async function handleSetBlockOutputFilename(blockId: string, filename: string | null): Promise<void> {
+    if (!workspace) return;
+    workspace = await setBlockOutputFilename(workspace.rootPath, blockId, filename);
+    projectPromptBlocks = await listProjectPromptBlocks(workspace.rootPath);
+  }
+
   function findAssetNode(nodes: ProjectAssetNode[], path: string): ProjectAssetNode | null {
     for (const node of nodes) {
       if (node.path === path) return node;
@@ -1008,6 +1015,7 @@
     onOpenPresetFile={handleOpenPresetFile}
     onSetBlockPreset={handleSetBlockPreset}
     onSetBlockOutputTarget={handleSetBlockOutputTarget}
+    onSetBlockOutputFilename={handleSetBlockOutputFilename}
     onDeletePipeline={handleDeletePipeline}
     onDeletePromptBlock={handleDeletePromptBlock}
     onDeleteRun={handleDeleteRun}

@@ -340,6 +340,20 @@ fn set_block_output_target(
 }
 
 #[tauri::command]
+fn set_block_output_filename(
+    root_path: String,
+    block_id: String,
+    filename: Option<String>,
+) -> Result<ProjectSummary, String> {
+    project_store::set_block_output_filename(
+        PathBuf::from(root_path).as_path(),
+        &block_id,
+        filename.as_deref(),
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn rename_project(
     app: tauri::AppHandle,
     root_path: String,
@@ -443,6 +457,7 @@ pub fn run() {
             delete_model_preset,
             set_block_model_preset,
             set_block_output_target,
+            set_block_output_filename,
             rename_project,
             delete_pipeline,
             delete_prompt_block,

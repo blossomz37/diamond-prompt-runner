@@ -13,7 +13,8 @@ use tera::{Context, Tera};
 use thiserror::Error;
 use uuid::Uuid;
 
-const PROJECT_DIRS: [&str; 6] = ["documents", "prompts", "models", "runs", "exports", "help"];
+const PROJECT_DIRS: [&str; 7] = ["documents", "prompts", "models", "runs", "exports", "help", "variables"];
+const WORKSPACE_VARIABLES_FILE: &str = "variables/workspace-variables.yaml";
 const RECENTS_FILE_NAME: &str = "recent-projects.json";
 const GLOBAL_VARIABLES_FILE_NAME: &str = "global-variables.json";
 const SEEDED_MODEL_PRESETS: [(&str, &str); 5] = [
@@ -81,6 +82,8 @@ pub struct ProjectCounts {
     pub exports: usize,
     #[serde(default)]
     pub help: usize,
+    #[serde(default)]
+    pub variables: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -324,6 +327,8 @@ pub struct ProjectPipelineBlockSummary {
     pub name: String,
     pub template_source: String,
     pub model_preset: String,
+    pub output_target: String,
+    pub output_filename: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -333,6 +338,8 @@ pub struct ProjectPromptBlockSummary {
     pub name: String,
     pub template_source: String,
     pub model_preset: String,
+    pub output_target: String,
+    pub output_filename: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -430,6 +437,8 @@ pub struct PromptBlock {
     pub input_bindings: Vec<Value>,
     pub model_preset: Option<String>,
     pub output_target: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_filename: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -478,6 +487,7 @@ pub fn create_project(parent_path: &Path, project_name: &str, app_data_dir: &Pat
 
     write_seeded_model_presets(&root_path)?;
     write_seeded_help_files(&root_path)?;
+    write_workspace_variables_yaml(&root_path, &BTreeMap::new())?;
 
     let now = timestamp();
     let manifest = ProjectManifest {
@@ -531,7 +541,8 @@ pub fn create_prompt_block(
         template_source: prompt_path.clone(),
         input_bindings: Vec::new(),
         model_preset: None,
-        output_target: "run_artifact".to_string(),
+        output_target: "replace_document".to_string(),
+        output_filename: None,
     });
     manifest.updated_at = timestamp();
     write_manifest(&root_path, &manifest)?;
@@ -612,6 +623,9 @@ pub fn set_project_variables(
     variables: BTreeMap<String, String>,
 ) -> StoreResult<ProjectSummary> {
     let (root_path, mut manifest) = validate_project(root_path)?;
+    // Write to YAML file (source of truth)
+    write_workspace_variables_yaml(&root_path, &variables)?;
+    // Sync to project.json for backward compatibility
     manifest.variables = variables
         .into_iter()
         .map(|(k, v)| (k, Value::String(v)))
@@ -759,7 +773,7 @@ pub fn set_block_output_target(
 ) -> StoreResult<ProjectSummary> {
     let (root_path, mut manifest) = validate_project(root_path)?;
 
-    let valid_targets = ["history_only", "document", "both"];
+    let valid_targets = ["replace_document", "append_document", "run_artifact", "document", "both", "history_only"];
     if !valid_targets.contains(&target) {
         return Err(ProjectStoreError::message(format!(
             "Invalid output target '{}'",
@@ -776,6 +790,49 @@ pub fn set_block_output_target(
         })?;
 
     block.output_target = target.to_string();
+    manifest.updated_at = timestamp();
+    write_manifest(&root_path, &manifest)?;
+    summarize_project(&root_path, &manifest)
+}
+
+pub fn set_block_output_filename(
+    root_path: &Path,
+    block_id: &str,
+    filename: Option<&str>,
+) -> StoreResult<ProjectSummary> {
+    let (root_path, mut manifest) = validate_project(root_path)?;
+
+    let block = manifest
+        .prompt_blocks
+        .iter_mut()
+        .find(|b| b.block_id == block_id)
+        .ok_or_else(|| {
+            ProjectStoreError::message(format!("Prompt block not found: {}", block_id))
+        })?;
+
+    block.output_filename = match filename {
+        Some(name) => {
+            let trimmed = name.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                // Ensure the filename ends with .md
+                let safe_name = if trimmed.ends_with(".md") {
+                    trimmed.to_string()
+                } else {
+                    format!("{trimmed}.md")
+                };
+                // Reject path separators to prevent directory traversal
+                if safe_name.contains('/') || safe_name.contains('\\') {
+                    return Err(ProjectStoreError::message(
+                        "Output filename cannot contain path separators.",
+                    ));
+                }
+                Some(safe_name)
+            }
+        }
+        None => None,
+    };
     manifest.updated_at = timestamp();
     write_manifest(&root_path, &manifest)?;
     summarize_project(&root_path, &manifest)
@@ -958,6 +1015,8 @@ pub fn list_project_prompt_blocks(root_path: &Path) -> StoreResult<Vec<ProjectPr
                 .model_preset
                 .clone()
                 .unwrap_or_else(|| manifest.default_model_preset.clone()),
+            output_target: block.output_target.clone(),
+            output_filename: block.output_filename.clone(),
         })
         .collect())
 }
@@ -1576,6 +1635,7 @@ where
                 .unwrap_or("Prompt")
                 .to_string()
         });
+    let output_filename_override = linked_block.as_ref().and_then(|block| block.output_filename.clone());
         
     let output_target = linked_block
         .map(|block| block.output_target.clone())
@@ -1585,9 +1645,19 @@ where
     let mut document_path = None;
     let mut final_output_for_json = Some(trimmed_output.clone());
 
-    if output_target == "document" || output_target == "both" {
-        let block_slug = slugify_prompt_name(&block_name);
-        let doc_filename = format!("{block_slug}.md");
+    let writes_document = matches!(
+        output_target.as_str(),
+        "replace_document" | "append_document" | "document" | "both"
+    );
+
+    if writes_document {
+        let doc_filename = match &output_filename_override {
+            Some(name) => name.clone(),
+            None => {
+                let block_slug = slugify_prompt_name(&block_name);
+                format!("{block_slug}.md")
+            }
+        };
         let doc_relative_path = format!("documents/{doc_filename}");
         let doc_absolute_path = root_path.join("documents").join(&doc_filename);
         
@@ -1595,7 +1665,25 @@ where
             let _ = fs::create_dir_all(parent);
         }
         
-        if let Err(e) = fs::write(&doc_absolute_path, &trimmed_output) {
+        let write_result = if output_target == "append_document" {
+            // Append: read existing content and add new output
+            let existing = if doc_absolute_path.is_file() {
+                fs::read_to_string(&doc_absolute_path).unwrap_or_default()
+            } else {
+                String::new()
+            };
+            let combined = if existing.is_empty() {
+                trimmed_output.clone()
+            } else {
+                format!("{existing}\n\n---\n\n{trimmed_output}")
+            };
+            fs::write(&doc_absolute_path, &combined)
+        } else {
+            // Replace (replace_document, document, both)
+            fs::write(&doc_absolute_path, &trimmed_output)
+        };
+
+        if let Err(e) = write_result {
             return Err(ProjectStoreError::message(format!("Failed to write document output: {e}")));
         }
         document_path = Some(doc_relative_path);
@@ -1742,6 +1830,8 @@ fn summarize_pipeline(manifest: &ProjectManifest, pipeline: &Pipeline) -> Projec
                         .model_preset
                         .clone()
                         .unwrap_or_else(|| manifest.default_model_preset.clone()),
+                    output_target: block.output_target.clone(),
+                    output_filename: block.output_filename.clone(),
                 }
             } else {
                 ProjectPipelineBlockSummary {
@@ -1749,6 +1839,8 @@ fn summarize_pipeline(manifest: &ProjectManifest, pipeline: &Pipeline) -> Projec
                     name: block_id.clone(),
                     template_source: String::new(),
                     model_preset: manifest.default_model_preset.clone(),
+                    output_target: "replace_document".to_string(),
+                    output_filename: None,
                 }
             }
         })
@@ -1835,13 +1927,20 @@ fn summarize_project(root_path: &Path, manifest: &ProjectManifest) -> StoreResul
         runs: count_files(root_path.join("runs"))?,
         exports: count_files(root_path.join("exports"))?,
         help: count_files(root_path.join("help"))?,
+        variables: count_files(root_path.join("variables"))?,
     };
 
-    let variables = manifest
-        .variables
-        .iter()
-        .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
-        .collect();
+    // Read from YAML file first; fall back to project.json manifest
+    let yaml_vars = read_workspace_variables_yaml(root_path);
+    let variables = if !yaml_vars.is_empty() {
+        yaml_vars
+    } else {
+        manifest
+            .variables
+            .iter()
+            .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+            .collect()
+    };
 
     Ok(ProjectSummary {
         root_path: root_path.to_string_lossy().to_string(),
@@ -1863,9 +1962,14 @@ fn validate_project(root_path: &Path) -> StoreResult<(PathBuf, ProjectManifest)>
     for directory in PROJECT_DIRS {
         let directory_path = root_path.join(directory);
         if !directory_path.is_dir() {
-            return Err(ProjectStoreError::message(format!(
-                "Project folder is missing required directory `{directory}`."
-            )));
+            // Auto-create directories that were added after initial project creation
+            if directory == "help" || directory == "variables" {
+                fs::create_dir_all(&directory_path)?;
+            } else {
+                return Err(ProjectStoreError::message(format!(
+                    "Project folder is missing required directory `{directory}`."
+                )));
+            }
         }
     }
 
@@ -2357,6 +2461,31 @@ fn write_global_variables_store(app_data_dir: &Path, variables: &BTreeMap<String
     Ok(())
 }
 
+fn read_workspace_variables_yaml(root_path: &Path) -> BTreeMap<String, String> {
+    let yaml_path = root_path.join(WORKSPACE_VARIABLES_FILE);
+    if !yaml_path.exists() {
+        return BTreeMap::new();
+    }
+    fs::read_to_string(yaml_path)
+        .ok()
+        .and_then(|content| serde_yaml::from_str::<BTreeMap<String, String>>(&content).ok())
+        .unwrap_or_default()
+}
+
+fn write_workspace_variables_yaml(root_path: &Path, variables: &BTreeMap<String, String>) -> StoreResult<()> {
+    let yaml_path = root_path.join(WORKSPACE_VARIABLES_FILE);
+    let content = if variables.is_empty() {
+        "# Workspace variables — editable here or via the sidebar\n".to_string()
+    } else {
+        format!(
+            "# Workspace variables — editable here or via the sidebar\n{}",
+            serde_yaml::to_string(variables).unwrap_or_default()
+        )
+    };
+    fs::write(yaml_path, content)?;
+    Ok(())
+}
+
 fn read_manifest(manifest_path: &Path) -> StoreResult<ProjectManifest> {
     let content = fs::read_to_string(manifest_path)?;
     Ok(serde_json::from_str(&content)?)
@@ -2636,18 +2765,30 @@ fn prepare_template_context(
     }
 
     // Project variables — override globals with the same name.
-    context.insert("variables", &manifest.variables);
-    for (name, value) in &manifest.variables {
-        if is_identifier_like(name) {
-            context.insert(name, value);
-            
-            let stringified = match value {
-                Value::String(s) => s.clone(),
-                Value::Number(n) => n.to_string(),
-                Value::Bool(b) => b.to_string(),
-                _ => value.to_string(),
-            };
-            resolved_variables.insert(name.clone(), stringified);
+    // Read from YAML file first; fall back to project.json manifest.
+    let yaml_vars = read_workspace_variables_yaml(root_path);
+    if !yaml_vars.is_empty() {
+        context.insert("variables", &yaml_vars);
+        for (name, value) in &yaml_vars {
+            if is_identifier_like(name) {
+                context.insert(name, value);
+                resolved_variables.insert(name.clone(), value.clone());
+            }
+        }
+    } else {
+        context.insert("variables", &manifest.variables);
+        for (name, value) in &manifest.variables {
+            if is_identifier_like(name) {
+                context.insert(name, value);
+
+                let stringified = match value {
+                    Value::String(s) => s.clone(),
+                    Value::Number(n) => n.to_string(),
+                    Value::Bool(b) => b.to_string(),
+                    _ => value.to_string(),
+                };
+                resolved_variables.insert(name.clone(), stringified);
+            }
         }
     }
 
@@ -4294,7 +4435,7 @@ mod tests {
 
         let mut project_vars = BTreeMap::new();
         project_vars.insert("tone".to_string(), "project-tone".to_string());
-        set_project_variables(&root, project_vars, &app_data).unwrap();
+        set_project_variables(&root, project_vars).unwrap();
 
         let result = validate_project_template(
             &root,
@@ -4319,7 +4460,7 @@ mod tests {
         vars.insert("chapter".to_string(), "12".to_string());
         vars.insert("word_target".to_string(), "5000".to_string());
 
-        set_project_variables(&root, vars, &app_data).unwrap();
+        set_project_variables(&root, vars).unwrap();
 
         let manifest = read_manifest(&root.join("project.json")).unwrap();
         assert_eq!(manifest.variables["chapter"], Value::String("12".to_string()));

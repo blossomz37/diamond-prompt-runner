@@ -93,6 +93,7 @@
     onOpenPresetFile: (presetPath: string) => void;
     onSetBlockPreset: (blockId: string, presetPath: string | null) => Promise<void>;
     onSetBlockOutputTarget: (blockId: string, target: string) => Promise<void>;
+    onSetBlockOutputFilename: (blockId: string, filename: string | null) => Promise<void>;
     onDeletePipeline: (pipelineId: string) => Promise<void>;
     onDeletePromptBlock: (blockId: string) => Promise<void>;
     onDeleteRun: (runPath: string) => Promise<void>;
@@ -151,6 +152,7 @@
     onOpenPresetFile,
     onSetBlockPreset,
     onSetBlockOutputTarget,
+    onSetBlockOutputFilename,
     onDeletePipeline,
     onDeletePromptBlock,
     onDeleteRun,
@@ -528,6 +530,7 @@
             {modelPresets}
             {onSetBlockPreset}
             {onSetBlockOutputTarget}
+            {onSetBlockOutputFilename}
             {onDeletePromptBlock}
             onOpenTemplate={(path) => {
               blockEditorActive = false;
@@ -585,7 +588,7 @@
           loading={validationLoading}
           execution={activeExecution}
           executionLoading={executionLoading && activeTab?.kind === 'tera'}
-          credentialState={credentialState}
+          credentialState={credentialState ?? { source: 'missing', hasStoredKey: false }}
           recentRuns={historyItems}
           recentRunsLoading={historyLoading}
           onOpenRunPath={onOpenRunPath}
