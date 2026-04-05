@@ -190,9 +190,19 @@
     pipelineEditorTarget ? `Pipeline: ${pipelineEditorTarget.name}` : 'New Pipeline'
   );
 
+  // Keep pipelineEditorTarget in sync when pipelines list refreshes
+  $effect(() => {
+    if (pipelineEditorTarget) {
+      const fresh = pipelines.find((p) => p.pipelineId === pipelineEditorTarget!.pipelineId);
+      if (fresh) pipelineEditorTarget = fresh;
+      else { pipelineEditorActive = false; pipelineEditorTarget = null; }
+    }
+  });
+
   function openPipelineEditor(pipeline: ProjectPipeline | null): void {
     pipelineEditorTarget = pipeline;
     pipelineEditorActive = true;
+    blockEditorActive = false;
   }
 
   function closePipelineEditor(): void {
@@ -367,14 +377,10 @@
             <SidebarPipelines
               {pipelines}
               {promptBlocks}
-              {pipelineExecution}
-              {pipelineLoading}
+              activePipelineId={pipelineEditorActive ? pipelineEditorTarget?.pipelineId ?? null : null}
               {pipelineAuthoringLoading}
-              onRunPipeline={onRunPipeline}
-              onEditPipeline={(pipeline) => openPipelineEditor(pipeline)}
+              onSelectPipeline={(pipeline) => openPipelineEditor(pipeline)}
               onNewPipeline={() => openPipelineEditor(null)}
-              {onDeletePipeline}
-              onExportPipeline={onExportAssets}
             />
           </div>
         {/if}
@@ -543,8 +549,13 @@
             existingPipeline={pipelineEditorTarget}
             {promptBlocks}
             loading={pipelineAuthoringLoading}
+            pipelineExecution={pipelineExecution}
+            {pipelineLoading}
             onSave={handlePipelineSave}
             onCancel={closePipelineEditor}
+            onRunPipeline={onRunPipeline}
+            {onDeletePipeline}
+            onExportPipeline={onExportAssets}
           />
         {:else}
           <AssetViewer

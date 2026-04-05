@@ -762,7 +762,10 @@ describe('App', () => {
 
     await expandSidebarSection('Pipelines');
     expect(screen.getByText('Review Pipeline')).toBeInTheDocument();
-    await fireEvent.click(screen.getByRole('button', { name: 'Run Review Pipeline' }));
+
+    // Click the pipeline name to open it in the center pane
+    await fireEvent.click(screen.getByText('Review Pipeline'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Run Pipeline' }));
 
     await waitFor(() =>
       expect(tauri.executePipeline).toHaveBeenCalledWith('/tmp/story-lab', 'review-pipeline')
@@ -841,7 +844,9 @@ describe('App', () => {
     );
 
     await expandSidebarSection('Pipelines');
-    await fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[0]);
+    // Click pipeline name to open in center pane, then click Edit
+    await fireEvent.click(screen.getByText('Review Pipeline'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
 
     // Pipeline editor now opens in the center pane
     const editNameInput = screen.getByRole('textbox', { name: 'Pipeline name' });
@@ -908,7 +913,9 @@ describe('App', () => {
     await fireEvent.input(editor, { target: { value: `${teraAssetContent.content}\n# unsaved` } });
 
     await expandSidebarSection('Pipelines');
-    await fireEvent.click(screen.getByRole('button', { name: 'Run Review Pipeline' }));
+    // Click pipeline name to open in center pane, then run
+    await fireEvent.click(screen.getByText('Review Pipeline'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Run Pipeline' }));
 
     expect(
       await screen.findByText(
