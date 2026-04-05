@@ -1330,7 +1330,15 @@ pub fn save_execution_api_key(api_key: &str) -> StoreResult<ExecutionCredentialS
     openrouter_keyring_entry()?
         .set_password(trimmed)
         .map_err(keyring_error)?;
-    get_execution_credential_status()
+
+    // Return a definitive success status after a confirmed write.
+    // Re-probing via get_execution_credential_status() can silently fail in unsigned
+    // dev builds — get_password() returns an error that is swallowed as "no key", which
+    // makes the frontend revert to the empty input state even though the write succeeded.
+    Ok(ExecutionCredentialStatus {
+        source: CredentialSource::Keychain,
+        has_stored_key: true,
+    })
 }
 
 pub fn clear_execution_api_key() -> StoreResult<ExecutionCredentialStatus> {
