@@ -15,11 +15,6 @@
     execution: PromptExecutionResult | null;
     executionLoading: boolean;
     credentialState: ExecutionCredentialStatus;
-    credentialDraft: string;
-    credentialLoading: boolean;
-    onCredentialInput: (value: string) => void;
-    onSaveCredential: () => void | Promise<void>;
-    onClearCredential: () => void | Promise<void>;
     recentRuns: PromptRunHistoryEntry[];
     recentRunsLoading: boolean;
     onOpenRunPath: (path: string) => void | Promise<void>;
@@ -33,11 +28,6 @@
     execution,
     executionLoading,
     credentialState,
-    credentialDraft,
-    credentialLoading,
-    onCredentialInput,
-    onSaveCredential,
-    onClearCredential,
     recentRuns,
     recentRunsLoading,
     onOpenRunPath,
@@ -59,38 +49,7 @@
     return status === 'success' ? 'good' : 'bad';
   }
 
-  function credentialTone(source: ExecutionCredentialStatus['source']): string {
-    switch (source) {
-      case 'keychain':
-        return 'good';
-      case 'environment':
-        return 'warn';
-      default:
-        return 'bad';
-    }
-  }
 
-  function credentialLabel(source: ExecutionCredentialStatus['source']): string {
-    switch (source) {
-      case 'keychain':
-        return 'keychain';
-      case 'environment':
-        return 'env fallback';
-      default:
-        return 'missing';
-    }
-  }
-
-  function credentialHelp(status: ExecutionCredentialStatus): string {
-    switch (status.source) {
-      case 'keychain':
-        return 'Stored in the native keychain for this app.';
-      case 'environment':
-        return 'No stored key is saved yet. Runs currently rely on OPENROUTER_API_KEY from the environment.';
-      default:
-        return 'No OpenRouter key is available yet. Save one here or set OPENROUTER_API_KEY.';
-    }
-  }
 
   const onlineDraftEnabled = $derived(
     tab?.kind === 'tera' ? promptUsesOnlineResearch(tab.draftContent) : false
@@ -168,45 +127,6 @@
           {/if}
         </div>
 
-        <div class="credential-card">
-          <div class="heading">
-            <div>
-              <p class="eyebrow">Credentials</p>
-              <h3>OpenRouter API Key</h3>
-            </div>
-            <span class={`badge ${credentialTone(credentialState.source)}`}>
-              {credentialLabel(credentialState.source)}
-            </span>
-          </div>
-
-          <p class="empty">{credentialHelp(credentialState)}</p>
-
-          <label class="secret-field">
-            <span>OpenRouter API key</span>
-            <input
-              type="password"
-              value={credentialDraft}
-              placeholder="sk-or-v1-..."
-              autocomplete="off"
-              spellcheck="false"
-              oninput={(event) => onCredentialInput((event.currentTarget as HTMLInputElement).value)}
-            />
-          </label>
-
-          <div class="credential-actions">
-            <button
-              type="button"
-              class="primary"
-              onclick={() => onSaveCredential()}
-              disabled={credentialLoading || credentialDraft.trim().length === 0}
-            >{credentialLoading ? 'Saving…' : 'Save key'}</button>
-            <button
-              type="button"
-              onclick={() => onClearCredential()}
-              disabled={credentialLoading || !credentialState.hasStoredKey}
-            >Clear stored key</button>
-          </div>
-        </div>
 
          {#if executionLoading}
           <div class="run-action state-loading">

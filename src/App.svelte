@@ -29,8 +29,9 @@
     removeRecentProject,
     renameProject,
     saveExecutionApiKey,
-    setDefaultModelPreset,
     setBlockModelPreset,
+    setBlockOutputTarget,
+    setDefaultModelPreset,
     setGlobalVariables,
     setProjectVariables,
     updatePipeline,
@@ -92,6 +93,7 @@
   });
   let executionCredentialDraft = $state('');
   let executionCredentialLoading = $state(false);
+  let executionCredentialError = $state<string | null>(null);
   let validationTimer: ReturnType<typeof setTimeout> | null = null;
   let validationRequestId = 0;
   let executionHistoryRequestId = 0;
@@ -738,6 +740,12 @@
     projectPromptBlocks = await listProjectPromptBlocks(workspace.rootPath);
   }
 
+  async function handleSetBlockOutputTarget(blockId: string, target: string): Promise<void> {
+    if (!workspace) return;
+    workspace = await setBlockOutputTarget(workspace.rootPath, blockId, target);
+    projectPromptBlocks = await listProjectPromptBlocks(workspace.rootPath);
+  }
+
   function findAssetNode(nodes: ProjectAssetNode[], path: string): ProjectAssetNode | null {
     for (const node of nodes) {
       if (node.path === path) return node;
@@ -814,13 +822,13 @@
     }
 
     executionCredentialLoading = true;
-    errorMessage = null;
+    executionCredentialError = null;
 
     try {
       executionCredentialStatus = await saveExecutionApiKey(apiKey);
       executionCredentialDraft = '';
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Failed to save execution API key.';
+      executionCredentialError = error instanceof Error ? error.message : 'Failed to save execution API key.';
     } finally {
       executionCredentialLoading = false;
     }
@@ -832,13 +840,12 @@
     }
 
     executionCredentialLoading = true;
-    errorMessage = null;
+    executionCredentialError = null;
 
     try {
       executionCredentialStatus = await clearExecutionApiKey();
-      executionCredentialDraft = '';
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : 'Failed to clear execution API key.';
+      executionCredentialError = error instanceof Error ? error.message : 'Failed to clear execution API key.';
     } finally {
       executionCredentialLoading = false;
     }
@@ -876,6 +883,13 @@
     onOpenRecent={handleOpenRecent}
     onLocateRecent={handleLocateRecent}
     onRemoveRecent={handleRemoveRecent}
+    credentialState={executionCredentialStatus}
+    credentialDraft={executionCredentialDraft}
+    credentialLoading={executionCredentialLoading}
+    credentialError={executionCredentialError}
+    onCredentialInput={(value) => (executionCredentialDraft = value)}
+    onSaveCredential={handleSaveExecutionCredential}
+    onClearCredential={handleClearExecutionCredential}
   />
 {:else}
   <WorkspaceShell
@@ -911,11 +925,6 @@
     onCreatePrompt={handleCreatePrompt}
     {promptCreationLoading}
     credentialState={executionCredentialStatus}
-    credentialDraft={executionCredentialDraft}
-    credentialLoading={executionCredentialLoading}
-    onExecutionCredentialInput={(value: string) => (executionCredentialDraft = value)}
-    onSaveExecutionCredential={handleSaveExecutionCredential}
-    onClearExecutionCredential={handleClearExecutionCredential}
     historyItems={executionHistory}
     historyLoading={executionHistoryLoading}
     onOpenRunPath={handleOpenRunPath}
@@ -931,5 +940,6 @@
     onDeletePreset={handleDeletePreset}
     onOpenPresetFile={handleOpenPresetFile}
     onSetBlockPreset={handleSetBlockPreset}
+    onSetBlockOutputTarget={handleSetBlockOutputTarget}
   />
 {/if}

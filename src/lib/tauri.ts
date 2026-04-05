@@ -246,6 +246,14 @@ export async function setBlockModelPreset(
   return invoke<ProjectSummary>('set_block_model_preset', { rootPath, blockId, presetPath });
 }
 
+export async function setBlockOutputTarget(
+  rootPath: string,
+  blockId: string,
+  target: string
+): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>('set_block_output_target', { rootPath, blockId, target });
+}
+
 export async function renameProject(
   rootPath: string,
   newName: string

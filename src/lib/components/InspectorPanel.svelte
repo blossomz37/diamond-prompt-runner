@@ -26,6 +26,7 @@
     modelPresets: ModelPresetSummary[];
     onOpenRunPath: (path: string) => void | Promise<void>;
     onSetBlockPreset: (blockId: string, presetPath: string | null) => Promise<void>;
+    onSetBlockOutputTarget: (blockId: string, target: string) => Promise<void>;
   }
 
   let {
@@ -37,7 +38,8 @@
     activePromptBlock,
     modelPresets,
     onOpenRunPath,
-    onSetBlockPreset
+    onSetBlockPreset,
+    onSetBlockOutputTarget
   }: Props = $props();
 
   let historyFilter = $state('all');
@@ -99,16 +101,37 @@
   async function handlePresetChange(event: Event): Promise<void> {
     if (!activePromptBlock) return;
     const select = event.target as HTMLSelectElement;
-    const value = select.value || null;
+    const newPresetPath = select.value || null;
     
     presetSaving = true;
     presetError = '';
     try {
-      await onSetBlockPreset(activePromptBlock.blockId, value);
-    } catch (e) {
-      presetError = String(e);
+      await onSetBlockPreset(activePromptBlock.blockId, newPresetPath || null);
+    } catch (error) {
+      presetError = error instanceof Error ? error.message : 'Failed to update preset.';
     } finally {
       presetSaving = false;
+    }
+  }
+
+  let targetSaving = $state(false);
+  let targetError = $state<string | null>(null);
+
+  async function handleTargetChange(event: Event): Promise<void> {
+    if (!activePromptBlock) return;
+
+    const select = event.currentTarget as HTMLSelectElement;
+    const newTarget = select.value;
+
+    targetSaving = true;
+    targetError = null;
+
+    try {
+      await onSetBlockOutputTarget(activePromptBlock.blockId, newTarget);
+    } catch (error) {
+      targetError = error instanceof Error ? error.message : 'Failed to update target.';
+    } finally {
+      targetSaving = false;
     }
   }
 </script>
@@ -216,6 +239,27 @@
           </select>
           {#if presetError}
             <p class="preset-error">{presetError}</p>
+          {/if}
+        </div>
+        <div class="target-override">
+          <label for="block-target-select">Output Strategy</label>
+          <select
+            id="block-target-select"
+            class="preset-select"
+            value={activePromptBlock.outputTarget || 'history_only'}
+            onchange={handleTargetChange}
+            disabled={targetSaving}
+          >
+            <option value="history_only">Run History JSON only</option>
+            <option value="document">Extracted Text Document</option>
+            <option value="both">Both (Document + Full Run History)</option>
+          </select>
+          {#if targetError}
+            <p class="preset-error">{targetError}</p>
+          {/if}
+          
+          {#if activePromptBlock.outputTarget === 'document' || activePromptBlock.outputTarget === 'both'}
+            <p class="target-path focus-path">⇢ documents/{activePromptBlock.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}.md</p>
           {/if}
         </div>
       </section>
@@ -435,11 +479,50 @@
     border: 1px solid rgba(157, 180, 255, 0.16);
     background: rgba(7, 11, 20, 0.82);
     color: var(--text);
-    padding: 0.3rem 0.5rem;
+    padding: 0.35rem 0.55rem;
     font-size: 11.5px;
     outline: none;
     cursor: pointer;
   }
+
+  .preset-error {
+    margin: 0;
+    color: var(--danger);
+    font-size: 0.76rem;
+  }
+
+  .target-override {
+    display: grid;
+    gap: 0.4rem;
+    margin-top: 1.25rem;
+  }
+
+  .target-override label {
+    margin: 0;
+    font-size: 0.72rem;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .target-path {
+    margin: 0;
+    padding: 0.4rem 0.65rem;
+    border-radius: 8px;
+    background: rgba(13, 17, 28, 0.5);
+    border: 1px solid rgba(157, 180, 255, 0.08);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--accent);
+    word-break: break-all;
+  }
+
+  .target-path.none {
+    font-family: inherit;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
 
   .preset-select:focus {
     border-color: rgba(139, 177, 255, 0.35);

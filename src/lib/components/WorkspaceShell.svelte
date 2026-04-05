@@ -70,12 +70,6 @@
     exportLoading: boolean;
     onCreatePrompt: (name: string) => void | Promise<void>;
     promptCreationLoading: boolean;
-    credentialState: ExecutionCredentialStatus;
-    credentialDraft: string;
-    credentialLoading: boolean;
-    onExecutionCredentialInput: (value: string) => void;
-    onSaveExecutionCredential: () => void | Promise<void>;
-    onClearExecutionCredential: () => void | Promise<void>;
     historyItems: PromptRunHistoryEntry[];
     historyLoading: boolean;
     onOpenRunPath: (path: string) => void | Promise<void>;
@@ -91,6 +85,7 @@
     onDeletePreset: (presetPath: string) => Promise<void>;
     onOpenPresetFile: (presetPath: string) => void;
     onSetBlockPreset: (blockId: string, presetPath: string | null) => Promise<void>;
+    onSetBlockOutputTarget: (blockId: string, target: string) => Promise<void>;
   }
 
   let {
@@ -126,11 +121,6 @@
     onCreatePrompt,
     promptCreationLoading,
     credentialState,
-    credentialDraft,
-    credentialLoading,
-    onExecutionCredentialInput,
-    onSaveExecutionCredential,
-    onClearExecutionCredential,
     historyItems,
     historyLoading,
     onOpenRunPath,
@@ -145,7 +135,8 @@
     onCreatePreset,
     onDeletePreset,
     onOpenPresetFile,
-    onSetBlockPreset
+    onSetBlockPreset,
+    onSetBlockOutputTarget
   }: Props = $props();
 
   const activeTab = $derived(tabs.find((tab) => tab.path === activePath) ?? null);
@@ -346,7 +337,6 @@
             <SidebarSettings
               {summary}
               presets={modelPresets}
-              credentialStatus={credentialState}
               {onRenameProject}
               {onSetDefaultPreset}
               {onCreatePreset}
@@ -432,6 +422,7 @@
         activePromptBlock={activePromptBlock}
         modelPresets={modelPresets}
         onSetBlockPreset={onSetBlockPreset}
+        onSetBlockOutputTarget={onSetBlockOutputTarget}
       />
     </aside>
 
@@ -456,11 +447,6 @@
           execution={activeExecution}
           executionLoading={executionLoading && activeTab?.kind === 'tera'}
           credentialState={credentialState}
-          credentialDraft={credentialDraft}
-          credentialLoading={credentialLoading}
-          onCredentialInput={onExecutionCredentialInput}
-          onSaveCredential={onSaveExecutionCredential}
-          onClearCredential={onClearExecutionCredential}
           recentRuns={historyItems}
           recentRunsLoading={historyLoading}
           onOpenRunPath={onOpenRunPath}

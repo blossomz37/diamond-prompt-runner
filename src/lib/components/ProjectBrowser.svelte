@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ProjectSummary, RecentProjectEntry } from '$lib/types/project';
+  import type { ExecutionCredentialStatus, ProjectSummary, RecentProjectEntry } from '$lib/types/project';
 
   interface Props {
     recentProjects: RecentProjectEntry[];
@@ -14,6 +14,13 @@
     onOpenRecent: (project: ProjectSummary) => void | Promise<void>;
     onLocateRecent: (project: RecentProjectEntry) => void | Promise<void>;
     onRemoveRecent: (rootPath: string) => void | Promise<void>;
+    credentialState: ExecutionCredentialStatus;
+    credentialDraft: string;
+    credentialLoading: boolean;
+    credentialError: string | null;
+    onCredentialInput: (value: string) => void;
+    onSaveCredential: () => void | Promise<void>;
+    onClearCredential: () => void | Promise<void>;
   }
 
   let {
@@ -28,8 +35,31 @@
     onOpenExisting,
     onOpenRecent,
     onLocateRecent,
-    onRemoveRecent
+    onRemoveRecent,
+    credentialState,
+    credentialDraft,
+    credentialLoading,
+    credentialError,
+    onCredentialInput,
+    onSaveCredential,
+    onClearCredential
   }: Props = $props();
+
+  function credentialTone(source: ExecutionCredentialStatus['source']): string {
+    switch (source) {
+      case 'keychain': return 'good';
+      case 'environment': return 'warn';
+      default: return 'bad';
+    }
+  }
+
+  function credentialLabel(source: ExecutionCredentialStatus['source']): string {
+    switch (source) {
+      case 'keychain': return 'keychain';
+      case 'environment': return 'env fallback';
+      default: return 'missing';
+    }
+  }
 </script>
 
 <section class="browser-shell">
@@ -42,10 +72,49 @@
         files in read-only tabs.
       </p>
     </div>
-    <div class="hero-note">
-      <span class="pill">Tauri 2</span>
-      <span class="pill">Svelte 5</span>
-      <span class="pill">Read-only shell</span>
+    <div class="global-credentials">
+      <div class="heading">
+        <p class="meta">Global Credentials</p>
+        <span class={`badge ${credentialTone(credentialState.source)}`}>
+          {credentialLabel(credentialState.source)}
+        </span>
+      </div>
+      <div class="credential-input-group">
+        {#if credentialState.hasStoredKey}
+          <div class="inline-input secured-readout">
+            <span>••••••••••••••••••••••••</span>
+          </div>
+          <button
+            type="button"
+            class="secondary clear-key"
+            onclick={() => onClearCredential()}
+            disabled={credentialLoading}
+          >
+            Clear key
+          </button>
+        {:else}
+          <input
+            type="password"
+            class="inline-input"
+            value={credentialDraft}
+            placeholder="sk-or-v1-..."
+            autocomplete="off"
+            spellcheck="false"
+            oninput={(event) => onCredentialInput((event.currentTarget as HTMLInputElement).value)}
+          />
+          <button
+            type="button"
+            class="primary save-key"
+            onclick={() => onSaveCredential()}
+            disabled={credentialLoading || credentialDraft.trim().length === 0}
+          >
+            {credentialLoading ? 'Saving…' : 'Save key'}
+          </button>
+        {/if}
+      </div>
+      {#if credentialError}
+        <p class="credential-error">{credentialError}</p>
+      {/if}
     </div>
   </div>
 
@@ -206,6 +275,74 @@
     align-items: flex-start;
     flex-wrap: wrap;
     justify-content: flex-end;
+  }
+
+  .global-credentials {
+    display: grid;
+    gap: 0.5rem;
+    align-self: start;
+    justify-items: end;
+  }
+
+  .global-credentials .heading {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .meta {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .badge {
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+
+  .badge.good { background: rgba(153, 227, 190, 0.15); color: #99e3be; }
+  .badge.warn { background: rgba(255, 204, 102, 0.15); color: #ffcc66; }
+  .badge.bad  { background: rgba(255, 102, 102, 0.15); color: #ff6666; }
+
+  .credential-input-group {
+    display: flex;
+    gap: 0.45rem;
+  }
+
+  .inline-input {
+    min-height: 2.2rem;
+    padding: 0 0.65rem;
+    border-radius: 6px;
+    border: 1px solid var(--panel-border);
+    background: rgba(7, 11, 20, 0.82);
+    color: var(--text);
+    width: 14rem;
+  }
+
+  .inline-input.secured-readout {
+    display: flex;
+    align-items: center;
+    color: var(--accent);
+    background: rgba(139, 177, 255, 0.05);
+    border-color: rgba(139, 177, 255, 0.15);
+  }
+
+  .save-key, .clear-key {
+    min-height: 2.2rem;
+    border-radius: 6px;
+  }
+
+  .credential-error {
+    margin: 0;
+    color: var(--danger);
+    font-size: 0.8rem;
   }
 
   .pill {

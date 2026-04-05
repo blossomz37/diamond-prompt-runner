@@ -326,6 +326,20 @@ fn set_block_model_preset(
 }
 
 #[tauri::command]
+fn set_block_output_target(
+    root_path: String,
+    block_id: String,
+    target: String,
+) -> Result<ProjectSummary, String> {
+    project_store::set_block_output_target(
+        PathBuf::from(root_path).as_path(),
+        &block_id,
+        &target,
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn rename_project(
     app: tauri::AppHandle,
     root_path: String,
@@ -376,6 +390,7 @@ pub fn run() {
             create_model_preset,
             delete_model_preset,
             set_block_model_preset,
+            set_block_output_target,
             rename_project
         ])
         .run(tauri::generate_context!())

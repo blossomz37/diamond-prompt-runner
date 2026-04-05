@@ -153,6 +153,7 @@ export interface ProjectPipelineBlock {
   name: string;
   templateSource: string;
   modelPreset: string;
+  outputTarget: string;
 }
 
 export type ProjectPromptBlock = ProjectPipelineBlock;

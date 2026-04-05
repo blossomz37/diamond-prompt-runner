@@ -725,6 +725,35 @@ pub fn set_block_model_preset(
     summarize_project(&root_path, &manifest)
 }
 
+pub fn set_block_output_target(
+    root_path: &Path,
+    block_id: &str,
+    target: &str,
+) -> StoreResult<ProjectSummary> {
+    let (root_path, mut manifest) = validate_project(root_path)?;
+
+    let valid_targets = ["history_only", "document", "both"];
+    if !valid_targets.contains(&target) {
+        return Err(ProjectStoreError::message(format!(
+            "Invalid output target '{}'",
+            target
+        )));
+    }
+
+    let block = manifest
+        .prompt_blocks
+        .iter_mut()
+        .find(|b| b.block_id == block_id)
+        .ok_or_else(|| {
+            ProjectStoreError::message(format!("Prompt block not found: {}", block_id))
+        })?;
+
+    block.output_target = target.to_string();
+    manifest.updated_at = timestamp();
+    write_manifest(&root_path, &manifest)?;
+    summarize_project(&root_path, &manifest)
+}
+
 pub fn rename_project(
     root_path: &Path,
     new_name: &str,
