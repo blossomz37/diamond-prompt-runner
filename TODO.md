@@ -56,6 +56,7 @@ Oldest to Newest
 - [x] Workspace Shell Restructure: move Pipelines, Variables, Exports to collapsible left sidebar sections; pipeline authoring opens in center pane; strip Inspector to read-only.
 - [x] Settings and Model Presets Slice: add project settings UI, automatic model preset generator, and enable inline dynamic overrides for model choices.
 - [x] Output Target & JSON Slimdown Slice: implement document artifact extraction loop (`outputTarget: 'document'`); purge payload bloat, extract `variables`, and map `document_path` on JSON records.
+- [x] Asset Lifecycle Slice (Phases 1–3): pipeline deletion, prompt block manifest removal (preserving .tera), and run artifact deletion — all with two-click inline confirmation.
 
 
 ## Post-MVP

@@ -22,6 +22,7 @@
     onRunPipeline: (pipelineId: string) => void | Promise<void>;
     onEditPipeline: (pipeline: ProjectPipeline) => void;
     onNewPipeline: () => void;
+    onDeletePipeline: (pipelineId: string) => Promise<void>;
   }
 
   let {
@@ -32,8 +33,26 @@
     pipelineAuthoringLoading,
     onRunPipeline,
     onEditPipeline,
-    onNewPipeline
+    onNewPipeline,
+    onDeletePipeline
   }: Props = $props();
+
+  let deletePipelineConfirm = $state<string | null>(null);
+  let deletePipelineLoading = $state(false);
+
+  async function handleDeletePipeline(pipelineId: string): Promise<void> {
+    if (deletePipelineConfirm !== pipelineId) {
+      deletePipelineConfirm = pipelineId;
+      return;
+    }
+    deletePipelineLoading = true;
+    try {
+      await onDeletePipeline(pipelineId);
+      deletePipelineConfirm = null;
+    } finally {
+      deletePipelineLoading = false;
+    }
+  }
 </script>
 
 <div class="sidebar-pipelines">
@@ -65,16 +84,26 @@
               type="button"
               class="mini-action"
               onclick={() => onEditPipeline(pipeline)}
-              disabled={pipelineLoading || pipelineAuthoringLoading}
+              disabled={pipelineLoading || pipelineAuthoringLoading || deletePipelineLoading}
             >
               Edit
             </button>
             <button
               type="button"
+              class="mini-action"
+              class:danger={deletePipelineConfirm === pipeline.pipelineId}
+              aria-label={deletePipelineConfirm === pipeline.pipelineId ? `Confirm delete ${pipeline.name}` : `Delete ${pipeline.name}`}
+              onclick={() => handleDeletePipeline(pipeline.pipelineId)}
+              disabled={pipelineLoading || pipelineAuthoringLoading || deletePipelineLoading}
+            >
+              {deletePipelineConfirm === pipeline.pipelineId ? 'Confirm?' : 'Delete'}
+            </button>
+            <button
+              type="button"
               class="pipeline-run"
               aria-label="Run {pipeline.name}"
-              onclick={() => onRunPipeline(pipeline.pipelineId)}
-              disabled={pipelineLoading || pipelineAuthoringLoading}
+              onclick={() => { deletePipelineConfirm = null; onRunPipeline(pipeline.pipelineId); }}
+              disabled={pipelineLoading || pipelineAuthoringLoading || deletePipelineLoading}
             >
               {pipelineLoading && pipelineExecution?.pipelineId === pipeline.pipelineId ? 'Running…' : 'Run'}
             </button>
@@ -209,5 +238,10 @@
     color: var(--text);
     background: linear-gradient(135deg, rgba(153, 227, 190, 0.22), rgba(49, 134, 96, 0.28));
     font-size: 0.78rem;
+  }
+
+  .mini-action.danger {
+    border-color: rgba(255, 100, 100, 0.35);
+    color: var(--danger);
   }
 </style>

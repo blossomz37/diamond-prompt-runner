@@ -86,6 +86,9 @@
     onOpenPresetFile: (presetPath: string) => void;
     onSetBlockPreset: (blockId: string, presetPath: string | null) => Promise<void>;
     onSetBlockOutputTarget: (blockId: string, target: string) => Promise<void>;
+    onDeletePipeline: (pipelineId: string) => Promise<void>;
+    onDeletePromptBlock: (blockId: string) => Promise<void>;
+    onDeleteRun: (runPath: string) => Promise<void>;
   }
 
   let {
@@ -136,8 +139,28 @@
     onDeletePreset,
     onOpenPresetFile,
     onSetBlockPreset,
-    onSetBlockOutputTarget
+    onSetBlockOutputTarget,
+    onDeletePipeline,
+    onDeletePromptBlock,
+    onDeleteRun
   }: Props = $props();
+
+  let deleteBlockConfirm = $state<string | null>(null);
+  let deleteBlockLoading = $state(false);
+
+  async function handleDeletePromptBlock(blockId: string): Promise<void> {
+    if (deleteBlockConfirm !== blockId) {
+      deleteBlockConfirm = blockId;
+      return;
+    }
+    deleteBlockLoading = true;
+    try {
+      await onDeletePromptBlock(blockId);
+      deleteBlockConfirm = null;
+    } finally {
+      deleteBlockLoading = false;
+    }
+  }
 
   const activeTab = $derived(tabs.find((tab) => tab.path === activePath) ?? null);
   const activePromptBlock = $derived(
@@ -264,6 +287,27 @@
               </form>
             {/if}
             <ExplorerTree nodes={nodes} activePath={pipelineEditorActive ? null : activePath} onSelectPath={onSelectAsset} />
+
+            {#if promptBlocks.length > 0}
+              <div class="block-list">
+                <p class="block-list-label">Registered Blocks</p>
+                {#each promptBlocks as block (block.blockId)}
+                  <div class="block-row">
+                    <span class="block-name">{block.name}</span>
+                    <button
+                      type="button"
+                      class="mini-action block-delete"
+                      class:danger={deleteBlockConfirm === block.blockId}
+                      onclick={() => handleDeletePromptBlock(block.blockId)}
+                      disabled={deleteBlockLoading}
+                      aria-label={deleteBlockConfirm === block.blockId ? `Confirm remove ${block.name}` : `Remove ${block.name}`}
+                    >
+                      {deleteBlockConfirm === block.blockId ? 'Confirm?' : 'Remove'}
+                    </button>
+                  </div>
+                {/each}
+              </div>
+            {/if}
           </div>
         {/if}
       </div>
@@ -285,6 +329,7 @@
               onRunPipeline={onRunPipeline}
               onEditPipeline={(pipeline) => openPipelineEditor(pipeline)}
               onNewPipeline={() => openPipelineEditor(null)}
+              {onDeletePipeline}
             />
           </div>
         {/if}
@@ -419,6 +464,7 @@
         runHistoryLoading={projectRunHistoryLoading}
         usageSummary={projectUsageSummary}
         onOpenRunPath={onOpenRunPath}
+        onDeleteRun={onDeleteRun}
         activePromptBlock={activePromptBlock}
         modelPresets={modelPresets}
         onSetBlockPreset={onSetBlockPreset}
@@ -640,6 +686,49 @@
   .mini-action.primary {
     background: rgba(139, 177, 255, 0.14);
     border-color: rgba(139, 177, 255, 0.28);
+  }
+
+  .mini-action.danger {
+    border-color: rgba(255, 100, 100, 0.35);
+    color: var(--danger);
+  }
+
+  .block-list {
+    display: grid;
+    gap: 0.3rem;
+    margin-top: 0.65rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid rgba(157, 180, 255, 0.08);
+  }
+
+  .block-list-label {
+    margin: 0 0 0.25rem;
+    color: var(--text-soft);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .block-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .block-name {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .block-delete {
+    flex-shrink: 0;
+    min-height: 0;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.75rem;
   }
 
   .create-form {

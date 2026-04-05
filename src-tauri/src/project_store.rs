@@ -542,6 +542,30 @@ pub fn create_prompt_block(
     })
 }
 
+pub fn delete_prompt_block(
+    root_path: &Path,
+    block_id: &str,
+    app_data_dir: &Path,
+) -> StoreResult<ProjectSummary> {
+    let (root_path, mut manifest) = validate_project(root_path)?;
+    let before_len = manifest.prompt_blocks.len();
+    manifest.prompt_blocks.retain(|b| b.block_id != block_id);
+    if manifest.prompt_blocks.len() == before_len {
+        return Err(ProjectStoreError::message(format!(
+            "Prompt block `{block_id}` was not found."
+        )));
+    }
+    // Remove the deleted block from any pipeline that references it.
+    for pipeline in &mut manifest.pipelines {
+        pipeline.ordered_blocks.retain(|id| id != block_id);
+    }
+    manifest.updated_at = timestamp();
+    write_manifest(&root_path, &manifest)?;
+    let summary = summarize_project(&root_path, &manifest)?;
+    update_recent_projects(app_data_dir, &summary)?;
+    Ok(summary)
+}
+
 pub fn get_recent_projects(app_data_dir: &Path) -> StoreResult<Vec<RecentProjectEntry>> {
     let recents = read_recents_store(app_data_dir)?;
 
@@ -947,6 +971,26 @@ pub fn update_pipeline(
     })
 }
 
+pub fn delete_pipeline(
+    root_path: &Path,
+    pipeline_id: &str,
+    app_data_dir: &Path,
+) -> StoreResult<ProjectSummary> {
+    let (root_path, mut manifest) = validate_project(root_path)?;
+    let before_len = manifest.pipelines.len();
+    manifest.pipelines.retain(|p| p.pipeline_id != pipeline_id);
+    if manifest.pipelines.len() == before_len {
+        return Err(ProjectStoreError::message(format!(
+            "Pipeline `{pipeline_id}` was not found."
+        )));
+    }
+    manifest.updated_at = timestamp();
+    write_manifest(&root_path, &manifest)?;
+    let summary = summarize_project(&root_path, &manifest)?;
+    update_recent_projects(app_data_dir, &summary)?;
+    Ok(summary)
+}
+
 pub fn export_project_assets(
     root_path: &Path,
     bundle_name: &str,
@@ -1269,6 +1313,26 @@ pub fn list_prompt_run_history(root_path: &Path, relative_path: &str) -> StoreRe
 pub fn list_project_run_history(root_path: &Path) -> StoreResult<Vec<ProjectRunHistoryEntry>> {
     let (root_path, _) = validate_project(root_path)?;
     read_run_history_entries(&root_path, None)
+}
+
+pub fn delete_run(root_path: &Path, run_path: &str) -> StoreResult<()> {
+    let (root_path, _) = validate_project(root_path)?;
+    let safe_relative = sanitize_relative_path(run_path)?;
+    // Restrict deletions to the runs/ directory only.
+    let first_component = safe_relative.components().next();
+    if first_component != Some(Component::Normal("runs".as_ref())) {
+        return Err(ProjectStoreError::message(
+            "Run artifact path must be within the runs/ directory.",
+        ));
+    }
+    let full_path = root_path.join(&safe_relative);
+    if !full_path.is_file() {
+        return Err(ProjectStoreError::message(format!(
+            "Run artifact not found: {run_path}"
+        )));
+    }
+    fs::remove_file(full_path)?;
+    Ok(())
 }
 
 pub fn get_project_usage_summary(root_path: &Path) -> StoreResult<ProjectUsageSummary> {

@@ -11,7 +11,7 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 - Product spec: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
 - Approved prototype: `Diamond Runner v2 - IDE Pass`
 - App direction: Tauri + Svelte desktop app with an IDE-like shell
-- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, the Single-Block Execution Slice, the Pipeline Runner Slice, the Run History Slice, the Pipeline Authoring Slice, the Export Bundle Slice, the Usage Metrics Slice, the Variable Assignment UI, the Workspace Shell Restructure, the Settings and Model Presets Slice, and the Output Target & JSON Slimdown Slice are complete
+- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, the Single-Block Execution Slice, the Pipeline Runner Slice, the Run History Slice, the Pipeline Authoring Slice, the Export Bundle Slice, the Usage Metrics Slice, the Variable Assignment UI, the Workspace Shell Restructure, the Settings and Model Presets Slice, the Output Target & JSON Slimdown Slice, and the Asset Lifecycle Slice (Phases 1–3: pipeline deletion, prompt block deletion, run history deletion) are complete
 - Current Rendering and Validation behavior:
 	- markdown, text, `.tera`, and model YAML assets are editable in the workspace
 	- new prompt blocks can be created directly from the explorer without hand-editing `project.json`
@@ -52,7 +52,13 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 	- pipeline create and edit open in the center pane as virtual tabs
 	- the right inspector is read-only: Project summary, Usage, File Metadata, and Run History
 
-Active implementation plan: `implementation-plans/19-PLAN-output-target-and-json-slimdown.md`
+- Current asset lifecycle status:
+	- pipelines can be deleted from the Pipelines sidebar with a two-click inline confirmation; deletion removes the pipeline from `project.json` without touching any prompt block templates
+	- prompt blocks can be removed from the manifest via the "Registered Blocks" list in the Explorer sidebar; the underlying `.tera` file is preserved on disk
+	- individual run artifacts can be deleted from the Run History inspector with the same two-click inline confirmation; deletion removes the JSON file from `runs/` and refreshes the usage summary
+	- all three deletions are guarded: they fail cleanly if the target is not found and do not corrupt `project.json`
+
+Active implementation plan: `implementation-plans/21-PLAN-asset-lifecycle-management.md`
 
 ## Recommended Agent Setup
 

@@ -38,9 +38,10 @@ Use these docs by question type:
 - Historical planning context or milestone references: other files under `implementation-plans/`
 
 ## Current Active Slice
-- The most recently completed implementation plan is `implementation-plans/17-PLAN-workspace-shell-restructure.md`.
-- Workspace Shell Restructure is complete.
-- All prior slices (Milestone 1, Editing, Rendering and Validation, Single-Block Execution, Pipeline Runner, Run History, Pipeline Authoring, Export Bundle, Online Research, Usage Metrics, Variable Assignment UI) are complete and should be treated as closed work unless a regression is introduced.
+- The most recently completed implementation plan is `implementation-plans/21-PLAN-asset-lifecycle-management.md` (Phases 1–3).
+- Asset Lifecycle Phases 1–3 (pipeline deletion, prompt block removal, run history deletion) are complete.
+- All prior slices (Milestone 1, Editing, Rendering and Validation, Single-Block Execution, Pipeline Runner, Run History, Pipeline Authoring, Export Bundle, Online Research, Usage Metrics, Variable Assignment UI, Workspace Shell Restructure, Settings and Model Presets, Output Target & JSON Slimdown, API Key UX & Output Strategy Label) are complete and should be treated as closed work unless a regression is introduced.
+- Remaining open work in Plan 21: Phase 4 (Document CRUD) and Phase 5 (Pipeline Export via UI).
 
 ## Build And Test Commands
 

@@ -50,8 +50,8 @@ Currently, the "file-first" architecture relies on users manually manipulating f
   - Hook an "Export" button on the Pipeline UI that gathers the pipeline JSON object and its associated `.tera` templates into an organized export package.
   
 ## Success Criteria
-- [ ] A user can delete a pipeline without opening `project.json`.
-- [ ] A user can delete a prompt block without accidentally destroying the underlying `.tera` template file.
-- [ ] A user can delete old runs to free up history clutter.
+- [x] A user can delete a pipeline without opening `project.json`.
+- [x] A user can delete a prompt block without accidentally destroying the underlying `.tera` template file.
+- [x] A user can delete old runs to free up history clutter.
 - [ ] Documents can be renamed and deleted natively from the Explorer Tree.
 - [ ] The risk of JSON corruption from manual editing is effectively reduced to zero for daily use cases.

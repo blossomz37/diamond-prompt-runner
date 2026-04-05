@@ -36,7 +36,10 @@
     setProjectVariables,
     updatePipeline,
     validateProjectTemplate,
-    writeProjectAsset
+    writeProjectAsset,
+    deletePipeline,
+    deletePromptBlock,
+    deleteRun
   } from '$lib/tauri';
   import type {
     ExecutionCredentialStatus,
@@ -811,6 +814,48 @@
     await openAssetPath(path);
   }
 
+  async function handleDeletePipeline(pipelineId: string): Promise<void> {
+    if (!workspace) return;
+    const updated = await deletePipeline(workspace.rootPath, pipelineId);
+    workspace = updated;
+    await refreshPipelineAuthoringState(workspace.rootPath);
+  }
+
+  async function handleDeletePromptBlock(blockId: string): Promise<void> {
+    if (!workspace) return;
+    const updated = await deletePromptBlock(workspace.rootPath, blockId);
+    workspace = updated;
+    // Refresh both asset tree and block/pipeline lists since pipeline steps may have changed.
+    const [nodes, pipelines, blocks] = await Promise.all([
+      listProjectAssets(workspace.rootPath),
+      listProjectPipelines(workspace.rootPath),
+      listProjectPromptBlocks(workspace.rootPath)
+    ]);
+    assetNodes = nodes;
+    projectPipelines = pipelines;
+    projectPromptBlocks = blocks;
+  }
+
+  async function handleDeleteRun(runPath: string): Promise<void> {
+    if (!workspace) return;
+    // Optimistic removal for instant feedback.
+    projectRunHistory = projectRunHistory.filter((item) => item.runPath !== runPath);
+    try {
+      await deleteRun(workspace.rootPath, runPath);
+      // Refresh usage summary since a run was removed.
+      projectUsageSummary = await getProjectUsageSummary(workspace.rootPath);
+    } catch (error) {
+      // On failure, refetch the full history to restore consistent state.
+      errorMessage = error instanceof Error ? error.message : 'Failed to delete run artifact.';
+      const [history, usage] = await Promise.all([
+        listProjectRunHistory(workspace.rootPath),
+        getProjectUsageSummary(workspace.rootPath)
+      ]);
+      projectRunHistory = history;
+      projectUsageSummary = usage;
+    }
+  }
+
   async function handleSaveExecutionCredential(): Promise<void> {
     if (executionCredentialLoading) {
       return;
@@ -941,5 +986,8 @@
     onOpenPresetFile={handleOpenPresetFile}
     onSetBlockPreset={handleSetBlockPreset}
     onSetBlockOutputTarget={handleSetBlockOutputTarget}
+    onDeletePipeline={handleDeletePipeline}
+    onDeletePromptBlock={handleDeletePromptBlock}
+    onDeleteRun={handleDeleteRun}
   />
 {/if}

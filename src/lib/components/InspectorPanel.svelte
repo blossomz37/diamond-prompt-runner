@@ -25,6 +25,7 @@
     activePromptBlock: ProjectPromptBlock | null;
     modelPresets: ModelPresetSummary[];
     onOpenRunPath: (path: string) => void | Promise<void>;
+    onDeleteRun: (runPath: string) => Promise<void>;
     onSetBlockPreset: (blockId: string, presetPath: string | null) => Promise<void>;
     onSetBlockOutputTarget: (blockId: string, target: string) => Promise<void>;
   }
@@ -38,9 +39,27 @@
     activePromptBlock,
     modelPresets,
     onOpenRunPath,
+    onDeleteRun,
     onSetBlockPreset,
     onSetBlockOutputTarget
   }: Props = $props();
+
+  let deleteRunConfirm = $state<string | null>(null);
+  let deleteRunLoading = $state(false);
+
+  async function handleDeleteRun(runPath: string): Promise<void> {
+    if (deleteRunConfirm !== runPath) {
+      deleteRunConfirm = runPath;
+      return;
+    }
+    deleteRunLoading = true;
+    try {
+      await onDeleteRun(runPath);
+      deleteRunConfirm = null;
+    } finally {
+      deleteRunLoading = false;
+    }
+  }
 
   let historyFilter = $state('all');
 
@@ -317,7 +336,19 @@
               {:else if item.error}
                 <p class="failed">{item.error}</p>
               {/if}
-              <button type="button" class="history-open" onclick={() => onOpenRunPath(item.runPath)}>Open artifact</button>
+              <div class="history-item-actions">
+                <button type="button" class="history-open" onclick={() => { deleteRunConfirm = null; onOpenRunPath(item.runPath); }}>Open</button>
+                <button
+                  type="button"
+                  class="history-delete"
+                  class:danger={deleteRunConfirm === item.runPath}
+                  onclick={() => handleDeleteRun(item.runPath)}
+                  disabled={deleteRunLoading}
+                  aria-label={deleteRunConfirm === item.runPath ? 'Confirm delete run' : 'Delete run'}
+                >
+                  {deleteRunConfirm === item.runPath ? 'Confirm?' : 'Delete'}
+                </button>
+              </div>
             </article>
           {/each}
         </div>
@@ -416,13 +447,28 @@
   }
 
   .history-filter select,
-  .history-open {
+  .history-open,
+  .history-delete {
     min-height: 2rem;
     border-radius: 10px;
     border: 1px solid rgba(157, 180, 255, 0.16);
     background: rgba(7, 11, 20, 0.82);
     color: var(--text);
     padding: 0.35rem 0.55rem;
+  }
+
+  .history-item-actions {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .history-delete {
+    font-size: 0.78rem;
+  }
+
+  .history-delete.danger {
+    border-color: rgba(255, 100, 100, 0.35);
+    color: var(--danger);
   }
 
   .history-list {

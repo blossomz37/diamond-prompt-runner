@@ -354,6 +354,42 @@ fn rename_project(
     .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn delete_pipeline(
+    app: tauri::AppHandle,
+    root_path: String,
+    pipeline_id: String,
+) -> Result<ProjectSummary, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::delete_pipeline(
+        PathBuf::from(root_path).as_path(),
+        &pipeline_id,
+        &app_data_dir,
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn delete_prompt_block(
+    app: tauri::AppHandle,
+    root_path: String,
+    block_id: String,
+) -> Result<ProjectSummary, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::delete_prompt_block(
+        PathBuf::from(root_path).as_path(),
+        &block_id,
+        &app_data_dir,
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn delete_run(root_path: String, run_path: String) -> Result<(), String> {
+    project_store::delete_run(PathBuf::from(root_path).as_path(), &run_path)
+        .map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -391,7 +427,10 @@ pub fn run() {
             delete_model_preset,
             set_block_model_preset,
             set_block_output_target,
-            rename_project
+            rename_project,
+            delete_pipeline,
+            delete_prompt_block,
+            delete_run
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

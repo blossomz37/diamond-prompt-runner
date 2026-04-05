@@ -260,3 +260,21 @@ export async function renameProject(
 ): Promise<ProjectSummary> {
   return invoke<ProjectSummary>('rename_project', { rootPath, newName });
 }
+
+export async function deletePipeline(
+  rootPath: string,
+  pipelineId: string
+): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>('delete_pipeline', { rootPath, pipelineId });
+}
+
+export async function deletePromptBlock(
+  rootPath: string,
+  blockId: string
+): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>('delete_prompt_block', { rootPath, blockId });
+}
+
+export async function deleteRun(rootPath: string, runPath: string): Promise<void> {
+  return invoke('delete_run', { rootPath, runPath });
+}
