@@ -78,7 +78,8 @@ const summary: ProjectSummary = {
     prompts: 1,
     models: 1,
     runs: 0,
-    exports: 0
+    exports: 0,
+    help: 0
   },
   variables: {}
 };

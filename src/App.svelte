@@ -1013,6 +1013,6 @@
     onDeleteRun={handleDeleteRun}
     onDeleteDocument={handleDeleteDocument}
     onRenameDocument={handleRenameDocument}
-    onOpenHelp={(key) => { /* TODO: open help tab in center pane */ console.log('Help topic:', key); }}
+    onOpenHelpFile={handleSelectAsset}
   />
 {/if}

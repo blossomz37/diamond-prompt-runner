@@ -14,6 +14,7 @@ export interface ProjectCounts {
   models: number;
   runs: number;
   exports: number;
+  help: number;
 }
 
 export interface ProjectSummary {
