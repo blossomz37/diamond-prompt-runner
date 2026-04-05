@@ -99,16 +99,19 @@
   // ── Export ────────────────────────────────────
   let exportLoading = $state(false);
   let exportError = $state('');
+  let exportSuccess = $state('');
 
   async function handleExport(): Promise<void> {
     if (!existingPipeline || exportLoading) return;
     exportLoading = true;
     exportError = '';
+    exportSuccess = '';
     const slug = existingPipeline.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const bundleName = `pipeline-${slug}`;
     const paths = existingPipeline.blocks.map((b) => b.templateSource).filter(Boolean);
     try {
       await onExportPipeline(bundleName, paths);
+      exportSuccess = `Exported to exports/${bundleName}/`;
     } catch (e) {
       exportError = e instanceof Error ? e.message : 'Export failed.';
     } finally {
@@ -197,6 +200,9 @@
     </div>
     {#if exportError}
       <p class="meta failed">{exportError}</p>
+    {/if}
+    {#if exportSuccess}
+      <p class="meta success">{exportSuccess}</p>
     {/if}
     {#if thisExecution}
       <div class="pipeline-status">
@@ -336,6 +342,10 @@
 
   .failed {
     color: var(--danger);
+  }
+
+  .success {
+    color: var(--accent, #99e3be);
   }
 
   .pipeline-status {
