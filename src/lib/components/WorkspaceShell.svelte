@@ -8,11 +8,16 @@
   // Author:      Diamond Runner
   // ──────────────────────────────────────────────
   import AssetViewer from '$lib/components/AssetViewer.svelte';
-  import ExplorerTree from '$lib/components/ExplorerTree.svelte';
   import InspectorPanel from '$lib/components/InspectorPanel.svelte';
   import PipelineEditorTab from '$lib/components/PipelineEditorTab.svelte';
+  import SidebarDocuments from '$lib/components/SidebarDocuments.svelte';
   import SidebarExports from '$lib/components/SidebarExports.svelte';
+  import SidebarHelp from '$lib/components/SidebarHelp.svelte';
+  import SidebarModels from '$lib/components/SidebarModels.svelte';
   import SidebarPipelines from '$lib/components/SidebarPipelines.svelte';
+  import SidebarPromptBlocks from '$lib/components/SidebarPromptBlocks.svelte';
+  import SidebarPrompts from '$lib/components/SidebarPrompts.svelte';
+  import SidebarRuns from '$lib/components/SidebarRuns.svelte';
   import SidebarSettings from '$lib/components/SidebarSettings.svelte';
   import SidebarVariables from '$lib/components/SidebarVariables.svelte';
   import ValidationPanel from '$lib/components/ValidationPanel.svelte';
@@ -91,6 +96,8 @@
     onDeleteRun: (runPath: string) => Promise<void>;
     onDeleteDocument: (relativePath: string) => Promise<void>;
     onRenameDocument: (relativePath: string, newName: string) => Promise<void>;
+    credentialState: ExecutionCredentialStatus | null;
+    onOpenHelp: (key: string) => void;
   }
 
   let {
@@ -146,49 +153,29 @@
     onDeletePromptBlock,
     onDeleteRun,
     onDeleteDocument,
-    onRenameDocument
+    onRenameDocument,
+    onOpenHelp
   }: Props = $props();
 
-  let deleteBlockConfirm = $state<string | null>(null);
-  let deleteBlockLoading = $state(false);
-
-  async function handleDeletePromptBlock(blockId: string): Promise<void> {
-    if (deleteBlockConfirm !== blockId) {
-      deleteBlockConfirm = blockId;
-      return;
-    }
-    deleteBlockLoading = true;
-    try {
-      await onDeletePromptBlock(blockId);
-      deleteBlockConfirm = null;
-    } finally {
-      deleteBlockLoading = false;
-    }
-  }
-
   const activeTab = $derived(tabs.find((tab) => tab.path === activePath) ?? null);
-  const activePromptBlock = $derived(
-    activeTab && activeTab.kind === 'tera'
-      ? promptBlocks.find((b) => b.templateSource === activeTab.path) ?? null
-      : null
-  );
   const activeExecution = $derived(
     activeTab && executionResult?.path === activeTab.path ? executionResult : null
   );
 
-  // Sidebar section collapse states
-  let explorerOpen = $state(true);
-  let pipelinesOpen = $state(false);
+  // Sidebar section collapse states (workflow order)
+  let modelsOpen = $state(false);
   let variablesOpen = $state(false);
+  let promptsOpen = $state(false);
+  let promptBlocksOpen = $state(false);
+  let pipelinesOpen = $state(false);
+  let runsOpen = $state(false);
+  let documentsOpen = $state(false);
   let exportsOpen = $state(false);
   let settingsOpen = $state(false);
+  let helpOpen = $state(false);
 
   // Bottom panel
   let bottomOpen = $state(true);
-
-  // Explorer prompt creation
-  let createPromptOpen = $state(false);
-  let newPromptName = $state('');
 
   // Pipeline editor virtual tab state
   let pipelineEditorActive = $state(false);
@@ -197,19 +184,6 @@
   const pipelineEditorTitle = $derived(
     pipelineEditorTarget ? `Pipeline: ${pipelineEditorTarget.name}` : 'New Pipeline'
   );
-
-  async function handleCreatePromptSubmit(): Promise<void> {
-    const trimmed = newPromptName.trim();
-    if (!trimmed) return;
-
-    try {
-      await onCreatePrompt(trimmed);
-      newPromptName = '';
-      createPromptOpen = false;
-    } catch {
-      // Keep the form open so the user can correct and retry.
-    }
-  }
 
   function openPipelineEditor(pipeline: ProjectPipeline | null): void {
     pipelineEditorTarget = pipeline;
@@ -260,69 +234,84 @@
 
   <div class="shell-grid" class:bottom-closed={!bottomOpen}>
     <aside class="sidebar panel">
-      <!-- Explorer section -->
-      <div class="sidebar-section" class:collapsed={!explorerOpen}>
-        <button type="button" class="sidebar-header" onclick={() => (explorerOpen = !explorerOpen)}>
-          <span>Explorer</span>
-          <span class="toggle">{explorerOpen ? '▾' : '▸'}</span>
+      <!-- 1. Models -->
+      <div class="sidebar-section" class:collapsed={!modelsOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (modelsOpen = !modelsOpen)}>
+          <span>Models</span>
+          <span class="toggle">{modelsOpen ? '▾' : '▸'}</span>
         </button>
-        {#if explorerOpen}
+        {#if modelsOpen}
           <div class="sidebar-body">
-            <div class="pane-head">
-              <div class="pane-actions">
-                <span>{nodes.length} root nodes</span>
-                <button type="button" class="mini-action" onclick={() => (createPromptOpen = !createPromptOpen)}>
-                  {createPromptOpen ? 'Close' : 'New Prompt'}
-                </button>
-              </div>
-            </div>
-            {#if createPromptOpen}
-              <form class="create-form" onsubmit={(event) => { event.preventDefault(); void handleCreatePromptSubmit(); }}>
-                <input
-                  type="text"
-                  bind:value={newPromptName}
-                  placeholder="Prompt name"
-                  aria-label="Prompt name"
-                  disabled={promptCreationLoading}
-                />
-                <button type="submit" class="mini-action primary" disabled={promptCreationLoading || !newPromptName.trim()}>
-                  {promptCreationLoading ? 'Creating…' : 'Create'}
-                </button>
-              </form>
-            {/if}
-            <ExplorerTree
-              nodes={nodes}
-              activePath={pipelineEditorActive ? null : activePath}
-              onSelectPath={onSelectAsset}
-              {onDeleteDocument}
-              {onRenameDocument}
+            <SidebarModels
+              {summary}
+              presets={modelPresets}
+              {onSetDefaultPreset}
+              {onCreatePreset}
+              {onDeletePreset}
+              {onOpenPresetFile}
             />
-
-            {#if promptBlocks.length > 0}
-              <div class="block-list">
-                <p class="block-list-label">Registered Blocks</p>
-                {#each promptBlocks as block (block.blockId)}
-                  <div class="block-row">
-                    <span class="block-name">{block.name}</span>
-                    <button
-                      type="button"
-                      class="mini-action block-delete"
-                      class:danger={deleteBlockConfirm === block.blockId}
-                      onclick={() => handleDeletePromptBlock(block.blockId)}
-                      disabled={deleteBlockLoading}
-                      aria-label={deleteBlockConfirm === block.blockId ? `Confirm remove ${block.name}` : `Remove ${block.name}`}
-                    >
-                      {deleteBlockConfirm === block.blockId ? 'Confirm?' : 'Remove'}
-                    </button>
-                  </div>
-                {/each}
-              </div>
-            {/if}
           </div>
         {/if}
       </div>
 
-      <!-- Pipelines section -->
+      <!-- 2. Variables -->
+      <div class="sidebar-section" class:collapsed={!variablesOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (variablesOpen = !variablesOpen)}>
+          <span>Variables</span>
+          <span class="toggle">{variablesOpen ? '▾' : '▸'}</span>
+        </button>
+        {#if variablesOpen}
+          <div class="sidebar-body">
+            <SidebarVariables
+              {summary}
+              {globalVariables}
+              {onSetGlobalVariables}
+              {onSetProjectVariables}
+            />
+          </div>
+        {/if}
+      </div>
+
+      <!-- 3. Prompts -->
+      <div class="sidebar-section" class:collapsed={!promptsOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (promptsOpen = !promptsOpen)}>
+          <span>Prompts</span>
+          <span class="toggle">{promptsOpen ? '▾' : '▸'}</span>
+        </button>
+        {#if promptsOpen}
+          <div class="sidebar-body">
+            <SidebarPrompts
+              {nodes}
+              activePath={pipelineEditorActive ? null : activePath}
+              onSelectPath={onSelectAsset}
+              {onCreatePrompt}
+              {promptCreationLoading}
+            />
+          </div>
+        {/if}
+      </div>
+
+      <!-- 4. Prompt Blocks -->
+      <div class="sidebar-section" class:collapsed={!promptBlocksOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (promptBlocksOpen = !promptBlocksOpen)}>
+          <span>Prompt Blocks</span>
+          <span class="toggle">{promptBlocksOpen ? '▾' : '▸'}</span>
+        </button>
+        {#if promptBlocksOpen}
+          <div class="sidebar-body">
+            <SidebarPromptBlocks
+              {promptBlocks}
+              {modelPresets}
+              {onDeletePromptBlock}
+              {onSetBlockPreset}
+              {onSetBlockOutputTarget}
+              onOpenTemplate={(path) => onSelectAsset({ name: path.split('/').pop() ?? path, path, kind: 'tera', isDirectory: false, children: [] })}
+            />
+          </div>
+        {/if}
+      </div>
+
+      <!-- 5. Pipelines -->
       <div class="sidebar-section" class:collapsed={!pipelinesOpen}>
         <button type="button" class="sidebar-header" onclick={() => (pipelinesOpen = !pipelinesOpen)}>
           <span>Pipelines</span>
@@ -346,25 +335,44 @@
         {/if}
       </div>
 
-      <!-- Variables section -->
-      <div class="sidebar-section" class:collapsed={!variablesOpen}>
-        <button type="button" class="sidebar-header" onclick={() => (variablesOpen = !variablesOpen)}>
-          <span>Variables</span>
-          <span class="toggle">{variablesOpen ? '▾' : '▸'}</span>
+      <!-- 6. Runs -->
+      <div class="sidebar-section" class:collapsed={!runsOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (runsOpen = !runsOpen)}>
+          <span>Runs</span>
+          <span class="toggle">{runsOpen ? '▾' : '▸'}</span>
         </button>
-        {#if variablesOpen}
+        {#if runsOpen}
           <div class="sidebar-body">
-            <SidebarVariables
-              {summary}
-              {globalVariables}
-              {onSetGlobalVariables}
-              {onSetProjectVariables}
+            <SidebarRuns
+              runHistory={projectRunHistory}
+              runHistoryLoading={projectRunHistoryLoading}
+              {onOpenRunPath}
+              {onDeleteRun}
             />
           </div>
         {/if}
       </div>
 
-      <!-- Exports section -->
+      <!-- 7. Documents -->
+      <div class="sidebar-section" class:collapsed={!documentsOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (documentsOpen = !documentsOpen)}>
+          <span>Documents</span>
+          <span class="toggle">{documentsOpen ? '▾' : '▸'}</span>
+        </button>
+        {#if documentsOpen}
+          <div class="sidebar-body">
+            <SidebarDocuments
+              {nodes}
+              activePath={pipelineEditorActive ? null : activePath}
+              onSelectPath={onSelectAsset}
+              {onDeleteDocument}
+              {onRenameDocument}
+            />
+          </div>
+        {/if}
+      </div>
+
+      <!-- 8. Exports -->
       <div class="sidebar-section" class:collapsed={!exportsOpen}>
         <button type="button" class="sidebar-header" onclick={() => (exportsOpen = !exportsOpen)}>
           <span>Exports</span>
@@ -382,7 +390,7 @@
         {/if}
       </div>
 
-      <!-- Settings section -->
+      <!-- 9. Settings -->
       <div class="sidebar-section" class:collapsed={!settingsOpen}>
         <button type="button" class="sidebar-header" onclick={() => (settingsOpen = !settingsOpen)}>
           <span>Settings</span>
@@ -393,12 +401,26 @@
             <SidebarSettings
               {summary}
               presets={modelPresets}
+              credentialStatus={credentialState}
               {onRenameProject}
               {onSetDefaultPreset}
               {onCreatePreset}
               {onDeletePreset}
               {onOpenPresetFile}
             />
+          </div>
+        {/if}
+      </div>
+
+      <!-- 10. Help -->
+      <div class="sidebar-section" class:collapsed={!helpOpen}>
+        <button type="button" class="sidebar-header" onclick={() => (helpOpen = !helpOpen)}>
+          <span>Help</span>
+          <span class="toggle">{helpOpen ? '▾' : '▸'}</span>
+        </button>
+        {#if helpOpen}
+          <div class="sidebar-body">
+            <SidebarHelp {onOpenHelp} />
           </div>
         {/if}
       </div>
@@ -471,15 +493,7 @@
       <InspectorPanel
         summary={summary}
         metadata={activeTab?.metadata ?? null}
-        runHistory={projectRunHistory}
-        runHistoryLoading={projectRunHistoryLoading}
         usageSummary={projectUsageSummary}
-        onOpenRunPath={onOpenRunPath}
-        onDeleteRun={onDeleteRun}
-        activePromptBlock={activePromptBlock}
-        modelPresets={modelPresets}
-        onSetBlockPreset={onSetBlockPreset}
-        onSetBlockOutputTarget={onSetBlockOutputTarget}
       />
     </aside>
 
@@ -697,66 +711,6 @@
   .mini-action.primary {
     background: rgba(139, 177, 255, 0.14);
     border-color: rgba(139, 177, 255, 0.28);
-  }
-
-  .mini-action.danger {
-    border-color: rgba(255, 100, 100, 0.35);
-    color: var(--danger);
-  }
-
-  .block-list {
-    display: grid;
-    gap: 0.3rem;
-    margin-top: 0.65rem;
-    padding-top: 0.65rem;
-    border-top: 1px solid rgba(157, 180, 255, 0.08);
-  }
-
-  .block-list-label {
-    margin: 0 0 0.25rem;
-    color: var(--text-soft);
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-  }
-
-  .block-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .block-name {
-    font-size: 0.82rem;
-    color: var(--text-dim);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .block-delete {
-    flex-shrink: 0;
-    min-height: 0;
-    padding: 0.2rem 0.45rem;
-    font-size: 0.75rem;
-  }
-
-  .create-form {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .create-form input {
-    min-width: 0;
-    min-height: 2.2rem;
-    border-radius: 12px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(7, 11, 20, 0.82);
-    color: var(--text);
-    padding: 0.55rem 0.75rem;
   }
 
   .pane-toggle {
