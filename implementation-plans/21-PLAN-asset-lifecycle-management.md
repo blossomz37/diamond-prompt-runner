@@ -16,15 +16,15 @@ Currently, the "file-first" architecture relies on users manually manipulating f
   - Wire up a confirmation modal: "Are you sure you want to delete this pipeline? (This does not delete the prompt blocks)."
   - Refetch / optimistic-update the local Project store upon success.
 
-## Phase 2: Prompt Block Lifecycle & Orchestrated Cleanup
-**Goal:** Prevent orphaned files when a prompt block is deleted. 
+## Phase 2: Prompt Block Lifecycle
+**Goal:** Safely remove prompt blocks from the workspace via UI without destroying underlying templates.
 - **Backend (Rust):**
   - Create `delete_prompt_block(project_id, block_id)` Tauri command.
   - Logic: Remove block from `prompt_blocks` array in `project.json`.
-  - Logic: Lookup the `templateSource` and physically delete the target `.tera` file from the `prompts/` directory to prevent clutter.
+  - **Important:** Do *not* delete the referenced `.tera` file, as it may be used by other blocks or kept for later use. Deleting physical templates should remain an explicit file browser action.
 - **Frontend (Svelte):**
   - Add standard "Delete" actions onto Prompt Blocks in the IDE shell.
-  - Display a strict warning: "This will also delete the target `.tera` file from your disk. Proceed?"
+  - Display confirmation: "Remove this prompt block? (The underlying .tera template file will remain untouched)."
 
 ## Phase 3: Run History Management
 **Goal:** Allow users to reclaim disk space and clear out junk generations.
@@ -51,7 +51,7 @@ Currently, the "file-first" architecture relies on users manually manipulating f
   
 ## Success Criteria
 - [ ] A user can delete a pipeline without opening `project.json`.
-- [ ] A user can delete a prompt block, and its underlying `.tera` file is successfully cleaned up.
+- [ ] A user can delete a prompt block without accidentally destroying the underlying `.tera` template file.
 - [ ] A user can delete old runs to free up history clutter.
 - [ ] Documents can be renamed and deleted natively from the Explorer Tree.
 - [ ] The risk of JSON corruption from manual editing is effectively reduced to zero for daily use cases.
