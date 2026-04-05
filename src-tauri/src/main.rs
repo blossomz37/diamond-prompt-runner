@@ -1,5 +1,6 @@
 mod project_store;
 mod types;
+// execution is a submodule of project_store — declared there
 
 use std::path::PathBuf;
 
