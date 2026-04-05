@@ -2,7 +2,7 @@
   "projectId": "3ba62a39-f7fa-4d95-8fe9-3dfa614c2442",
   "projectName": "EPBM 2 - Write Chapter 1",
   "createdAt": "2026-04-05T17:28:05Z",
-  "updatedAt": "2026-04-05T18:02:14Z",
+  "updatedAt": "2026-04-05T18:29:23Z",
   "defaultModelPreset": "models/default.yaml",
   "variables": {},
   "promptBlocks": [
@@ -48,6 +48,14 @@
         "draft-chapter-1",
         "edit-chapter-1",
         "final-chapter-1"
+      ],
+      "executionMode": "sequential"
+    },
+    {
+      "pipelineId": "plan-chapter-1",
+      "name": "Plan Chapter 1",
+      "orderedBlocks": [
+        "plan-chapter-1"
       ],
       "executionMode": "sequential"
     }
