@@ -36,7 +36,6 @@
     setGlobalVariables,
     setProjectVariables,
     updatePipeline,
-    validateProjectTemplate,
     writeProjectAsset,
     deletePipeline,
     deletePromptBlock,
@@ -60,10 +59,10 @@
     ProjectSummary,
     RecentProjectEntry,
     SavedPipelineResult,
-    TemplateValidationResult,
     WorkspaceTab
   } from '$lib/types/project';
   import { findAssetNode, latestStepForPath } from '$lib/utils/assetUtils';
+  import { createValidationStore } from '$lib/stores/validation.svelte';
 
   let mode = $state<'browser' | 'workspace'>('browser');
   let recentProjects = $state<RecentProjectEntry[]>([]);
@@ -78,8 +77,11 @@
   let tabs = $state<WorkspaceTab[]>([]);
   let activePath = $state<string | null>(null);
   let loadingPath = $state<string | null>(null);
-  let validationResult = $state<TemplateValidationResult | null>(null);
-  let validationLoading = $state(false);
+  const validation = createValidationStore(
+    () => tabs,
+    () => activePath,
+    () => workspace?.rootPath ?? null
+  );
   let executionResult = $state<PromptExecutionResult | null>(null);
   let executionLoading = $state(false);
   let executionHistory = $state<PromptRunHistoryEntry[]>([]);
@@ -101,8 +103,6 @@
   let executionCredentialDraft = $state('');
   let executionCredentialLoading = $state(false);
   let executionCredentialError = $state<string | null>(null);
-  let validationTimer: ReturnType<typeof setTimeout> | null = null;
-  let validationRequestId = 0;
   let executionHistoryRequestId = 0;
 
   onMount(async () => {
@@ -139,8 +139,7 @@
     tabs = [];
     activePath = null;
     loadingPath = null;
-    validationResult = null;
-    validationLoading = false;
+    validation.reset();
     executionResult = null;
     executionLoading = false;
     executionHistory = [];
@@ -157,38 +156,6 @@
     mode = 'browser';
     workspace = null;
   }
-
-  $effect(() => {
-    const currentTab = tabs.find((tab) => tab.path === activePath) ?? null;
-    const rootPath = workspace?.rootPath ?? null;
-
-    if (validationTimer) {
-      clearTimeout(validationTimer);
-      validationTimer = null;
-    }
-
-    if (!rootPath || !currentTab || currentTab.kind !== 'tera') {
-      validationRequestId += 1;
-      validationLoading = false;
-      validationResult = null;
-      return;
-    }
-
-    validationLoading = true;
-    const path = currentTab.path;
-    const content = currentTab.draftContent;
-
-    validationTimer = setTimeout(() => {
-      void runTemplateValidation(rootPath, path, content);
-    }, 250);
-
-    return () => {
-      if (validationTimer) {
-        clearTimeout(validationTimer);
-        validationTimer = null;
-      }
-    };
-  });
 
   $effect(() => {
     const currentTab = tabs.find((tab) => tab.path === activePath) ?? null;
@@ -358,40 +325,6 @@
       ...tab,
       draftContent: content
     }));
-  }
-
-  async function runTemplateValidation(
-    rootPath: string,
-    path: string,
-    content: string
-  ): Promise<void> {
-    const requestId = ++validationRequestId;
-
-    try {
-      const result = await validateProjectTemplate(rootPath, path, content);
-      if (requestId !== validationRequestId) {
-        return;
-      }
-
-      validationResult = result;
-    } catch (error) {
-      if (requestId !== validationRequestId) {
-        return;
-      }
-
-      validationResult = {
-        path,
-        status: 'invalid',
-        preview: null,
-        warnings: [],
-        errors: [error instanceof Error ? error.message : 'Template validation failed.'],
-        contextSummary: []
-      };
-    } finally {
-      if (requestId === validationRequestId) {
-        validationLoading = false;
-      }
-    }
   }
 
   async function handleSaveTab(path: string): Promise<void> {
@@ -980,8 +913,8 @@
     historyLoading={executionHistoryLoading}
     onOpenRunPath={handleOpenRunPath}
     onCloseProject={handleCloseProject}
-    {validationResult}
-    {validationLoading}
+    validationResult={validation.result}
+    validationLoading={validation.loading}
     {executionResult}
     {executionLoading}
     {modelPresets}
