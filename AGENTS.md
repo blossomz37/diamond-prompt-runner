@@ -41,7 +41,7 @@ Use these docs by question type:
 - The most recently completed implementation plan is `implementation-plans/21-PLAN-asset-lifecycle-management.md` (Phases 1–3).
 - Asset Lifecycle Phases 1–3 (pipeline deletion, prompt block removal, run history deletion) are complete.
 - All prior slices (Milestone 1, Editing, Rendering and Validation, Single-Block Execution, Pipeline Runner, Run History, Pipeline Authoring, Export Bundle, Online Research, Usage Metrics, Variable Assignment UI, Workspace Shell Restructure, Settings and Model Presets, Output Target & JSON Slimdown, API Key UX & Output Strategy Label) are complete and should be treated as closed work unless a regression is introduced.
-- Remaining open work in Plan 21: Phase 4 (Document CRUD) and Phase 5 (Pipeline Export via UI).
+- Plan 21 is fully complete. All 5 phases shipped.
 
 ## Build And Test Commands
 

@@ -53,5 +53,5 @@ Currently, the "file-first" architecture relies on users manually manipulating f
 - [x] A user can delete a pipeline without opening `project.json`.
 - [x] A user can delete a prompt block without accidentally destroying the underlying `.tera` template file.
 - [x] A user can delete old runs to free up history clutter.
-- [ ] Documents can be renamed and deleted natively from the Explorer Tree.
-- [ ] The risk of JSON corruption from manual editing is effectively reduced to zero for daily use cases.
+- [x] Documents can be renamed and deleted natively from the Explorer Tree.
+- [x] The risk of JSON corruption from manual editing is effectively reduced to zero for daily use cases.

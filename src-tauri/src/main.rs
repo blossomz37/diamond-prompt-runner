@@ -390,6 +390,22 @@ fn delete_run(root_path: String, run_path: String) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn delete_document(root_path: String, relative_path: String) -> Result<(), String> {
+    project_store::delete_document(PathBuf::from(root_path).as_path(), &relative_path)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn rename_document(
+    root_path: String,
+    old_path: String,
+    new_name: String,
+) -> Result<String, String> {
+    project_store::rename_document(PathBuf::from(root_path).as_path(), &old_path, &new_name)
+        .map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -430,7 +446,9 @@ pub fn run() {
             rename_project,
             delete_pipeline,
             delete_prompt_block,
-            delete_run
+            delete_run,
+            delete_document,
+            rename_document
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

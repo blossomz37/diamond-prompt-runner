@@ -873,6 +873,64 @@ pub fn list_project_assets(root_path: &Path) -> StoreResult<Vec<ProjectAssetNode
     Ok(nodes)
 }
 
+pub fn delete_document(root_path: &Path, relative_path: &str) -> StoreResult<()> {
+    let (root_path, _) = validate_project(root_path)?;
+    let safe_relative = sanitize_relative_path(relative_path)?;
+    let first_component = safe_relative.components().next();
+    if first_component != Some(Component::Normal("documents".as_ref())) {
+        return Err(ProjectStoreError::message(
+            "Document path must be within the documents/ directory.",
+        ));
+    }
+    let full_path = root_path.join(&safe_relative);
+    if !full_path.is_file() {
+        return Err(ProjectStoreError::message(format!(
+            "Document not found: {relative_path}"
+        )));
+    }
+    fs::remove_file(full_path)?;
+    Ok(())
+}
+
+pub fn rename_document(root_path: &Path, old_path: &str, new_name: &str) -> StoreResult<String> {
+    let (root_path, _) = validate_project(root_path)?;
+    let safe_old = sanitize_relative_path(old_path)?;
+    let trimmed_name = new_name.trim();
+
+    let first_component = safe_old.components().next();
+    if first_component != Some(Component::Normal("documents".as_ref())) {
+        return Err(ProjectStoreError::message(
+            "Document path must be within the documents/ directory.",
+        ));
+    }
+
+    if trimmed_name.is_empty() {
+        return Err(ProjectStoreError::message("New document name cannot be empty."));
+    }
+    if trimmed_name.contains('/') || trimmed_name.contains('\\') {
+        return Err(ProjectStoreError::message(
+            "New document name cannot contain path separators.",
+        ));
+    }
+
+    let old_full = root_path.join(&safe_old);
+    if !old_full.is_file() {
+        return Err(ProjectStoreError::message(format!(
+            "Document not found: {old_path}"
+        )));
+    }
+
+    let new_full = old_full.with_file_name(trimmed_name);
+    if new_full.exists() {
+        return Err(ProjectStoreError::message(format!(
+            "A document named '{trimmed_name}' already exists."
+        )));
+    }
+
+    fs::rename(&old_full, &new_full)?;
+    Ok(format!("documents/{trimmed_name}"))
+}
+
 pub fn list_project_pipelines(root_path: &Path) -> StoreResult<Vec<ProjectPipelineSummary>> {
     let (_, manifest) = validate_project(root_path)?;
 

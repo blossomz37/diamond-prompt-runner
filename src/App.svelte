@@ -39,7 +39,9 @@
     writeProjectAsset,
     deletePipeline,
     deletePromptBlock,
-    deleteRun
+    deleteRun,
+    deleteDocument,
+    renameDocument
   } from '$lib/tauri';
   import type {
     ExecutionCredentialStatus,
@@ -836,6 +838,26 @@
     projectPromptBlocks = blocks;
   }
 
+  async function handleDeleteDocument(relativePath: string): Promise<void> {
+    if (!workspace) return;
+    await deleteDocument(workspace.rootPath, relativePath);
+    // Close any open tab pointing to the deleted file before refreshing the tree.
+    tabs = tabs.filter((tab) => tab.path !== relativePath);
+    if (activePath === relativePath) activePath = tabs[0]?.path ?? null;
+    assetNodes = await listProjectAssets(workspace.rootPath);
+  }
+
+  async function handleRenameDocument(relativePath: string, newName: string): Promise<void> {
+    if (!workspace) return;
+    const newPath = await renameDocument(workspace.rootPath, relativePath, newName);
+    // Close the stale tab so the renamed file opens fresh on next selection.
+    tabs = tabs.filter((tab) => tab.path !== relativePath);
+    if (activePath === relativePath) activePath = tabs[0]?.path ?? null;
+    assetNodes = await listProjectAssets(workspace.rootPath);
+    // Open the renamed file automatically so the author stays in context.
+    await openAssetPath(newPath);
+  }
+
   async function handleDeleteRun(runPath: string): Promise<void> {
     if (!workspace) return;
     // Optimistic removal for instant feedback.
@@ -989,5 +1011,7 @@
     onDeletePipeline={handleDeletePipeline}
     onDeletePromptBlock={handleDeletePromptBlock}
     onDeleteRun={handleDeleteRun}
+    onDeleteDocument={handleDeleteDocument}
+    onRenameDocument={handleRenameDocument}
   />
 {/if}

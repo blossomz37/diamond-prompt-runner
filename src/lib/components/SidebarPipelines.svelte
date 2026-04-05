@@ -8,6 +8,7 @@
   // Author:      Diamond Runner
   // ──────────────────────────────────────────────
   import type {
+    ExportBundleResult,
     PipelineExecutionResult,
     ProjectPipeline,
     ProjectPromptBlock
@@ -23,6 +24,7 @@
     onEditPipeline: (pipeline: ProjectPipeline) => void;
     onNewPipeline: () => void;
     onDeletePipeline: (pipelineId: string) => Promise<void>;
+    onExportPipeline: (bundleName: string, relativePaths: string[]) => Promise<ExportBundleResult>;
   }
 
   let {
@@ -34,8 +36,28 @@
     onRunPipeline,
     onEditPipeline,
     onNewPipeline,
-    onDeletePipeline
+    onDeletePipeline,
+    onExportPipeline
   }: Props = $props();
+
+  let exportingPipelineId = $state<string | null>(null);
+  let exportError = $state('');
+
+  async function handleExportPipeline(pipeline: ProjectPipeline): Promise<void> {
+    if (exportingPipelineId) return;
+    exportingPipelineId = pipeline.pipelineId;
+    exportError = '';
+    const slug = pipeline.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const bundleName = `pipeline-${slug}`;
+    const paths = pipeline.blocks.map((b) => b.templateSource).filter(Boolean);
+    try {
+      await onExportPipeline(bundleName, paths);
+    } catch (e) {
+      exportError = e instanceof Error ? e.message : 'Export failed.';
+    } finally {
+      exportingPipelineId = null;
+    }
+  }
 
   let deletePipelineConfirm = $state<string | null>(null);
   let deletePipelineLoading = $state(false);
@@ -91,6 +113,15 @@
             <button
               type="button"
               class="mini-action"
+              onclick={() => handleExportPipeline(pipeline)}
+              disabled={pipelineLoading || pipelineAuthoringLoading || deletePipelineLoading || exportingPipelineId === pipeline.pipelineId}
+              aria-label="Export {pipeline.name}"
+            >
+              {exportingPipelineId === pipeline.pipelineId ? '…' : 'Export'}
+            </button>
+            <button
+              type="button"
+              class="mini-action"
               class:danger={deletePipelineConfirm === pipeline.pipelineId}
               aria-label={deletePipelineConfirm === pipeline.pipelineId ? `Confirm delete ${pipeline.name}` : `Delete ${pipeline.name}`}
               onclick={() => handleDeletePipeline(pipeline.pipelineId)}
@@ -131,6 +162,9 @@
               <p class="meta failed">{pipelineExecution.error}</p>
             {/if}
           </div>
+        {/if}
+        {#if exportError && exportingPipelineId === null}
+          <p class="meta failed">{exportError}</p>
         {/if}
       </article>
     {/each}

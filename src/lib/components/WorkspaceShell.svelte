@@ -89,6 +89,8 @@
     onDeletePipeline: (pipelineId: string) => Promise<void>;
     onDeletePromptBlock: (blockId: string) => Promise<void>;
     onDeleteRun: (runPath: string) => Promise<void>;
+    onDeleteDocument: (relativePath: string) => Promise<void>;
+    onRenameDocument: (relativePath: string, newName: string) => Promise<void>;
   }
 
   let {
@@ -142,7 +144,9 @@
     onSetBlockOutputTarget,
     onDeletePipeline,
     onDeletePromptBlock,
-    onDeleteRun
+    onDeleteRun,
+    onDeleteDocument,
+    onRenameDocument
   }: Props = $props();
 
   let deleteBlockConfirm = $state<string | null>(null);
@@ -286,7 +290,13 @@
                 </button>
               </form>
             {/if}
-            <ExplorerTree nodes={nodes} activePath={pipelineEditorActive ? null : activePath} onSelectPath={onSelectAsset} />
+            <ExplorerTree
+              nodes={nodes}
+              activePath={pipelineEditorActive ? null : activePath}
+              onSelectPath={onSelectAsset}
+              {onDeleteDocument}
+              {onRenameDocument}
+            />
 
             {#if promptBlocks.length > 0}
               <div class="block-list">
@@ -330,6 +340,7 @@
               onEditPipeline={(pipeline) => openPipelineEditor(pipeline)}
               onNewPipeline={() => openPipelineEditor(null)}
               {onDeletePipeline}
+              onExportPipeline={onExportAssets}
             />
           </div>
         {/if}

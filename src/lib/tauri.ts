@@ -278,3 +278,15 @@ export async function deletePromptBlock(
 export async function deleteRun(rootPath: string, runPath: string): Promise<void> {
   return invoke('delete_run', { rootPath, runPath });
 }
+
+export async function deleteDocument(rootPath: string, relativePath: string): Promise<void> {
+  return invoke('delete_document', { rootPath, relativePath });
+}
+
+export async function renameDocument(
+  rootPath: string,
+  oldPath: string,
+  newName: string
+): Promise<string> {
+  return invoke<string>('rename_document', { rootPath, oldPath, newName });
+}
