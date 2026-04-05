@@ -1,0 +1,9 @@
+{
+  "bundleName": "pipeline-review-pipeline",
+  "bundlePath": "exports/pipeline-review-pipeline",
+  "exportedAt": "2026-04-05T02:41:37Z",
+  "paths": [
+    "prompts/brief-review.tera"
+  ],
+  "projectName": "Sample Project"
+}

@@ -1,0 +1,6 @@
+You are reviewing the current project context.
+
+Context:
+{{ doc("context.md") }}
+
+Respond with a short summary and one next action.
