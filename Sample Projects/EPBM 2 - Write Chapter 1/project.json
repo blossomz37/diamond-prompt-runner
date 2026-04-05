@@ -2,8 +2,8 @@
   "projectId": "3ba62a39-f7fa-4d95-8fe9-3dfa614c2442",
   "projectName": "EPBM 2 - Write Chapter 1",
   "createdAt": "2026-04-05T17:28:05Z",
-  "updatedAt": "2026-04-05T18:29:23Z",
-  "defaultModelPreset": "models/default.yaml",
+  "updatedAt": "2026-04-05T18:41:58Z",
+  "defaultModelPreset": "models/claude-sonnet-4.6.yaml",
   "variables": {},
   "promptBlocks": [
     {
@@ -11,7 +11,7 @@
       "name": "Plan Chapter 1",
       "templateSource": "prompts/plan-chapter-1.tera",
       "inputBindings": [],
-      "modelPreset": null,
+      "modelPreset": "models/claude-sonnet-4.6.yaml",
       "outputTarget": "replace_document"
     },
     {
