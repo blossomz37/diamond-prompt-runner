@@ -1,0 +1,40 @@
+# Migrate Pipelines to Dedicated Files
+
+This plan outlines the architecture for moving Pipeline data out of the monolithic `project.json` manifest and into discrete files stored within a new `pipelines/` directory.
+
+## User Review Required
+
+> [!WARNING]
+> This change modifies how projects are saved to the file system.
+> Pre-existing projects (like Neon & Nightmares) will undergo an automatic, invisible migration when they are loaded via `open_project`. Their `project.json` will be stripped of pipelines, and a new `pipelines/` directory will be created to house them.
+> Do you approve this data migration strategy?
+
+## Proposed Changes
+
+### Backend Architecture (Rust)
+
+#### [MODIFY] `src-tauri/src/types.rs`
+- Add `#[serde(default, skip_serializing)]` to the `pipelines` vector within `ProjectManifest`. This allows existing manifests to be read without error, but guarantees that `project.json` will no longer embed pipelines when saved.
+- Ensure the `Pipeline` struct derives needed traits for discrete JSON serialization.
+
+#### [MODIFY] `src-tauri/src/project_store.rs`
+- **`create_project`**: Automatically create a `pipelines/` directory during project initialization alongside `documents/` and `prompts/`.
+- **`open_project` / `validate_project`**: Introduce migration logic. If `manifest.pipelines` is populated (i.e. legacy project), iterate over the pipelines, serialize them into `pipelines/{id}.json`, clear the `manifest.pipelines` vector, and immediately re-save `project.json` to complete the migration seamlessly.
+- **`create_pipeline`**, **`update_pipeline`**, **`delete_pipeline`**: Shift their I/O logic to target `root_path.join("pipelines").join(format!("{}.json", pipeline_id))` instead of modifying and flushing `project.json`.
+- **`list_project_pipelines`**: Refactor to execute a filesystem scan of the `pipelines/` folder—similarly to how prompt blocks and documents are parsed—rather than iterating over the `project.json` struct.
+
+### Frontend Integration
+
+> [!NOTE]  
+> Because the Tauri backend acts as a strict boundary, no frontend codebase changes should be necessary! 
+> `list_project_pipelines` retains the exact same return signature `Vec<ProjectPipelineSummary>`, and the UI components will seamlessly continue rendering the lists and saving states exactly as before.
+
+## Verification Plan
+
+### Automated Tests
+- Run `cargo test --manifest-path src-tauri/Cargo.toml` to verify Rust tests still pass, specifically ensuring `tempfile` mock projects successfully initialize and parse pipelines.
+- Verify `npm run typecheck` to confirm TS bounds.
+
+### Manual Verification
+- We will boot the app (`npm run tauri:dev`), open the `Neon & Nightmares` project, and visually confirm that the `project.json` slims down while a new `pipelines/` folder populates gracefully.
+- We will execute a test pipeline to verify that headless operation still operates correctly with decoupled models.
