@@ -7,7 +7,7 @@ modified: 2026-04-04 1:22 PM
 Oldest to Newest
 
 
-## 2026-04-03
+## Started: 2026-04-03
 - [x] ONGOING: Implementation Plans. `implementation-plans/`
 - [x] ONGOING: Keep README and AGENTS aligned with the approved tool and commit workflow recommendations.
 - [x] Spare parts files from YFD Runner. `workshop-parts/`
@@ -65,6 +65,11 @@ Oldest to Newest
 - [x] Post-MVP online extension: add tests for scoped online-research prompt behavior.
 - [x] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.
 - [x] Post-MVP online extension: decide whether `:online` support belongs in the MVP spec or as a later extension. Decision: post-MVP extension, documented in SPEC_DIAMOND_RUNNER_v1.md §3 Post-MVP Extensions.
+- [x] Code Audit (Plan 23): extract `types.rs`, `execution.rs`, `credentials.rs`, `history.rs`, `presets.rs`, `variables.rs`, `assets.rs` from `project_store.rs`; extract `assetUtils.ts`, `textSearch.ts`, `validation.svelte.ts`, `FindBar.svelte` on frontend.
+- [ ] Code Audit deferred: extract App.svelte tab state to `lib/stores/tabs.svelte.ts` (requires WorkspaceShell prop audit first).
+- [ ] Code Audit deferred: evaluate WorkspaceShell.svelte split after App.svelte tab state is resolved.
+- [ ] Code Audit deferred: evaluate PipelineEditorTab.svelte split if a shared two-step confirmation pattern is formalized.
+- [ ] Code Audit deferred: evaluate ProjectBrowser.svelte split (`CredentialsPanel`, `RecentProjectsList`) after App.svelte credential state is reviewed.
 - [ ] Decide whether to create custom Diamond-specific skills for implementation, fixtures, and prompt-pack porting.
 
 
