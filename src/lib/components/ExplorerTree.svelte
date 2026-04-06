@@ -109,7 +109,7 @@
           bind:value={renameValue}
           onkeydown={(e) => handleRenameKeydown(e, node.path)}
           onblur={cancelRename}
-          autofocus
+
           aria-label="Rename document"
         />
         <button
@@ -130,6 +130,7 @@
     {:else}
       <div
         class="node-row"
+        role="group"
         onmouseenter={() => { hoveredPath = node.path; }}
         onmouseleave={() => { if (hoveredPath === node.path) hoveredPath = null; }}
       >

@@ -358,14 +358,7 @@
     gap: 0.75rem;
   }
 
-  .credential-card {
-    display: grid;
-    gap: 0.75rem;
-    padding: 0.8rem;
-    border-radius: 14px;
-    border: 1px solid rgba(157, 180, 255, 0.12);
-    background: rgba(255, 255, 255, 0.03);
-  }
+
 
   .history-item {
     padding: 0.8rem;
@@ -466,33 +459,7 @@
     gap: 0.6rem;
   }
 
-  .secret-field {
-    display: grid;
-    gap: 0.4rem;
-    color: var(--text-soft);
-    font-size: 0.8rem;
-  }
 
-  .secret-field input {
-    width: 100%;
-    border-radius: 12px;
-    border: 1px solid var(--panel-border);
-    background: rgba(5, 8, 15, 0.9);
-    color: var(--text);
-    padding: 0.7rem 0.8rem;
-    font: inherit;
-  }
-
-  .secret-field input:focus {
-    outline: 1px solid rgba(139, 177, 255, 0.34);
-    border-color: rgba(139, 177, 255, 0.34);
-  }
-
-  .credential-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-  }
 
   .run-action {
     display: grid;

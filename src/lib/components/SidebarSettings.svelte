@@ -139,12 +139,7 @@
     margin: 0;
   }
 
-  .settings-heading span {
-    font-weight: 400;
-    color: var(--text-soft);
-    font-size: 10px;
-    letter-spacing: 0;
-  }
+
 
   .settings-error {
     font-size: 11px;

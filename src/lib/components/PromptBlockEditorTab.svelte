@@ -30,7 +30,7 @@
   let deleteConfirm = $state(false);
   let error = $state('');
   // eslint-disable-next-line svelte/prefer-writable-derived -- needs to be writable for bind:value
-  let filenameInput = $state(block.outputFilename ?? '');
+  let filenameInput = $state('');
 
   // Keep filenameInput in sync when the block prop refreshes (e.g. after save)
   $effect(() => {

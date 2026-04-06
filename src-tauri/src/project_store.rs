@@ -7,7 +7,7 @@ use std::{
 use chrono::{SecondsFormat, Utc};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::json;
 // tera used via execution submodule
 use uuid::Uuid;
 
@@ -25,6 +25,10 @@ pub use credentials::{get_execution_credential_status, save_execution_api_key, c
 
 pub(crate) mod execution;
 pub use execution::{validate_project_template, execute_prompt_block, execute_pipeline};
+
+#[cfg(test)]
+use serde_json::Value;
+#[cfg(test)]
 use execution::{
     PersistedRunRecord, extract_usage_metrics,
     execute_prompt_block_with_transport, execute_pipeline_with_transport,

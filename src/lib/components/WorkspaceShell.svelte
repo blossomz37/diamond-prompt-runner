@@ -775,25 +775,7 @@
     gap: 0.55rem;
   }
 
-  .pane-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-  }
 
-  .mini-action {
-    min-height: 2rem;
-    padding: 0.35rem 0.65rem;
-    border-radius: 10px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text);
-  }
-
-  .mini-action.primary {
-    background: rgba(139, 177, 255, 0.14);
-    border-color: rgba(139, 177, 255, 0.28);
-  }
 
   .pane-toggle {
     background: transparent;
