@@ -6,5 +6,11 @@
         "cursor-workspace": true
     },
     "chat.mcp.gallery.enabled": true,
-    "chat.planAgent.defaultModel": "GPT-5.4 (copilot)"
+    "chat.planAgent.defaultModel": "GPT-5.4 (copilot)",
+    "chat.tools.terminal.autoApprove": {
+        "cargo build": true
+    },
+    "VsCodeTaskButtons.tasks": [
+        {"label": "$(play) Tauri Dev", "task": "Tauri Dev", "tooltip": "Start Tauri dev server"}
+    ]
 }
