@@ -1,5 +1,11 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+if (typeof Range !== 'undefined') {
+  Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
+  Range.prototype.getBoundingClientRect = () => ({ width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, x: 0, y: 0, toJSON() {} }) as DOMRect;
+}
+
 import { ONLINE_PROMPT_DIRECTIVE } from '$lib/promptExecution';
 import App from './App.svelte';
 import type {

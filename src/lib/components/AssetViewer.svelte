@@ -3,6 +3,7 @@
   import { ONLINE_PROMPT_DIRECTIVE, promptUsesOnlineResearch } from '$lib/promptExecution';
   import type { PromptExecutionResult, WorkspaceTab } from '$lib/types/project';
   import FindBar from '$lib/components/FindBar.svelte';
+  import CodeEditor, { type CodeEditorApi } from '$lib/components/CodeEditor.svelte';
 
   // Disable raw HTML passthrough for safety
   marked.use({ renderer: { html: () => '' } });
@@ -20,7 +21,7 @@
   let { tab, onDraftChange, onSave, onReload, onExecute, execution, executionLoading }: Props = $props();
 
   let previewMode = $state(false);
-  let editorEl: HTMLTextAreaElement | undefined = $state();
+  let editorEl: HTMLTextAreaElement | CodeEditorApi | undefined = $state();
   let findBar: FindBar | undefined = $state();
   let currentTabPath = '';
 
@@ -134,14 +135,13 @@
         content={tab.draftContent}
         onContentChange={(newContent) => onDraftChange(tab.path, newContent)}
       />
-      <textarea
-        bind:this={editorEl}
-        data-testid="asset-editor"
+      <CodeEditor
+        bind:api={editorEl as CodeEditorApi}
         value={tab.draftContent}
-        spellcheck="false"
-        oninput={(event) => onDraftChange(tab.path, (event.currentTarget as HTMLTextAreaElement).value)}
+        kind={tab.kind}
+        onContentChange={(newContent) => onDraftChange(tab.path, newContent)}
         onkeydown={handleEditorKeydown}
-      ></textarea>
+      />
     {/if}
   </section>
 {:else if tab.view === 'text'}
@@ -263,18 +263,6 @@
     word-break: break-word;
   }
 
-  textarea {
-    width: 100%;
-    min-height: 30rem;
-    flex: 1 1 auto;
-    resize: none;
-    border-radius: 18px;
-    border: 1px solid var(--border-faint);
-    background: rgba(5, 8, 15, 0.9);
-    color: #dbe5ff;
-    padding: 1rem;
-    line-height: 1.55;
-  }
 
   .editable {
     display: flex;

@@ -1,8 +1,9 @@
 <script lang="ts">
   import { getMatches, escapeRegex } from '$lib/utils/textSearch';
+  import type { CodeEditorApi } from '$lib/components/CodeEditor.svelte';
 
   interface Props {
-    editorEl: HTMLTextAreaElement | undefined;
+    editorEl: HTMLTextAreaElement | CodeEditorApi | undefined;
     content: string;
     onContentChange: (newContent: string) => void;
   }
