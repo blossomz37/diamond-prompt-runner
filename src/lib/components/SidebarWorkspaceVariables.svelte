@@ -1,90 +1,57 @@
 <script lang="ts">
-  import type { ProjectSummary } from '$lib/types/project';
+  import { WORKSPACE_VARIABLES_PATH } from '$lib/types/project';
 
   interface Props {
-    summary: ProjectSummary;
-    onSetProjectVariables: (variables: Record<string, string>) => Promise<void>;
+    activePath: string | null;
+    variableCount: number;
+    onOpenWorkspaceVariables: (path: string, title?: string) => void | Promise<void>;
   }
 
-  let { summary, onSetProjectVariables }: Props = $props();
-
-  let newName = $state('');
-  let newValue = $state('');
-  let saving = $state(false);
-
-  const projectVariables = $derived(summary.variables);
-
-  async function addVariable(): Promise<void> {
-    const name = newName.trim();
-    const value = newValue.trim();
-    if (!name || saving) return;
-    saving = true;
-    try {
-      await onSetProjectVariables({ ...projectVariables, [name]: value });
-      newName = '';
-      newValue = '';
-    } finally {
-      saving = false;
-    }
-  }
-
-  async function removeVariable(name: string): Promise<void> {
-    if (saving) return;
-    saving = true;
-    try {
-      const next = { ...projectVariables };
-      delete next[name];
-      await onSetProjectVariables(next);
-    } finally {
-      saving = false;
-    }
-  }
+  let { activePath, variableCount, onOpenWorkspaceVariables }: Props = $props();
 </script>
 
 <div class="vars-section">
-  {#if Object.keys(projectVariables).length > 0}
-    <ul class="vars-list">
-      {#each Object.entries(projectVariables) as [name, value] (name)}
-        <li class="var-row">
-          <span class="var-name">{name}</span>
-          <span class="var-value">{value}</span>
-          <button
-            type="button"
-            class="var-remove"
-            onclick={() => removeVariable(name)}
-            disabled={saving}
-            aria-label="Remove {name}"
-          >✕</button>
-        </li>
-      {/each}
-    </ul>
-  {:else}
-    <p class="vars-empty">No workspace variables yet.</p>
-  {/if}
-  <div class="vars-add-form">
-    <input
-      type="text"
-      bind:value={newName}
-      placeholder="name"
-      aria-label="New workspace variable name"
-      disabled={saving}
-    />
-    <input
-      type="text"
-      bind:value={newValue}
-      placeholder="value"
-      aria-label="New workspace variable value"
-      disabled={saving}
-    />
-    <button
-      type="button"
-      class="mini-action"
-      onclick={addVariable}
-      disabled={saving || !newName.trim()}
-    >+ Add</button>
-  </div>
+  <button
+    type="button"
+    class="var-item"
+    class:active={activePath === WORKSPACE_VARIABLES_PATH}
+    onclick={() => onOpenWorkspaceVariables(WORKSPACE_VARIABLES_PATH, 'workspace-variables.yaml')}
+  >
+    <span class="var-name">workspace-variables.yaml</span>
+    <span class="var-meta">{variableCount} vars</span>
+  </button>
 </div>
 
 <style>
-  /* All variable panel styles now in app.css */
+  .var-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 2rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .var-item:hover {
+    background: var(--bg-ghost);
+    color: var(--text);
+  }
+
+  .var-item.active {
+    background: var(--bg-active);
+    color: var(--text);
+  }
+
+  .var-meta {
+    color: var(--text-soft);
+    font-size: 0.72rem;
+    flex-shrink: 0;
+  }
 </style>

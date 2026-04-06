@@ -515,8 +515,8 @@ async function expandSidebarSection(sectionName: string): Promise<void> {
 
   async function openModelPresetFile(presetFilename: string): Promise<void> {
     await expandSidebarSection('Models');
-    const editBtn = await screen.findByRole('button', { name: `Edit ${presetFilename}` });
-    await fireEvent.click(editBtn);
+    const label = await screen.findByText(presetFilename);
+    await fireEvent.click(label.closest('button')!);
   }
 
 describe('App', () => {
@@ -824,11 +824,19 @@ describe('App', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Run Pipeline' }));
 
     await waitFor(() =>
-      expect(tauri.executePipeline).toHaveBeenCalledWith('/tmp/story-lab', 'review-pipeline')
+      expect(tauri.executePipeline).toHaveBeenCalledWith(
+        '/tmp/story-lab',
+        'review-pipeline',
+        undefined,
+        undefined,
+        undefined
+      )
     );
 
     expect(await screen.findByText('Pipeline complete')).toBeInTheDocument();
     expect(screen.getByText('1 / 1 blocks completed')).toBeInTheDocument();
+    expect(screen.getByText('Last pipeline succeeded')).toBeInTheDocument();
+    expect(screen.getByText('Review Pipeline · 1 steps')).toBeInTheDocument();
   });
 
   it('creates a pipeline from the sidebar and center pane editor', async () => {
@@ -1217,13 +1225,15 @@ describe('App', () => {
     );
 
     await expandSidebarSection('Prompt Blocks');
+  expect(screen.queryByRole('button', { name: 'Register' })).not.toBeInTheDocument();
+  await fireEvent.click(screen.getByRole('button', { name: /Available Templates/ }));
     await fireEvent.click(screen.getByRole('button', { name: 'Register' }));
 
     await waitFor(() =>
       expect(tauri.registerPromptBlock).toHaveBeenCalledWith('/tmp/story-lab', 'prompts/brief-review.tera')
     );
 
-    expect(await screen.findByText('Brief Review')).toBeInTheDocument();
+    expect(await screen.findByText('Scene Draft')).toBeInTheDocument();
   });
 
   it('shows the online research affordance when the prompt opts in locally', async () => {
@@ -1268,10 +1278,10 @@ describe('App', () => {
     );
 
     expect(await screen.findByText('Execution output from the provider.')).toBeInTheDocument();
-    expect(screen.getByText('runs/run-1.json')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Artifact' })).toBeInTheDocument();
   });
 
-  it('shows execution failure in the bottom panel', async () => {
+  it('shows execution failure in the workspace execution panel', async () => {
     tauri.executePromptBlock.mockRejectedValueOnce(
       new Error('Missing OpenRouter API key. Save one in the app or set OPENROUTER_API_KEY.')
     );
@@ -1288,7 +1298,7 @@ describe('App', () => {
 
     await fireEvent.click(await screen.findByRole('button', { name: 'Run' }));
 
-    expect(await screen.findByText('Run failed')).toBeInTheDocument();
+    expect((await screen.findAllByText('Run failed')).length).toBeGreaterThan(0);
     expect(
       screen.getByText('Missing OpenRouter API key. Save one in the app or set OPENROUTER_API_KEY.')
     ).toBeInTheDocument();
@@ -1322,7 +1332,7 @@ describe('App', () => {
     const historyPreview = await screen.findByText('Earlier persisted output.');
     const historyItem = historyPreview.closest('article');
     expect(historyItem).not.toBeNull();
-    await fireEvent.click(within(historyItem!).getByRole('button', { name: 'Open artifact' }));
+  await fireEvent.click(within(historyItem!).getByRole('button', { name: 'Open Artifact' }));
 
     await waitFor(() =>
       expect(tauri.readProjectAsset).toHaveBeenCalledWith('/tmp/story-lab', 'runs/run-2.json')
@@ -1332,7 +1342,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'run-2.json', level: 2 })).toBeInTheDocument();
   });
 
-  it('loads global variables on mount and shows them in the Variables section', async () => {
+  it('opens global variables as a workspace tab', async () => {
     tauri.getGlobalVariables.mockResolvedValueOnce({ tone: 'precise', pov: 'third-limited' });
 
     render(App);
@@ -1340,29 +1350,37 @@ describe('App', () => {
     await screen.findByRole('heading', { name: 'Story Lab', level: 1 });
 
     await expandSidebarSection('Global Variables');
-    expect(await screen.findByText('tone')).toBeInTheDocument();
-    expect(screen.getByText('precise')).toBeInTheDocument();
+    await fireEvent.click(await screen.findByRole('button', { name: /global-variables\.yaml/ }));
+
+    expect(await screen.findByDisplayValue('tone')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('precise')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('pov')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('third-limited')).toBeInTheDocument();
   });
 
-  it('adds a global variable and calls setGlobalVariables', async () => {
+  it('saves global variables from the workspace editor', async () => {
     render(App);
     await fireEvent.click(await screen.findByText('Open Existing Project'));
     await screen.findByRole('heading', { name: 'Story Lab', level: 1 });
 
     await expandSidebarSection('Global Variables');
+    await fireEvent.click(await screen.findByRole('button', { name: /global-variables\.yaml/ }));
 
-    const nameInputs = screen.getAllByPlaceholderText('name');
-    const valueInputs = screen.getAllByPlaceholderText('value');
-    await fireEvent.input(nameInputs[0], { target: { value: 'genre' } });
-    await fireEvent.input(valueInputs[0], { target: { value: 'thriller' } });
-    await fireEvent.click(screen.getAllByRole('button', { name: '+ Add' })[0]);
+    await fireEvent.click(screen.getByRole('button', { name: 'Add Variable' }));
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Variable name 1' }), {
+      target: { value: 'genre' }
+    });
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Variable value 1' }), {
+      target: { value: 'thriller' }
+    });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() =>
       expect(tauri.setGlobalVariables).toHaveBeenCalledWith({ genre: 'thriller' })
     );
   });
 
-  it('adds a project variable and calls setProjectVariables', async () => {
+  it('saves workspace variables from the workspace editor', async () => {
     tauri.setProjectVariables.mockResolvedValueOnce({
       ...summary,
       variables: { chapter: '12' }
@@ -1373,12 +1391,16 @@ describe('App', () => {
     await screen.findByRole('heading', { name: 'Story Lab', level: 1 });
 
     await expandSidebarSection('Workspace Variables');
+    await fireEvent.click(await screen.findByRole('button', { name: /workspace-variables\.yaml/ }));
 
-    const nameInputs = screen.getAllByPlaceholderText('name');
-    const valueInputs = screen.getAllByPlaceholderText('value');
-    await fireEvent.input(nameInputs[0], { target: { value: 'chapter' } });
-    await fireEvent.input(valueInputs[0], { target: { value: '12' } });
-    await fireEvent.click(screen.getAllByRole('button', { name: '+ Add' })[0]);
+    await fireEvent.click(screen.getByRole('button', { name: 'Add Variable' }));
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Variable name 1' }), {
+      target: { value: 'chapter' }
+    });
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Variable value 1' }), {
+      target: { value: '12' }
+    });
+    await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() =>
       expect(tauri.setProjectVariables).toHaveBeenCalledWith('/tmp/story-lab', { chapter: '12' })

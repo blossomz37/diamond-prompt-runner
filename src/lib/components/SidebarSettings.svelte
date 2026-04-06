@@ -7,17 +7,15 @@
   // Modified:    2026-04-04
   // Author:      Diamond Runner
   // ──────────────────────────────────────────────
-  import type { ProjectSummary, ExecutionCredentialStatus } from '$lib/types/project';
+  import type { ProjectSummary } from '$lib/types/project';
 
   interface Props {
     summary: ProjectSummary;
-    credentialStatus: ExecutionCredentialStatus | null;
     onRenameProject: (newName: string) => Promise<void>;
   }
 
   let {
     summary,
-    credentialStatus,
     onRenameProject
   }: Props = $props();
 
@@ -59,22 +57,6 @@
     if (event.key === 'Enter') saveRename();
     if (event.key === 'Escape') cancelRename();
   }
-
-  const credentialLabel = $derived(
-    credentialStatus
-      ? credentialStatus.source === 'keychain'
-        ? '✓ Keychain'
-        : credentialStatus.source === 'environment'
-          ? '✓ Env'
-          : '✕ Not set'
-      : '…'
-  );
-
-  const credentialClass = $derived(
-    credentialStatus
-      ? credentialStatus.source === 'missing' ? 'status-missing' : 'status-ok'
-      : ''
-  );
 </script>
 
 <div class="settings-section">
@@ -103,15 +85,6 @@
         <button class="mini-action" onclick={startRename}>Rename</button>
       </div>
     {/if}
-  </div>
-
-  <!-- API Key -->
-  <div class="settings-group">
-    <p class="settings-heading">OpenRouter API Key</p>
-    <div class="credential-row">
-      <span class="credential-status {credentialClass}">{credentialLabel}</span>
-      <span class="credential-hint">Manage in bottom panel</span>
-    </div>
   </div>
 </div>
 
@@ -175,34 +148,5 @@
   .rename-form input {
     font-size: 11.5px;
     width: 100%;
-  }
-
-  .credential-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 5px 7px;
-    border-radius: 8px;
-    background: rgba(7, 11, 20, 0.6);
-    border: 1px solid var(--panel-border);
-  }
-
-  .credential-status {
-    font-size: 11.5px;
-    font-weight: 600;
-  }
-
-  .credential-status.status-ok {
-    color: var(--success, #6cf);
-  }
-
-  .credential-status.status-missing {
-    color: var(--danger);
-  }
-
-  .credential-hint {
-    font-size: 10px;
-    color: var(--text-soft);
   }
 </style>

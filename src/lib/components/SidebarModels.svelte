@@ -1,292 +1,178 @@
 <script lang="ts">
-  import type { ModelPresetSummary, ProjectSummary } from '$lib/types/project';
+  import type { ProjectAssetNode } from '$lib/types/project';
 
   interface Props {
-    summary: ProjectSummary;
-    presets: ModelPresetSummary[];
-    onSetDefaultPreset: (presetPath: string) => Promise<void>;
+    nodes: ProjectAssetNode[];
+    activePath: string | null;
+    defaultModelPreset: string;
     onCreatePreset: (filename: string, modelId: string) => Promise<void>;
-    onDeletePreset: (presetPath: string) => Promise<void>;
-    onOpenPresetFile: (presetPath: string) => void;
+    onOpenModel: (path: string, title?: string) => void | Promise<void>;
   }
 
   let {
-    summary,
-    presets,
-    onSetDefaultPreset,
+    nodes,
+    activePath,
+    defaultModelPreset,
     onCreatePreset,
-    onDeletePreset,
-    onOpenPresetFile
+    onOpenModel
   }: Props = $props();
 
-  let saving = $state(false);
-  let error = $state('');
+  let createOpen = $state(false);
   let newPresetModelId = $state('');
   let newPresetFilename = $state('');
-  let deleteConfirm = $state<string | null>(null);
+  let creating = $state(false);
 
-  async function handleDefaultChange(event: Event): Promise<void> {
-    const select = event.target as HTMLSelectElement;
-    const value = select.value;
-    if (value === summary.defaultModelPreset) return;
-    saving = true;
-    error = '';
-    try {
-      await onSetDefaultPreset(value);
-    } catch (e) {
-      error = String(e);
-    } finally {
-      saving = false;
-    }
-  }
+  const modelNodes = $derived.by(() => {
+    const modelsDir = nodes.find((node) => node.path === 'models' && node.isDirectory);
+    return (modelsDir?.children ?? []).filter((node) => !node.isDirectory);
+  });
 
-  async function handleCreatePreset(): Promise<void> {
+  async function handleCreatePresetSubmit(): Promise<void> {
     const modelId = newPresetModelId.trim();
     const filename = newPresetFilename.trim() || modelId.replace(/\//g, '-');
-    if (!modelId || saving) return;
-    saving = true;
-    error = '';
+
+    if (!modelId || creating) {
+      return;
+    }
+
+    creating = true;
     try {
       await onCreatePreset(filename, modelId);
       newPresetModelId = '';
       newPresetFilename = '';
-    } catch (e) {
-      error = String(e);
+      createOpen = false;
     } finally {
-      saving = false;
+      creating = false;
     }
-  }
-
-  async function handleDeletePreset(presetPath: string): Promise<void> {
-    if (deleteConfirm !== presetPath) {
-      deleteConfirm = presetPath;
-      return;
-    }
-    saving = true;
-    error = '';
-    try {
-      await onDeletePreset(presetPath);
-      deleteConfirm = null;
-    } catch (e) {
-      error = String(e);
-    } finally {
-      saving = false;
-    }
-  }
-
-  function handleCreateKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Enter') handleCreatePreset();
   }
 </script>
 
 <div class="models-section">
-  {#if error}
-    <p class="models-error">{error}</p>
-  {/if}
-
-  <div class="models-group">
-    <p class="models-heading">Default Preset</p>
-    <select
-      class="preset-select"
-      value={summary.defaultModelPreset}
-      onchange={handleDefaultChange}
-      disabled={saving}
-      aria-label="Default model preset"
-    >
-      {#each presets as preset (preset.path)}
-        <option value={preset.path}>{preset.filename} — {preset.modelId}</option>
-      {/each}
-    </select>
+  <div class="header-row">
+    <span>{modelNodes.length} presets</span>
+    <button type="button" class="mini-action" onclick={() => (createOpen = !createOpen)}>
+      {createOpen ? 'Close' : 'New Preset'}
+    </button>
   </div>
 
-  <div class="models-group">
-    <p class="models-heading">Available Presets <span>{presets.length}</span></p>
-    {#if presets.length > 0}
-      <ul class="preset-list">
-        {#each presets as preset (preset.path)}
-          <li class="preset-row">
-            <div class="preset-info">
-              <span class="preset-filename">{preset.filename}</span>
-              <span class="preset-model">{preset.modelId}</span>
-            </div>
-            <div class="preset-actions">
-              <button
-                class="mini-link"
-                onclick={() => onOpenPresetFile(preset.path)}
-                aria-label="Edit {preset.filename}"
-              >Edit</button>
-              {#if preset.path !== summary.defaultModelPreset}
-                <button
-                  class="mini-link danger"
-                  onclick={() => handleDeletePreset(preset.path)}
-                  disabled={saving}
-                  aria-label="Delete {preset.filename}"
-                >{deleteConfirm === preset.path ? 'Confirm?' : 'Delete'}</button>
-              {/if}
-            </div>
-          </li>
-        {/each}
-      </ul>
-    {:else}
-      <p class="models-empty">No presets found.</p>
-    {/if}
-  </div>
-
-  <div class="models-group">
-    <p class="models-heading">New Preset</p>
-    <div class="new-preset-form">
+  {#if createOpen}
+    <form class="create-form" onsubmit={(event) => { event.preventDefault(); void handleCreatePresetSubmit(); }}>
       <input
         type="text"
         bind:value={newPresetModelId}
-        placeholder="model ID (e.g. anthropic/claude-opus-4)"
-        onkeydown={handleCreateKeydown}
-        disabled={saving}
-        aria-label="New preset model ID"
+        placeholder="model ID"
+        aria-label="Model preset model ID"
+        disabled={creating}
       />
       <input
         type="text"
         bind:value={newPresetFilename}
         placeholder="filename (optional)"
-        onkeydown={handleCreateKeydown}
-        disabled={saving}
-        aria-label="New preset filename"
+        aria-label="Model preset filename"
+        disabled={creating}
       />
-      <button
-        class="mini-action"
-        onclick={handleCreatePreset}
-        disabled={saving || !newPresetModelId.trim()}
-      >+ Create</button>
+      <button type="submit" class="mini-action primary" disabled={creating || !newPresetModelId.trim()}>
+        {creating ? 'Creating…' : 'Create'}
+      </button>
+    </form>
+  {/if}
+
+  {#if modelNodes.length === 0}
+    <p class="models-empty">No presets found.</p>
+  {:else}
+    <div class="model-list">
+      {#each modelNodes as node (node.path)}
+        <button
+          type="button"
+          class="model-item"
+          class:active={activePath === node.path}
+          onclick={() => onOpenModel(node.path, node.name)}
+        >
+          <span class="model-name">{node.name}</span>
+          {#if node.path === defaultModelPreset}
+            <span class="model-badge">Default</span>
+          {/if}
+        </button>
+      {/each}
     </div>
-  </div>
+  {/if}
 </div>
 
 <style>
   .models-section {
     display: grid;
-    gap: 1rem;
+    gap: 0.55rem;
   }
 
-  .models-group {
-    display: grid;
-    gap: 0.4rem;
-  }
-
-  .models-heading {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-dim);
-    letter-spacing: 0.04em;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--panel-border);
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin: 0;
-  }
-
-  .models-heading span {
-    font-weight: 400;
-    color: var(--text-soft);
-    font-size: 10px;
-    letter-spacing: 0;
-  }
-
-  .models-error {
-    font-size: 11px;
-    color: var(--danger);
-    margin: 0;
-    padding: 4px 7px;
-    background: rgba(255, 80, 80, 0.08);
-    border-radius: 6px;
-  }
-
-  .models-empty {
-    font-size: 11px;
-    color: var(--text-soft);
-    font-style: italic;
-    margin: 0;
-  }
-
-  .preset-select {
-    width: 100%;
-    font-size: 11.5px;
-    cursor: pointer;
-  }
-
-  .preset-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 4px;
-  }
-
-  .preset-row {
+  .header-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 5px 7px;
-    border-radius: 8px;
-    background: rgba(7, 11, 20, 0.6);
-    border: 1px solid var(--panel-border);
-    gap: 6px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
   }
 
-  .preset-info {
+  .create-form {
     display: grid;
-    gap: 2px;
-    overflow: hidden;
+    gap: 0.45rem;
+  }
+
+  .create-form input {
     min-width: 0;
+    min-height: 2.2rem;
+    border-radius: 12px;
+    padding: 0.55rem 0.75rem;
   }
 
-  .preset-filename {
-    font-size: 11.5px;
-    color: var(--accent);
-    font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .preset-model {
-    font-size: 10px;
+  .models-empty {
     color: var(--text-soft);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    margin: 0;
   }
 
-  .preset-actions {
+  .model-list {
+    display: grid;
+    gap: 0.08rem;
+  }
+
+  .model-item {
     display: flex;
-    gap: 6px;
-    flex-shrink: 0;
-  }
-
-  .mini-link {
-    background: none;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 12px;
+    background: transparent;
     border: none;
     color: var(--text-dim);
+    text-align: left;
     cursor: pointer;
-    font-size: 10.5px;
-    padding: 2px 4px;
-    border-radius: 4px;
   }
 
-  .mini-link:hover:not(:disabled) {
+  .model-item:hover {
+    background: var(--bg-ghost);
+    color: var(--text);
+  }
+
+  .model-item.active {
+    background: var(--bg-active);
+    color: var(--text);
+  }
+
+  .model-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .model-badge {
+    padding: 0.18rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(132, 173, 255, 0.14);
+    border: 1px solid rgba(139, 177, 255, 0.28);
     color: var(--accent);
-  }
-
-  .mini-link.danger:hover:not(:disabled) {
-    color: var(--danger);
-  }
-
-  .new-preset-form {
-    display: grid;
-    gap: 6px;
-  }
-
-  .new-preset-form input {
-    font-size: 11.5px;
-    width: 100%;
+    font-size: 0.68rem;
+    flex-shrink: 0;
   }
 </style>

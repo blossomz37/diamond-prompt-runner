@@ -18,6 +18,8 @@
   }: Props = $props();
 
   let registeringPath = $state<string | null>(null);
+  let registeredOpen = $state(false);
+  let availableOpen = $state(false);
 
   const promptTemplates = $derived.by(() => {
     const promptsDir = nodes.find((node) => node.path === 'prompts' && node.isDirectory);
@@ -44,42 +46,59 @@
 </script>
 
 <div class="sidebar-blocks">
-  {#if unregisteredTemplates.length > 0}
-    <section class="register-list">
-      <p class="section-label">Available Templates</p>
-      {#each unregisteredTemplates as node (node.path)}
-        <div class="register-item">
-          <span class="block-name">{node.name}</span>
-          <button
-            type="button"
-            class="register-btn"
-            onclick={() => void handleRegister(node.path)}
-            disabled={registeringPath !== null}
-          >
-            {registeringPath === node.path ? 'Registering…' : 'Register'}
-          </button>
+  <section class="group-section">
+    <button type="button" class="group-toggle" onclick={() => (registeredOpen = !registeredOpen)}>
+      <span class="section-label">Registered Templates</span>
+      <span class="section-meta">{promptBlocks.length} {registeredOpen ? '▾' : '▸'}</span>
+    </button>
+    {#if registeredOpen}
+      {#if promptBlocks.length === 0}
+        <p class="empty-state">No prompt blocks registered yet.</p>
+      {:else}
+        <div class="block-list">
+          {#each promptBlocks as block (block.blockId)}
+            <button
+              type="button"
+              class="block-item"
+              class:active={activeBlockId === block.blockId}
+              onclick={() => onSelectBlock(block)}
+            >
+              <span class="block-name">{block.name}</span>
+              <span class="block-meta">{block.templateSource.split('/').pop()}</span>
+            </button>
+          {/each}
         </div>
-      {/each}
-    </section>
-  {/if}
+      {/if}
+    {/if}
+  </section>
 
-  {#if promptBlocks.length === 0}
-    <p class="empty-state">No prompt blocks registered yet.</p>
-  {:else}
-    <div class="block-list">
-      {#each promptBlocks as block (block.blockId)}
-        <button
-          type="button"
-          class="block-item"
-          class:active={activeBlockId === block.blockId}
-          onclick={() => onSelectBlock(block)}
-        >
-          <span class="block-name">{block.name}</span>
-          <span class="block-meta">{block.templateSource.split('/').pop()}</span>
-        </button>
-      {/each}
-    </div>
-  {/if}
+  <section class="group-section">
+    <button type="button" class="group-toggle" onclick={() => (availableOpen = !availableOpen)}>
+      <span class="section-label">Available Templates</span>
+      <span class="section-meta">{unregisteredTemplates.length} {availableOpen ? '▾' : '▸'}</span>
+    </button>
+    {#if availableOpen}
+      {#if unregisteredTemplates.length === 0}
+        <p class="empty-state">No unregistered templates right now.</p>
+      {:else}
+        <section class="register-list">
+          {#each unregisteredTemplates as node (node.path)}
+            <div class="register-item">
+              <span class="block-name">{node.name}</span>
+              <button
+                type="button"
+                class="register-btn"
+                onclick={() => void handleRegister(node.path)}
+                disabled={registeringPath !== null}
+              >
+                {registeringPath === node.path ? 'Registering…' : 'Register'}
+              </button>
+            </div>
+          {/each}
+        </section>
+      {/if}
+    {/if}
+  </section>
 </div>
 
 <style>
@@ -88,11 +107,27 @@
     gap: 0.55rem;
   }
 
+  .group-section {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .group-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+  }
+
   .register-list {
     display: grid;
     gap: 0.35rem;
-    padding-bottom: 0.35rem;
-    border-bottom: 1px solid var(--border-faint);
   }
 
   .section-label {
@@ -101,6 +136,11 @@
     text-transform: uppercase;
     letter-spacing: 0.12em;
     color: var(--text-soft);
+  }
+
+  .section-meta {
+    color: var(--text-soft);
+    font-size: 0.72rem;
   }
 
   .register-item {

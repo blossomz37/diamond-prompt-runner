@@ -28,6 +28,9 @@ export interface ProjectSummary {
   variables: Record<string, string>;
 }
 
+export const GLOBAL_VARIABLES_PATH = 'app/global-variables.yaml';
+export const WORKSPACE_VARIABLES_PATH = 'variables/workspace-variables.yaml';
+
 export interface RecentProjectEntry extends ProjectSummary {
   lastOpenedAt: string;
   lastKnownValid: boolean;

@@ -1,97 +1,61 @@
 <script lang="ts">
+  import { GLOBAL_VARIABLES_PATH } from '$lib/types/project';
+
   interface Props {
-    globalVariables: Record<string, string>;
-    projectVariables: Record<string, string>;
-    onSetGlobalVariables: (variables: Record<string, string>) => Promise<void>;
+    activePath: string | null;
+    variableCount: number;
+    onOpenGlobalVariables: (path: string, title?: string) => void | Promise<void>;
   }
 
   let {
-    globalVariables,
-    projectVariables,
-    onSetGlobalVariables
+    activePath,
+    variableCount,
+    onOpenGlobalVariables
   }: Props = $props();
-
-  let newName = $state('');
-  let newValue = $state('');
-  let saving = $state(false);
-
-  async function addVariable(): Promise<void> {
-    const name = newName.trim();
-    const value = newValue.trim();
-    if (!name || saving) return;
-    saving = true;
-    try {
-      await onSetGlobalVariables({ ...globalVariables, [name]: value });
-      newName = '';
-      newValue = '';
-    } finally {
-      saving = false;
-    }
-  }
-
-  async function removeVariable(name: string): Promise<void> {
-    if (saving) return;
-    saving = true;
-    try {
-      const next = { ...globalVariables };
-      delete next[name];
-      await onSetGlobalVariables(next);
-    } finally {
-      saving = false;
-    }
-  }
 </script>
 
 <div class="vars-section">
-  {#if Object.keys(globalVariables).length > 0}
-    <ul class="vars-list">
-      {#each Object.entries(globalVariables) as [name, value] (name)}
-        {@const overridden = Object.prototype.hasOwnProperty.call(projectVariables, name)}
-        <li class="var-row" class:overridden>
-          <span class="var-name">{name}</span>
-          <span class="var-value">{overridden ? '(overridden)' : value}</span>
-          {#if !overridden}
-            <button
-              type="button"
-              class="var-remove"
-              onclick={() => removeVariable(name)}
-              disabled={saving}
-              aria-label="Remove {name}"
-            >✕</button>
-          {/if}
-        </li>
-      {/each}
-    </ul>
-  {:else}
-    <p class="vars-empty">No global variables yet.</p>
-  {/if}
-  <div class="vars-add-form">
-    <input
-      type="text"
-      bind:value={newName}
-      placeholder="name"
-      aria-label="New global variable name"
-      disabled={saving}
-    />
-    <input
-      type="text"
-      bind:value={newValue}
-      placeholder="value"
-      aria-label="New global variable value"
-      disabled={saving}
-    />
-    <button
-      type="button"
-      class="mini-action"
-      onclick={addVariable}
-      disabled={saving || !newName.trim()}
-    >+ Add</button>
-  </div>
+  <button
+    type="button"
+    class="var-item"
+    class:active={activePath === GLOBAL_VARIABLES_PATH}
+    onclick={() => onOpenGlobalVariables(GLOBAL_VARIABLES_PATH, 'global-variables.yaml')}
+  >
+    <span class="var-name">global-variables.yaml</span>
+    <span class="var-meta">{variableCount} vars</span>
+  </button>
 </div>
 
 <style>
-  /* Variable panel base styles in app.css; local override only */
-  .var-row.overridden {
-    opacity: 0.4;
+  .var-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 2rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .var-item:hover {
+    background: var(--bg-ghost);
+    color: var(--text);
+  }
+
+  .var-item.active {
+    background: var(--bg-active);
+    color: var(--text);
+  }
+
+  .var-meta {
+    color: var(--text-soft);
+    font-size: 0.72rem;
+    flex-shrink: 0;
   }
 </style>

@@ -22,7 +22,6 @@
   import SidebarSettings from '$lib/components/SidebarSettings.svelte';
   import SidebarGlobalVariables from '$lib/components/SidebarGlobalVariables.svelte';
   import SidebarWorkspaceVariables from '$lib/components/SidebarWorkspaceVariables.svelte';
-  import ValidationPanel from '$lib/components/ValidationPanel.svelte';
   import type {
     ExportBundleResult,
     ExecutionCredentialStatus,
@@ -59,9 +58,8 @@
     projectRunHistoryLoading: boolean;
     projectUsageSummary: ProjectUsageSummary | null;
     globalVariables: Record<string, string>;
-    onSetGlobalVariables: (variables: Record<string, string>) => Promise<void>;
-    onSetProjectVariables: (variables: Record<string, string>) => Promise<void>;
     onSelectAsset: (node: ProjectAssetNode) => void | Promise<void>;
+    onOpenPath: (path: string, title?: string) => void | Promise<void>;
     onSelectTab: (path: string) => void;
     onCloseTab: (path: string) => void;
     onDraftChange: (path: string, content: string) => void;
@@ -98,7 +96,6 @@
     onSetDefaultPreset: (presetPath: string) => Promise<void>;
     onCreatePreset: (filename: string, modelId: string) => Promise<void>;
     onDeletePreset: (presetPath: string) => Promise<void>;
-    onOpenPresetFile: (presetPath: string) => void;
     onSetBlockPreset: (blockId: string, presetPath: string | null) => Promise<void>;
     onSetBlockOutputTarget: (blockId: string, target: string) => Promise<void>;
     onSetBlockOutputFilename: (blockId: string, filename: string | null) => Promise<void>;
@@ -131,9 +128,8 @@
     projectRunHistoryLoading,
     projectUsageSummary,
     globalVariables,
-    onSetGlobalVariables,
-    onSetProjectVariables,
     onSelectAsset,
+    onOpenPath,
     onSelectTab,
     onCloseTab,
     onDraftChange,
@@ -162,7 +158,6 @@
     onSetDefaultPreset,
     onCreatePreset,
     onDeletePreset,
-    onOpenPresetFile,
     onSetBlockPreset,
     onSetBlockOutputTarget,
     onSetBlockOutputFilename,
@@ -182,6 +177,30 @@
     activeTab && executionResult?.path === activeTab.path ? executionResult : null
   );
 
+  const pipelineStatusLabel = $derived.by(() => {
+    if (activePipelineProgress) {
+      return `Running ${activePipelineProgress.completedBlocks}/${activePipelineProgress.totalBlocks}`;
+    }
+
+    if (pipelineExecution) {
+      return pipelineExecution.status === 'success' ? 'Last pipeline succeeded' : 'Last pipeline failed';
+    }
+
+    return 'No pipeline runs yet';
+  });
+
+  const pipelineStatusDetail = $derived.by(() => {
+    if (activePipelineProgress) {
+      return `${activePipelineProgress.currentBlockName} · ${activePipelineProgress.status}`;
+    }
+
+    if (pipelineExecution) {
+      return `${pipelineExecution.pipelineName} · ${pipelineExecution.steps.length} steps`;
+    }
+
+    return 'Use the Pipelines section to run a workflow.';
+  });
+
   // Sidebar section collapse states (workflow order)
   let modelsOpen = $state(false);
   let globalVarsOpen = $state(false);
@@ -194,9 +213,6 @@
   let exportsOpen = $state(false);
   let settingsOpen = $state(false);
   let helpOpen = $state(false);
-
-  // Bottom panel
-  let bottomOpen = $state(true);
 
   // Inspector panel
   let inspectorOpen = $state(true);
@@ -289,11 +305,12 @@
         <h1>{summary.projectName}</h1>
       </div>
     </div>
-    <div class="counts">
-      <span>{summary.counts.documents} docs</span>
-      <span>{summary.counts.prompts} prompts</span>
-      <span>{summary.counts.models} models</span>
-      <span>{summary.defaultModelPreset}</span>
+    <div class="status-strip">
+      <div class="pipeline-status" class:failed={pipelineExecution?.status === 'failed'} class:running={activePipelineProgress !== null}>
+        <p class="eyebrow">Pipeline Status</p>
+        <strong>{pipelineStatusLabel}</strong>
+        <span>{pipelineStatusDetail}</span>
+      </div>
       <button
         type="button"
         class="pane-toggle"
@@ -309,7 +326,7 @@
     <p class="error-banner">{errorMessage}</p>
   {/if}
 
-  <div class="shell-grid" class:bottom-closed={!bottomOpen} class:inspector-closed={!inspectorOpen}>
+  <div class="shell-grid" class:inspector-closed={!inspectorOpen}>
     <aside class="sidebar panel">
       <!-- 1. Models -->
       <div class="sidebar-section" class:collapsed={!modelsOpen}>
@@ -320,12 +337,11 @@
         {#if modelsOpen}
           <div class="sidebar-body">
             <SidebarModels
-              {summary}
-              presets={modelPresets}
-              {onSetDefaultPreset}
+              {nodes}
+              activePath={blockEditorActive || pipelineEditorActive ? null : activePath}
+              defaultModelPreset={summary.defaultModelPreset}
               {onCreatePreset}
-              {onDeletePreset}
-              {onOpenPresetFile}
+              onOpenModel={onOpenPath}
             />
           </div>
         {/if}
@@ -340,9 +356,9 @@
         {#if globalVarsOpen}
           <div class="sidebar-body">
             <SidebarGlobalVariables
-              {globalVariables}
-              projectVariables={summary.variables}
-              {onSetGlobalVariables}
+              activePath={blockEditorActive || pipelineEditorActive ? null : activePath}
+              variableCount={Object.keys(globalVariables).length}
+              onOpenGlobalVariables={onOpenPath}
             />
           </div>
         {/if}
@@ -357,8 +373,9 @@
         {#if workspaceVarsOpen}
           <div class="sidebar-body">
             <SidebarWorkspaceVariables
-              {summary}
-              {onSetProjectVariables}
+              activePath={blockEditorActive || pipelineEditorActive ? null : activePath}
+              variableCount={Object.keys(summary.variables).length}
+              onOpenWorkspaceVariables={onOpenPath}
             />
           </div>
         {/if}
@@ -491,7 +508,6 @@
           <div class="sidebar-body">
             <SidebarSettings
               {summary}
-              credentialStatus={credentialState}
               {onRenameProject}
             />
           </div>
@@ -611,6 +627,13 @@
             validationLoading={validationLoading}
             execution={activeExecution}
             executionLoading={executionLoading && activeTab?.kind === 'tera'}
+            historyItems={historyItems}
+            historyLoading={historyLoading}
+            credentialState={credentialState ?? { source: 'missing', hasStoredKey: false }}
+            {onOpenRunPath}
+            defaultModelPreset={summary.defaultModelPreset}
+            {onSetDefaultPreset}
+            onDeletePreset={onDeletePreset}
           />
         {/if}
       </div>
@@ -628,37 +651,6 @@
         />
       </aside>
     {/if}
-
-    <section class="bottom panel">
-      <div class="pane-head">
-        <p class="eyebrow">Bottom Panel</p>
-        <div class="pane-controls">
-          <span>{activeTab?.kind === 'tera' ? 'Run Output + History' : 'Preview'}</span>
-          <button
-            type="button"
-            class="pane-toggle"
-            onclick={() => (bottomOpen = !bottomOpen)}
-            aria-label={bottomOpen ? 'Collapse bottom panel' : 'Expand bottom panel'}
-          >{bottomOpen ? '▾' : '▸'}</button>
-        </div>
-      </div>
-      {#if bottomOpen}
-        <ValidationPanel
-          tab={activeTab}
-          validation={validationResult}
-          loading={validationLoading}
-          execution={activeExecution}
-          executionLoading={executionLoading && activeTab?.kind === 'tera'}
-          credentialState={credentialState ?? { source: 'missing', hasStoredKey: false }}
-          recentRuns={historyItems}
-          recentRunsLoading={historyLoading}
-          onOpenRunPath={onOpenRunPath}
-          onExecute={onRunTab}
-          showValidation={false}
-          showPreview={false}
-        />
-      {/if}
-    </section>
   </div>
 </section>
 
@@ -713,33 +705,49 @@
     font-size: 1.15rem;
   }
 
-  .counts {
+  .status-strip {
     display: flex;
-    gap: 0.55rem;
-    flex-wrap: wrap;
+    gap: 0.8rem;
     align-items: center;
-    color: var(--text-dim);
-    font-size: 0.84rem;
   }
 
-  .counts span {
-    padding: 0.28rem 0.55rem;
-    border-radius: 999px;
+  .pipeline-status {
+    display: grid;
+    gap: 0.1rem;
+    min-width: min(28rem, 48vw);
+    padding: 0.55rem 0.8rem;
+    border-radius: 16px;
     background: var(--bg-ghost);
     border: 1px solid var(--border-faint);
+    color: var(--text-dim);
+  }
+
+  .pipeline-status strong {
+    color: var(--text);
+    font-size: 0.92rem;
+  }
+
+  .pipeline-status span {
+    color: var(--text-soft);
+    font-size: 0.8rem;
+  }
+
+  .pipeline-status.running {
+    border-color: rgba(139, 177, 255, 0.34);
+    background: rgba(132, 173, 255, 0.1);
+  }
+
+  .pipeline-status.failed {
+    border-color: rgba(255, 141, 161, 0.2);
+    background: rgba(255, 141, 161, 0.08);
   }
 
   .shell-grid {
     display: grid;
     grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr) minmax(17rem, 21rem);
-    grid-template-rows: minmax(0, 1fr) minmax(10rem, auto);
     gap: 0.85rem;
     min-height: 0;
     flex: 1;
-  }
-
-  .shell-grid.bottom-closed {
-    grid-template-rows: minmax(0, 1fr) auto;
   }
 
   .shell-grid.inspector-closed {
@@ -748,8 +756,7 @@
 
   .sidebar,
   .inspector,
-  .editor,
-  .bottom {
+  .editor {
     min-height: 0;
   }
 
@@ -806,24 +813,6 @@
   }
 
   /* ── Explorer innards ── */
-
-  .pane-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.65rem;
-    align-items: center;
-    margin-bottom: 0.75rem;
-    color: var(--text-dim);
-    font-size: 0.8rem;
-  }
-
-  .pane-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-  }
-
-
 
   .pane-toggle {
     background: transparent;
@@ -902,40 +891,12 @@
     overflow-y: auto;
   }
 
-  /* ── Bottom panel ── */
-
-  .bottom {
-    grid-column: 1 / span 3;
-    display: grid;
-    grid-template-rows: auto auto;
-    gap: 0.45rem;
-    padding: 0.8rem 1rem;
-    color: var(--text-dim);
-  }
-
-  .shell-grid.inspector-closed .bottom {
-    grid-column: 1 / span 2;
-  }
-
-  .bottom p {
-    margin: 0;
-  }
-
   @media (max-width: 1160px) {
     .shell-grid {
       grid-template-columns: minmax(14rem, 16rem) minmax(0, 1fr);
-      grid-template-rows: minmax(0, 1fr) minmax(16rem, auto) minmax(10rem, auto);
-    }
-
-    .shell-grid.bottom-closed {
-      grid-template-rows: minmax(0, 1fr) minmax(16rem, auto) auto;
     }
 
     .inspector {
-      grid-column: 1 / span 2;
-    }
-
-    .bottom {
       grid-column: 1 / span 2;
     }
   }
@@ -947,16 +908,21 @@
     }
 
     .shell-grid {
-      grid-template-rows: minmax(16rem, auto) minmax(24rem, auto) minmax(16rem, auto) minmax(10rem, auto);
+      grid-template-rows: minmax(16rem, auto) minmax(24rem, auto) minmax(16rem, auto);
     }
 
-    .shell-grid.bottom-closed {
-      grid-template-rows: minmax(16rem, auto) minmax(24rem, auto) minmax(16rem, auto) auto;
-    }
-
-    .inspector,
-    .bottom {
+    .inspector {
       grid-column: 1;
+    }
+
+    .status-strip {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .pipeline-status {
+      min-width: 0;
+      flex: 1;
     }
   }
 </style>

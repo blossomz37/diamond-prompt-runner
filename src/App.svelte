@@ -48,7 +48,13 @@
     cancelPipeline,
     onPipelineProgress
   } from '$lib/tauri';
+  import {
+    GLOBAL_VARIABLES_PATH,
+    WORKSPACE_VARIABLES_PATH
+  } from '$lib/types/project';
   import type {
+    AssetContent,
+    AssetMetadata,
     ExecutionCredentialStatus,
     CreatedPromptBlockResult,
     ExportBundleResult,
@@ -67,7 +73,6 @@
     WorkspaceTab,
     PipelineProgressEvent
   } from '$lib/types/project';
-  import { findAssetNode } from '$lib/utils/assetUtils';
   import { createValidationStore } from '$lib/stores/validation.svelte';
 
   let mode = $state<'browser' | 'workspace'>('browser');
@@ -111,6 +116,111 @@
   let executionCredentialLoading = $state(false);
   let executionCredentialError = $state<string | null>(null);
   let executionHistoryRequestId = 0;
+
+  function serializeVariables(variables: Record<string, string>, scope: 'global' | 'workspace'): string {
+    const header =
+      scope === 'global'
+        ? '# App-level global variables\n# Saved outside the project workspace.\n'
+        : '# Workspace variables\n# Saved with the current project.\n';
+
+    const entries = Object.entries(variables)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, value]) => `${name}: ${JSON.stringify(value)}`)
+      .join('\n');
+
+    return entries ? `${header}\n${entries}\n` : `${header}\n`;
+  }
+
+  function parseVariables(content: string): Record<string, string> {
+    const next: Record<string, string> = {};
+
+    for (const rawLine of content.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('#')) {
+        continue;
+      }
+
+      const separator = line.indexOf(':');
+      if (separator <= 0) {
+        throw new Error(`Invalid variable entry: ${line}`);
+      }
+
+      const name = line.slice(0, separator).trim();
+      const rawValue = line.slice(separator + 1).trim();
+
+      if (!name) {
+        throw new Error(`Variable name is required: ${line}`);
+      }
+
+      if (!rawValue) {
+        next[name] = '';
+        continue;
+      }
+
+      if (rawValue.startsWith('"')) {
+        const parsed = JSON.parse(rawValue);
+        next[name] = typeof parsed === 'string' ? parsed : String(parsed);
+        continue;
+      }
+
+      next[name] = rawValue;
+    }
+
+    return next;
+  }
+
+  function buildVariablesMetadata(
+    path: string,
+    name: string,
+    content: string,
+    details: { label: string; value: string }[]
+  ): AssetMetadata {
+    return {
+      kind: 'yaml',
+      path,
+      name,
+      sizeBytes: content.length,
+      modifiedAt: new Date().toISOString(),
+      details
+    };
+  }
+
+  function buildGlobalVariablesAsset(): AssetContent {
+    const content = serializeVariables(globalVariables, 'global');
+
+    return {
+      path: GLOBAL_VARIABLES_PATH,
+      kind: 'yaml',
+      view: 'text',
+      content,
+      isEditable: true,
+      metadata: buildVariablesMetadata(GLOBAL_VARIABLES_PATH, 'global-variables.yaml', content, [
+        { label: 'Scope', value: 'App-level' },
+        { label: 'Storage', value: 'App data' },
+        { label: 'Variables', value: String(Object.keys(globalVariables).length) }
+      ]),
+      parsedJson: null
+    };
+  }
+
+  function buildWorkspaceVariablesAsset(): AssetContent {
+    const variables = workspace?.variables ?? {};
+    const content = serializeVariables(variables, 'workspace');
+
+    return {
+      path: WORKSPACE_VARIABLES_PATH,
+      kind: 'yaml',
+      view: 'text',
+      content,
+      isEditable: true,
+      metadata: buildVariablesMetadata(WORKSPACE_VARIABLES_PATH, 'workspace-variables.yaml', content, [
+        { label: 'Scope', value: 'Project-backed' },
+        { label: 'Stored At', value: 'variables/workspace-variables.yaml' },
+        { label: 'Variables', value: String(Object.keys(variables).length) }
+      ]),
+      parsedJson: null
+    };
+  }
 
   onMount(async () => {
     try {
@@ -277,7 +387,16 @@
     errorMessage = null;
 
     try {
-      const asset = await readProjectAsset(workspace.rootPath, path);
+      let asset: AssetContent;
+
+      if (path === GLOBAL_VARIABLES_PATH) {
+        asset = buildGlobalVariablesAsset();
+      } else if (path === WORKSPACE_VARIABLES_PATH) {
+        asset = buildWorkspaceVariablesAsset();
+      } else {
+        asset = await readProjectAsset(workspace.rootPath, path);
+      }
+
       const nextTab: WorkspaceTab = {
         ...asset,
         title: title ?? asset.metadata.name ?? path.split('/').pop() ?? path,
@@ -349,7 +468,19 @@
     errorMessage = null;
 
     try {
-      const asset = await writeProjectAsset(workspace.rootPath, path, tab.draftContent);
+      let asset: AssetContent;
+
+      if (path === GLOBAL_VARIABLES_PATH) {
+        globalVariables = await setGlobalVariables(parseVariables(tab.draftContent));
+        asset = buildGlobalVariablesAsset();
+      } else if (path === WORKSPACE_VARIABLES_PATH) {
+        workspace = await setProjectVariables(workspace.rootPath, parseVariables(tab.draftContent));
+        assetNodes = await listProjectAssets(workspace.rootPath);
+        asset = buildWorkspaceVariablesAsset();
+      } else {
+        asset = await writeProjectAsset(workspace.rootPath, path, tab.draftContent);
+      }
+
       updateTab(path, (current) => ({
         ...current,
         ...asset,
@@ -378,7 +509,16 @@
     errorMessage = null;
 
     try {
-      const asset = await readProjectAsset(workspace.rootPath, path);
+      let asset: AssetContent;
+
+      if (path === GLOBAL_VARIABLES_PATH) {
+        asset = buildGlobalVariablesAsset();
+      } else if (path === WORKSPACE_VARIABLES_PATH) {
+        asset = buildWorkspaceVariablesAsset();
+      } else {
+        asset = await readProjectAsset(workspace.rootPath, path);
+      }
+
       updateTab(path, (current) => ({
         ...current,
         ...asset,
@@ -626,15 +766,6 @@
     }
   }
 
-  async function handleSetGlobalVariables(variables: Record<string, string>): Promise<void> {
-    globalVariables = await setGlobalVariables(variables);
-  }
-
-  async function handleSetProjectVariables(variables: Record<string, string>): Promise<void> {
-    if (!workspace) return;
-    workspace = await setProjectVariables(workspace.rootPath, variables);
-  }
-
   async function handleRenameProject(newName: string): Promise<void> {
     if (!workspace) return;
     workspace = await renameProject(workspace.rootPath, newName);
@@ -649,7 +780,6 @@
     if (!workspace) return;
     await createModelPreset(workspace.rootPath, filename, modelId);
     modelPresets = await listModelPresets(workspace.rootPath);
-    // Refresh asset tree since models/ changed
     assetNodes = await listProjectAssets(workspace.rootPath);
   }
 
@@ -666,15 +796,6 @@
       }
     }
     assetNodes = await listProjectAssets(workspace.rootPath);
-  }
-
-  function handleOpenPresetFile(presetPath: string): void {
-    if (!workspace) return;
-    // Find the asset node in the tree and select it
-    const node = findAssetNode(assetNodes, presetPath);
-    if (node) {
-      handleSelectAsset(node);
-    }
   }
 
   async function handleSetBlockPreset(blockId: string, presetPath: string | null): Promise<void> {
@@ -947,9 +1068,8 @@
     {projectUsageSummary}
     {globalVariables}
     {modelPresets}
-    onSetGlobalVariables={handleSetGlobalVariables}
-    onSetProjectVariables={handleSetProjectVariables}
     onSelectAsset={handleSelectAsset}
+    onOpenPath={openAssetPath}
     onSelectTab={(path) => { activePath = path; errorMessage = null; }}
     onCloseTab={(path) => { tabs = tabs.filter(t => t.path !== path); if (activePath === path) activePath = tabs[0]?.path ?? null; }}
     onDraftChange={handleDraftChange}
@@ -977,7 +1097,6 @@
     onSetDefaultPreset={handleSetDefaultPreset}
     onCreatePreset={handleCreatePreset}
     onDeletePreset={handleDeletePreset}
-    onOpenPresetFile={handleOpenPresetFile}
     onSetBlockPreset={handleSetBlockPreset}
     onSetBlockOutputTarget={handleSetBlockOutputTarget}
     onSetBlockOutputFilename={handleSetBlockOutputFilename}
