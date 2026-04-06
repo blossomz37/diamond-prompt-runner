@@ -19,14 +19,22 @@ pub use credentials::{get_execution_credential_status, save_execution_api_key, c
 pub(crate) mod execution;
 pub use execution::{validate_project_template, execute_prompt_block, execute_pipeline};
 use execution::{
-    load_model_id_from_preset, PersistedRunRecord, extract_usage_metrics,
+    PersistedRunRecord, extract_usage_metrics,
     execute_prompt_block_with_transport, execute_pipeline_with_transport,
 };
 
+pub(crate) mod history;
+pub use history::{list_prompt_run_history, list_project_run_history, delete_run, get_project_usage_summary};
+
+pub(crate) mod presets;
+pub use presets::{list_model_presets, set_default_model_preset, create_model_preset, delete_model_preset, set_block_model_preset};
+
+pub(crate) mod variables;
+pub use variables::{get_global_variables, set_global_variables, set_project_variables};
+pub(crate) use variables::{read_global_variables_store, read_workspace_variables_yaml, write_workspace_variables_yaml};
+
 const PROJECT_DIRS: [&str; 7] = ["documents", "prompts", "models", "runs", "exports", "help", "variables"];
-const WORKSPACE_VARIABLES_FILE: &str = "variables/workspace-variables.yaml";
 const RECENTS_FILE_NAME: &str = "recent-projects.json";
-const GLOBAL_VARIABLES_FILE_NAME: &str = "global-variables.json";
 const SEEDED_MODEL_PRESETS: [(&str, &str); 5] = [
     (
         "default.yaml",
@@ -58,11 +66,7 @@ struct RecentsStore {
     projects: Vec<RecentProjectEntry>,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
-struct GlobalVariablesStore {
-    #[serde(default)]
-    variables: BTreeMap<String, String>,
-}
+// GlobalVariablesStore moved to variables.rs
 
 pub fn create_project(parent_path: &Path, project_name: &str, app_data_dir: &Path) -> StoreResult<ProjectSummary> {
     if !parent_path.is_dir() {
@@ -208,166 +212,9 @@ pub fn remove_recent_project(app_data_dir: &Path, root_path: &Path) -> StoreResu
     Ok(())
 }
 
-pub fn get_global_variables(app_data_dir: &Path) -> StoreResult<BTreeMap<String, String>> {
-    Ok(read_global_variables_store(app_data_dir))
-}
+// get_global_variables, set_global_variables, set_project_variables → variables.rs
 
-pub fn set_global_variables(
-    app_data_dir: &Path,
-    variables: BTreeMap<String, String>,
-) -> StoreResult<BTreeMap<String, String>> {
-    fs::create_dir_all(app_data_dir)?;
-    write_global_variables_store(app_data_dir, &variables)?;
-    Ok(variables)
-}
-
-pub fn set_project_variables(
-    root_path: &Path,
-    variables: BTreeMap<String, String>,
-) -> StoreResult<ProjectSummary> {
-    let (root_path, mut manifest) = validate_project(root_path)?;
-    // Write to YAML file (source of truth)
-    write_workspace_variables_yaml(&root_path, &variables)?;
-    // Sync to project.json for backward compatibility
-    manifest.variables = variables
-        .into_iter()
-        .map(|(k, v)| (k, Value::String(v)))
-        .collect();
-    manifest.updated_at = timestamp();
-    write_manifest(&root_path, &manifest)?;
-    summarize_project(&root_path, &manifest)
-}
-
-pub fn list_model_presets(root_path: &Path) -> StoreResult<Vec<ModelPresetSummary>> {
-    let (root_path, _manifest) = validate_project(root_path)?;
-    let models_dir = root_path.join("models");
-    if !models_dir.is_dir() {
-        return Ok(Vec::new());
-    }
-
-    let mut presets: Vec<ModelPresetSummary> = Vec::new();
-    for entry in fs::read_dir(&models_dir)?.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|ext| ext.to_str()) != Some("yaml") {
-            continue;
-        }
-        let filename = path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_string();
-        let relative_path = format!("models/{}", filename);
-        let model_id = load_model_id_from_preset(&root_path, &relative_path)
-            .unwrap_or_else(|_| "unknown".to_string());
-        presets.push(ModelPresetSummary {
-            path: relative_path,
-            filename,
-            model_id,
-        });
-    }
-    presets.sort_by(|a, b| a.filename.cmp(&b.filename));
-    Ok(presets)
-}
-
-pub fn set_default_model_preset(
-    root_path: &Path,
-    preset_path: &str,
-) -> StoreResult<ProjectSummary> {
-    let (root_path, mut manifest) = validate_project(root_path)?;
-    if !root_path.join(preset_path).is_file() {
-        return Err(ProjectStoreError::message(format!(
-            "Preset file not found: {}",
-            preset_path
-        )));
-    }
-    manifest.default_model_preset = preset_path.to_string();
-    manifest.updated_at = timestamp();
-    write_manifest(&root_path, &manifest)?;
-    summarize_project(&root_path, &manifest)
-}
-
-pub fn create_model_preset(
-    root_path: &Path,
-    filename: &str,
-    model_id: &str,
-) -> StoreResult<ModelPresetSummary> {
-    let (root_path, _manifest) = validate_project(root_path)?;
-
-    let safe_filename = if filename.ends_with(".yaml") {
-        filename.to_string()
-    } else {
-        format!("{}.yaml", filename)
-    };
-
-    let preset_path = root_path.join("models").join(&safe_filename);
-    if preset_path.exists() {
-        return Err(ProjectStoreError::message(format!(
-            "Preset already exists: models/{}",
-            safe_filename
-        )));
-    }
-
-    let content = format!(
-        "# Custom model preset.\nmodel: {}\ntemperature: 1\nmax_completion_tokens: 16000\n",
-        model_id
-    );
-    fs::write(&preset_path, &content)?;
-
-    Ok(ModelPresetSummary {
-        path: format!("models/{}", safe_filename),
-        filename: safe_filename,
-        model_id: model_id.to_string(),
-    })
-}
-
-pub fn delete_model_preset(root_path: &Path, preset_path: &str) -> StoreResult<()> {
-    let (root_path, manifest) = validate_project(root_path)?;
-    if manifest.default_model_preset == preset_path {
-        return Err(ProjectStoreError::message(
-            "Cannot delete the current default model preset. Change the default first.",
-        ));
-    }
-    let full_path = root_path.join(preset_path);
-    if !full_path.is_file() {
-        return Err(ProjectStoreError::message(format!(
-            "Preset file not found: {}",
-            preset_path
-        )));
-    }
-    fs::remove_file(full_path)?;
-    Ok(())
-}
-
-pub fn set_block_model_preset(
-    root_path: &Path,
-    block_id: &str,
-    preset_path: Option<&str>,
-) -> StoreResult<ProjectSummary> {
-    let (root_path, mut manifest) = validate_project(root_path)?;
-
-    // Validate preset exists when setting (not clearing)
-    if let Some(path) = preset_path {
-        if !root_path.join(path).is_file() {
-            return Err(ProjectStoreError::message(format!(
-                "Preset file not found: {}",
-                path
-            )));
-        }
-    }
-
-    let block = manifest
-        .prompt_blocks
-        .iter_mut()
-        .find(|b| b.block_id == block_id)
-        .ok_or_else(|| {
-            ProjectStoreError::message(format!("Prompt block not found: {}", block_id))
-        })?;
-
-    block.model_preset = preset_path.map(|p| p.to_string());
-    manifest.updated_at = timestamp();
-    write_manifest(&root_path, &manifest)?;
-    summarize_project(&root_path, &manifest)
-}
+// list_model_presets, set_default_model_preset, create_model_preset, delete_model_preset, set_block_model_preset → presets.rs
 
 pub fn set_block_output_target(
     root_path: &Path,
@@ -876,140 +723,7 @@ pub fn write_project_asset(root_path: &Path, relative_path: &str, content: &str)
 
 // validate_project_template, execute_prompt_block, execute_pipeline → execution.rs
 // get_execution_credential_status, save_execution_api_key, clear_execution_api_key → credentials.rs
-
-pub fn list_prompt_run_history(root_path: &Path, relative_path: &str) -> StoreResult<Vec<PromptRunHistoryEntry>> {
-    let (root_path, _) = validate_project(root_path)?;
-    let safe_relative = sanitize_relative_path(relative_path)?;
-    let safe_relative_string = safe_relative.to_string_lossy().replace('\\', "/");
-
-    let entries = read_run_history_entries(&root_path, Some(&safe_relative_string))?;
-    Ok(entries
-        .into_iter()
-        .map(|entry| PromptRunHistoryEntry {
-            run_id: entry.run_id,
-            path: entry.path,
-            block_id: entry.block_id,
-            block_name: entry.block_name,
-            pipeline_id: entry.pipeline_id,
-            pipeline_name: entry.pipeline_name,
-            model_id: entry.model_id,
-            status: entry.status,
-            run_path: entry.run_path,
-            started_at: entry.started_at,
-            completed_at: entry.completed_at,
-            output_preview: entry.output_preview,
-            error: entry.error,
-            online: entry.online,
-            usage: entry.usage,
-        })
-        .collect())
-}
-
-pub fn list_project_run_history(root_path: &Path) -> StoreResult<Vec<ProjectRunHistoryEntry>> {
-    let (root_path, _) = validate_project(root_path)?;
-    read_run_history_entries(&root_path, None)
-}
-
-pub fn delete_run(root_path: &Path, run_path: &str) -> StoreResult<()> {
-    let (root_path, _) = validate_project(root_path)?;
-    let safe_relative = sanitize_relative_path(run_path)?;
-    // Restrict deletions to the runs/ directory only.
-    let first_component = safe_relative.components().next();
-    if first_component != Some(Component::Normal("runs".as_ref())) {
-        return Err(ProjectStoreError::message(
-            "Run artifact path must be within the runs/ directory.",
-        ));
-    }
-    let full_path = root_path.join(&safe_relative);
-    if !full_path.is_file() {
-        return Err(ProjectStoreError::message(format!(
-            "Run artifact not found: {run_path}"
-        )));
-    }
-    fs::remove_file(full_path)?;
-    Ok(())
-}
-
-pub fn get_project_usage_summary(root_path: &Path) -> StoreResult<ProjectUsageSummary> {
-    let (root_path, _) = validate_project(root_path)?;
-    let entries = read_run_history_entries(&root_path, None)?;
-    let mut summary = ProjectUsageSummary {
-        total_runs: 0,
-        successful_runs: 0,
-        failed_runs: 0,
-        total_prompt_tokens: 0,
-        total_completion_tokens: 0,
-        total_tokens: 0,
-        total_cost: 0.0,
-        total_output_words: 0,
-        total_retries: 0,
-    };
-    for entry in &entries {
-        summary.total_runs += 1;
-        match entry.status {
-            ExecutionStatus::Success => summary.successful_runs += 1,
-            ExecutionStatus::Failed => summary.failed_runs += 1,
-        }
-        summary.total_prompt_tokens += entry.usage.prompt_tokens.unwrap_or(0) as u64;
-        summary.total_completion_tokens += entry.usage.completion_tokens.unwrap_or(0) as u64;
-        summary.total_tokens += entry.usage.total_tokens.unwrap_or(0) as u64;
-        summary.total_cost += entry.usage.cost.unwrap_or(0.0);
-        summary.total_output_words += entry.usage.output_word_count.unwrap_or(0) as u64;
-        summary.total_retries += entry.usage.retry_count.unwrap_or(0);
-    }
-    Ok(summary)
-}
-
-fn read_run_history_entries(
-    root_path: &Path,
-    path_filter: Option<&str>,
-) -> StoreResult<Vec<ProjectRunHistoryEntry>> {
-    let mut entries = Vec::new();
-    for entry in fs::read_dir(root_path.join("runs"))?.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|value| value.to_str()) != Some("json") {
-            continue;
-        }
-
-        let content = match fs::read_to_string(&path) {
-            Ok(content) => content,
-            Err(_) => continue,
-        };
-
-        let record = match serde_json::from_str::<PersistedRunRecord>(&content) {
-            Ok(record) => record,
-            Err(_) => continue,
-        };
-
-        if let Some(filter) = path_filter {
-            if record.path != filter {
-                continue;
-            }
-        }
-
-        let run_path = diff_path(&root_path, &path)?;
-        entries.push(ProjectRunHistoryEntry {
-            run_id: record.run_id,
-            path: record.path,
-            block_id: record.block_id,
-            block_name: record.block_name,
-            pipeline_id: record.pipeline_id,
-            pipeline_name: record.pipeline_name,
-            model_id: record.model_id,
-            status: record.status,
-            run_path,
-            started_at: record.started_at,
-            completed_at: record.completed_at,
-            output_preview: record.output.as_deref().map(|value| preview_text(value, 180)),
-            error: record.error,
-            online: record.online,
-            usage: record.usage,
-        });
-    }
-
-    entries.sort_by(|left, right| right.completed_at.cmp(&left.completed_at));
-    Ok(entries)
-}
+// list_prompt_run_history, list_project_run_history, delete_run, get_project_usage_summary → history.rs
 
 
 fn summarize_pipeline(manifest: &ProjectManifest, pipeline: &Pipeline) -> ProjectPipelineSummary {
@@ -1115,7 +829,7 @@ fn is_hidden_ui_entry(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-fn summarize_project(root_path: &Path, manifest: &ProjectManifest) -> StoreResult<ProjectSummary> {
+pub(crate) fn summarize_project(root_path: &Path, manifest: &ProjectManifest) -> StoreResult<ProjectSummary> {
     let counts = ProjectCounts {
         documents: count_files(root_path.join("documents"))?,
         prompts: count_files(root_path.join("prompts"))?,
@@ -1638,56 +1352,15 @@ fn read_recents_store(app_data_dir: &Path) -> StoreResult<RecentsStore> {
     Ok(serde_json::from_str(&content)?)
 }
 
-pub(crate) fn read_global_variables_store(app_data_dir: &Path) -> BTreeMap<String, String> {
-    let store_path = app_data_dir.join(GLOBAL_VARIABLES_FILE_NAME);
-    if !store_path.exists() {
-        return BTreeMap::new();
-    }
-    fs::read_to_string(store_path)
-        .ok()
-        .and_then(|content| serde_json::from_str::<GlobalVariablesStore>(&content).ok())
-        .map(|store| store.variables)
-        .unwrap_or_default()
-}
-
-fn write_global_variables_store(app_data_dir: &Path, variables: &BTreeMap<String, String>) -> StoreResult<()> {
-    let store = GlobalVariablesStore { variables: variables.clone() };
-    let store_path = app_data_dir.join(GLOBAL_VARIABLES_FILE_NAME);
-    fs::write(store_path, serde_json::to_string_pretty(&store)?)?;
-    Ok(())
-}
-
-pub(crate) fn read_workspace_variables_yaml(root_path: &Path) -> BTreeMap<String, String> {
-    let yaml_path = root_path.join(WORKSPACE_VARIABLES_FILE);
-    if !yaml_path.exists() {
-        return BTreeMap::new();
-    }
-    fs::read_to_string(yaml_path)
-        .ok()
-        .and_then(|content| serde_yaml::from_str::<BTreeMap<String, String>>(&content).ok())
-        .unwrap_or_default()
-}
-
-fn write_workspace_variables_yaml(root_path: &Path, variables: &BTreeMap<String, String>) -> StoreResult<()> {
-    let yaml_path = root_path.join(WORKSPACE_VARIABLES_FILE);
-    let content = if variables.is_empty() {
-        "# Workspace variables — editable here or via the sidebar\n".to_string()
-    } else {
-        format!(
-            "# Workspace variables — editable here or via the sidebar\n{}",
-            serde_yaml::to_string(variables).unwrap_or_default()
-        )
-    };
-    fs::write(yaml_path, content)?;
-    Ok(())
-}
+// read_global_variables_store, write_global_variables_store → variables.rs
+// read_workspace_variables_yaml, write_workspace_variables_yaml → variables.rs
 
 fn read_manifest(manifest_path: &Path) -> StoreResult<ProjectManifest> {
     let content = fs::read_to_string(manifest_path)?;
     Ok(serde_json::from_str(&content)?)
 }
 
-fn write_manifest(root_path: &Path, manifest: &ProjectManifest) -> StoreResult<()> {
+pub(crate) fn write_manifest(root_path: &Path, manifest: &ProjectManifest) -> StoreResult<()> {
     let manifest_path = root_path.join("project.json");
     fs::write(manifest_path, serde_json::to_string_pretty(manifest)?)?;
     Ok(())
@@ -1853,7 +1526,7 @@ fn is_editable_kind(kind: &AssetKind) -> bool {
     matches!(kind, AssetKind::Markdown | AssetKind::Text | AssetKind::Tera | AssetKind::Yaml)
 }
 
-fn diff_path(root_path: &Path, path: &Path) -> StoreResult<String> {
+pub(crate) fn diff_path(root_path: &Path, path: &Path) -> StoreResult<String> {
     path.strip_prefix(root_path)
         .map(|relative| relative.to_string_lossy().replace('\\', "/"))
         .map_err(|_| ProjectStoreError::message("Asset path escaped the project root."))
