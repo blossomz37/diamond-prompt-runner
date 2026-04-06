@@ -1,9 +1,0 @@
-Read the following story information:
-
-{{ doc("Story Dossier.md") }}
-
-Here is the plan for writing Chapter 1:
-
-{{ doc("plan-chapter-1.md") }}
-
-Now write Chapter 1 so it reads like a bestselling cozy mystery novel. Write in first person from Josie's perspective. Use vivid sensory detail, natural dialogue, and a pace that balances warmth with mounting tension. Let the reader settle into the world before the body is found.

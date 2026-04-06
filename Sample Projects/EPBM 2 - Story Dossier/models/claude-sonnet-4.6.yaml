@@ -1,4 +1,0 @@
-# Strong controlled prose and planning candidate from the workshop presets.
-model: anthropic/claude-sonnet-4.6
-temperature: 0.9
-max_completion_tokens: 8000

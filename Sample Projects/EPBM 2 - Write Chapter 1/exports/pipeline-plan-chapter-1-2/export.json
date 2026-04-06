@@ -1,9 +1,0 @@
-{
-  "bundleName": "pipeline-plan-chapter-1",
-  "bundlePath": "exports/pipeline-plan-chapter-1-2",
-  "exportedAt": "2026-04-05T18:38:32Z",
-  "paths": [
-    "prompts/plan-chapter-1.tera"
-  ],
-  "projectName": "EPBM 2 - Write Chapter 1"
-}
