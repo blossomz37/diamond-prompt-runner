@@ -961,10 +961,44 @@ fn extract_section_filter(value: &Value, args: &std::collections::HashMap<String
     Ok(Value::String(slice_from_start[..end_idx].trim().to_string()))
 }
 
+fn last_numbered_marker_filter(
+    value: &Value,
+    args: &std::collections::HashMap<String, Value>,
+) -> tera::Result<Value> {
+    let input = match value.as_str() {
+        Some(s) => s,
+        None => return Err(tera::Error::msg("last_numbered_marker filter requires a string input")),
+    };
+
+    let prefix = args
+        .get("prefix")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| tera::Error::msg("last_numbered_marker requires a `prefix` argument"))?;
+
+    let escaped_prefix = regex::escape(prefix);
+    let pattern = format!(r"(?m)^{}(\d+)\s*$", escaped_prefix);
+    let regex = Regex::new(&pattern)
+        .map_err(|error| tera::Error::msg(format!("last_numbered_marker regex error: {error}")))?;
+
+    let last_number = regex
+        .captures_iter(input)
+        .filter_map(|captures| captures.get(1).map(|value| value.as_str().to_string()))
+        .last();
+
+    match last_number {
+        Some(number) => Ok(Value::String(number)),
+        None => Ok(Value::String(format!(
+            "[last_numbered_marker warning: prefix '{}' not found]",
+            prefix
+        ))),
+    }
+}
+
 fn build_tera(root_path: &Path) -> Tera {
     let mut tera = Tera::default();
     tera.autoescape_on(Vec::new());
     tera.register_filter("extract_section", extract_section_filter);
+    tera.register_filter("last_numbered_marker", last_numbered_marker_filter);
     
     let doc_root = root_path.to_path_buf();
     tera.register_filter("doc", move |value: &Value, _: &std::collections::HashMap<String, Value>| -> tera::Result<Value> {
@@ -981,6 +1015,55 @@ fn build_tera(root_path: &Path) -> Tera {
     });
     
     tera
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{extract_section_filter, last_numbered_marker_filter};
+    use serde_json::{json, Value};
+    use std::collections::HashMap;
+
+    #[test]
+    fn extract_section_returns_trimmed_slice_between_markers() {
+        let mut args = HashMap::new();
+        args.insert("start".to_string(), json!("## start"));
+        args.insert("end".to_string(), json!("## end"));
+
+        let result = extract_section_filter(&json!("preamble\n## start\n hello \n## end\npost"), &args)
+            .expect("extract_section should succeed");
+
+        assert_eq!(result, Value::String("hello".to_string()));
+    }
+
+    #[test]
+    fn last_numbered_marker_returns_last_matching_suffix() {
+        let mut args = HashMap::new();
+        args.insert("prefix".to_string(), json!("### chapter_"));
+
+        let result = last_numbered_marker_filter(
+            &json!("### chapter_1\nbody\n### chapter_12\nmore\n### chapter_28\nend"),
+            &args,
+        )
+        .expect("last_numbered_marker should succeed");
+
+        assert_eq!(result, Value::String("28".to_string()));
+    }
+
+    #[test]
+    fn last_numbered_marker_warns_when_prefix_missing() {
+        let mut args = HashMap::new();
+        args.insert("prefix".to_string(), json!("### chapter_"));
+
+        let result = last_numbered_marker_filter(&json!("no chapter markers here"), &args)
+            .expect("last_numbered_marker should succeed");
+
+        assert_eq!(
+            result,
+            Value::String(
+                "[last_numbered_marker warning: prefix '### chapter_' not found]".to_string()
+            )
+        );
+    }
 }
 
 fn extract_completion_text(response: &Value) -> String {

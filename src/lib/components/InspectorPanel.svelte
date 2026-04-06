@@ -14,6 +14,7 @@
     TemplateValidationResult,
     WorkspaceTab
   } from '$lib/types/project';
+  import { buildYamlPromptPaths } from '$lib/utils/yamlPromptPaths';
 
   interface Props {
     summary: ProjectSummary;
@@ -32,6 +33,22 @@
     validation,
     validationLoading
   }: Props = $props();
+
+  const yamlPromptPaths = $derived.by(() => {
+    if (!tab || tab.kind !== 'yaml' || !tab.path.startsWith('documents/')) {
+      return null;
+    }
+
+    return buildYamlPromptPaths(tab.path, tab.draftContent);
+  });
+
+  const branchPromptText = $derived(yamlPromptPaths?.branches.join('\n') ?? '');
+  const leafPromptText = $derived(yamlPromptPaths?.leaves.join('\n') ?? '');
+
+  function rowsFor(text: string): number {
+    const lineCount = text ? text.split('\n').length : 1;
+    return Math.min(Math.max(lineCount, 2), 8);
+  }
 </script>
 
 <aside class="inspector">
@@ -161,6 +178,48 @@
         {/each}
       </dl>
     </section>
+
+    {#if yamlPromptPaths}
+      <section class="section">
+        <p class="eyebrow">Prompt Paths</p>
+        <dl>
+          <div>
+            <dt>Alias</dt>
+            <dd>{yamlPromptPaths.alias}</dd>
+          </div>
+        </dl>
+
+        {#if yamlPromptPaths.error}
+          <div class="message error">
+            <p>{yamlPromptPaths.error}</p>
+          </div>
+        {:else}
+          <div class="prompt-path-group">
+            <label class="prompt-path-label" for="yaml-branch-paths">Branches</label>
+            <textarea
+              id="yaml-branch-paths"
+              class="prompt-paths"
+              readonly
+              aria-label="Branch prompt paths"
+              rows={rowsFor(branchPromptText)}
+              value={branchPromptText || 'No branch objects found in this YAML document.'}
+            ></textarea>
+          </div>
+
+          <div class="prompt-path-group">
+            <label class="prompt-path-label" for="yaml-leaf-paths">Leaves</label>
+            <textarea
+              id="yaml-leaf-paths"
+              class="prompt-paths"
+              readonly
+              aria-label="Leaf prompt paths"
+              rows={rowsFor(leafPromptText)}
+              value={leafPromptText || 'No scalar values found in this YAML document.'}
+            ></textarea>
+          </div>
+        {/if}
+      </section>
+    {/if}
   {/if}
 </aside>
 
@@ -260,5 +319,29 @@
     margin: 0;
     color: var(--text-dim);
     word-break: break-word;
+  }
+
+  .prompt-path-group {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .prompt-path-label {
+    color: var(--text-soft);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .prompt-paths {
+    width: 100%;
+    resize: vertical;
+    border-radius: 12px;
+    border: 1px solid var(--border-faint);
+    background: rgba(6, 10, 18, 0.82);
+    color: var(--text-dim);
+    padding: 0.65rem 0.75rem;
+    font: inherit;
+    line-height: 1.5;
   }
 </style>

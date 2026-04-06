@@ -107,6 +107,8 @@
     onDeleteDocument: (relativePath: string) => Promise<void>;
     onDeletePrompt: (relativePath: string) => Promise<void>;
     onRenameDocument: (relativePath: string, newName: string) => Promise<void>;
+    onAuditAsset: (path: string) => Promise<void>;
+    onConvertAsset: (path: string) => Promise<void>;
     credentialState: ExecutionCredentialStatus | null;
     onOpenHelpFile: (node: ProjectAssetNode) => void;
   }
@@ -169,6 +171,8 @@
     onDeleteDocument,
     onDeletePrompt,
     onRenameDocument,
+    onAuditAsset,
+    onConvertAsset,
     onOpenHelpFile
   }: Props = $props();
 
@@ -634,6 +638,8 @@
             defaultModelPreset={summary.defaultModelPreset}
             {onSetDefaultPreset}
             onDeletePreset={onDeletePreset}
+            onAuditAsset={onAuditAsset}
+            onConvertAsset={onConvertAsset}
           />
         {/if}
       </div>

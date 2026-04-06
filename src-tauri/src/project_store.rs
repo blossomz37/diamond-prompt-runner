@@ -15,7 +15,7 @@ pub use crate::types::*;
 
 pub(crate) mod assets;
 pub use assets::{
-    list_project_assets, read_project_asset, write_project_asset,
+    audit_project_asset, convert_project_asset, list_project_assets, read_project_asset, write_project_asset,
     export_project_assets, delete_document, rename_document, trash_prompt,
 };
 pub(crate) use assets::classify_asset;

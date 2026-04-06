@@ -8,7 +8,7 @@ use std::sync::Arc;
 use lazy_static::lazy_static;
 
 use project_store::{
-    AssetContent, CreatedPromptBlockResult, ExecutionCredentialStatus, ExportBundleResult,
+    AssetContent, AssetConversionAuditResult, AssetConversionResult, CreatedPromptBlockResult, ExecutionCredentialStatus, ExportBundleResult,
     ModelPresetSummary, PipelineExecutionResult, PipelineProgressEvent, ProjectAssetNode, ProjectPipelineSummary,
     ProjectPromptBlockSummary, ProjectRunHistoryEntry, ProjectSummary, ProjectUsageSummary,
     PromptExecutionResult, PromptRunHistoryEntry, RecentProjectEntry, SavedPipelineResult,
@@ -182,6 +182,24 @@ fn write_project_asset(
     content: String,
 ) -> Result<AssetContent, String> {
     project_store::write_project_asset(PathBuf::from(root_path).as_path(), &relative_path, &content)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn convert_project_asset(
+    root_path: String,
+    relative_path: String,
+) -> Result<AssetConversionResult, String> {
+    project_store::convert_project_asset(PathBuf::from(root_path).as_path(), &relative_path)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn audit_project_asset(
+    root_path: String,
+    relative_path: String,
+) -> Result<AssetConversionAuditResult, String> {
+    project_store::audit_project_asset(PathBuf::from(root_path).as_path(), &relative_path)
         .map_err(|error| error.to_string())
 }
 
@@ -525,6 +543,8 @@ pub fn run() {
             export_project_assets,
             read_project_asset,
             write_project_asset,
+            convert_project_asset,
+            audit_project_asset,
             validate_project_template,
             execute_prompt_block,
             execute_pipeline,

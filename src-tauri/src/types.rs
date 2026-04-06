@@ -161,6 +161,38 @@ pub struct AssetContent {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct AssetConversionResult {
+    pub source_path: String,
+    pub target_path: String,
+    pub source_kind: AssetKind,
+    pub target_kind: AssetKind,
+    pub assessment: String,
+    pub warnings: Vec<String>,
+    pub asset: AssetContent,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AssetConversionAuditStatus {
+    Convertible,
+    PartiallyConvertible,
+    NotSafelyConvertible,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssetConversionAuditResult {
+    pub source_path: String,
+    pub target_path: String,
+    pub source_kind: AssetKind,
+    pub target_kind: AssetKind,
+    pub status: AssetConversionAuditStatus,
+    pub assessment: String,
+    pub warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TemplateValidationResult {
     pub path: String,
     pub status: ValidationStatus,

@@ -10,6 +10,8 @@ import { ONLINE_PROMPT_DIRECTIVE } from '$lib/promptExecution';
 import App from './App.svelte';
 import type {
   AssetContent,
+  AssetConversionAuditResult,
+  AssetConversionResult,
   CreatedPromptBlockResult,
   ExecutionCredentialStatus,
   ExportBundleResult,
@@ -27,7 +29,9 @@ import type {
 } from '$lib/types/project';
 
 const tauri = vi.hoisted(() => ({
+  auditProjectAsset: vi.fn(),
   clearExecutionApiKey: vi.fn(),
+  convertProjectAsset: vi.fn(),
   createModelPreset: vi.fn(),
   createPipeline: vi.fn(),
   createProject: vi.fn(),
@@ -221,6 +225,49 @@ const yamlAssetContent: AssetContent = {
     ]
   },
   parsedJson: null
+};
+
+const convertedYamlAssetContent: AssetContent = {
+  path: 'documents/context.yaml',
+  kind: 'yaml',
+  view: 'text',
+  content:
+    'section_1:\n  summary: A small fixture document.\n  tags:\n    - fixture\nsection_2:\n  details:\n    status: draft\n',
+  isEditable: true,
+  metadata: {
+    kind: 'yaml',
+    path: 'documents/context.yaml',
+    name: 'context.yaml',
+    sizeBytes: 115,
+    modifiedAt: '2026-04-03T20:12:30Z',
+    details: [
+      { label: 'Model', value: 'Unknown' },
+      { label: 'Temperature', value: '—' },
+      { label: 'Max Tokens', value: '—' }
+    ]
+  },
+  parsedJson: null
+};
+
+const conversionResult: AssetConversionResult = {
+  sourcePath: 'documents/context.md',
+  targetPath: 'documents/context.yaml',
+  sourceKind: 'markdown',
+  targetKind: 'yaml',
+  assessment: 'Structured Markdown headings and `**field:** value` lines were mapped into YAML.',
+  warnings: [],
+  asset: convertedYamlAssetContent
+};
+
+const conversionAuditResult: AssetConversionAuditResult = {
+  sourcePath: 'documents/context.md',
+  targetPath: 'documents/context.yaml',
+  sourceKind: 'markdown',
+  targetKind: 'yaml',
+  status: 'partially_convertible',
+  assessment:
+    'The Markdown contains extractable structure, but some lines would need manual cleanup or richer parser support before safe conversion.',
+  warnings: ['Heading `# Context` uses `#` and would need to be remapped before safe conversion.']
 };
 
 const teraAssetContent: AssetContent = {
@@ -547,6 +594,8 @@ describe('App', () => {
     tauri.onPipelineProgress.mockResolvedValue(() => {});
     tauri.removeRecentProject.mockResolvedValue(undefined);
     tauri.executePipeline.mockResolvedValue(pipelineExecutionResult);
+    tauri.auditProjectAsset.mockResolvedValue(conversionAuditResult);
+    tauri.convertProjectAsset.mockResolvedValue(conversionResult);
     tauri.listProjectAssets.mockResolvedValue(assetNodes);
     tauri.readProjectAsset.mockImplementation(async (_rootPath: string, relativePath: string) => {
       if (relativePath === 'models/default.yaml') {
@@ -1016,6 +1065,62 @@ describe('App', () => {
     );
 
     expect(screen.getByText('Saved')).toBeInTheDocument();
+  });
+
+  it('creates a converted asset copy from the editor toolbar', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    await openDocumentAsset('context.md');
+    await fireEvent.click(screen.getByRole('button', { name: 'Copy As YAML' }));
+
+    await waitFor(() =>
+      expect(tauri.convertProjectAsset).toHaveBeenCalledWith('/tmp/story-lab', 'documents/context.md')
+    );
+
+    expect(await screen.findAllByText('context.yaml')).not.toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Copy As Markdown' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Created documents/context.yaml', level: 2 })).toBeInTheDocument();
+    expect(screen.getByText('Prompt Paths')).toBeInTheDocument();
+    expect(screen.getByText('context')).toBeInTheDocument();
+    expect(screen.getByLabelText('Branch prompt paths')).toHaveValue(
+      '{{ context.section_1 }}\n{{ context.section_2 }}\n{{ context.section_2.details }}'
+    );
+    expect(screen.getByLabelText('Leaf prompt paths')).toHaveValue(
+      '{{ context.section_1.summary }}\n{{ context.section_1.tags }}\n{{ context.section_2.details.status }}'
+    );
+  });
+
+  it('reports an audit-only conversion status without writing a file', async () => {
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    await openDocumentAsset('context.md');
+    await fireEvent.click(screen.getByRole('button', { name: 'Audit YAML Conversion' }));
+
+    await waitFor(() =>
+      expect(tauri.auditProjectAsset).toHaveBeenCalledWith('/tmp/story-lab', 'documents/context.md')
+    );
+
+    expect(screen.getByRole('heading', { name: 'partially_convertible', level: 2 })).toBeInTheDocument();
+    expect(screen.getByText('Conversion Audit')).toBeInTheDocument();
+    expect(screen.getByText(/Heading `# Context` uses `#`/)).toBeInTheDocument();
+    expect(tauri.convertProjectAsset).not.toHaveBeenCalled();
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Dismiss message' }));
+    await waitFor(() => {
+      expect(screen.queryByText('Conversion Audit')).not.toBeInTheDocument();
+    });
   });
 
   it('exports selected open tabs into a derived bundle from the sidebar', async () => {

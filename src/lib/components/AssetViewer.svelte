@@ -33,6 +33,8 @@
     defaultModelPreset: string;
     onSetDefaultPreset: (presetPath: string) => void | Promise<void>;
     onDeletePreset: (presetPath: string) => void | Promise<void>;
+    onAuditAsset: (path: string) => void | Promise<void>;
+    onConvertAsset: (path: string) => void | Promise<void>;
   }
 
   let {
@@ -51,7 +53,9 @@
     onOpenRunPath,
     defaultModelPreset,
     onSetDefaultPreset,
-    onDeletePreset
+    onDeletePreset,
+    onAuditAsset,
+    onConvertAsset
   }: Props = $props();
 
   let previewMode = $state(false);
@@ -136,6 +140,36 @@
   const isGlobalVariablesTab = $derived(tab?.path === GLOBAL_VARIABLES_PATH);
   const isWorkspaceVariablesTab = $derived(tab?.path === WORKSPACE_VARIABLES_PATH);
   const isVariableTab = $derived(isGlobalVariablesTab || isWorkspaceVariablesTab);
+  const conversionTargetLabel = $derived.by(() => {
+    if (isVariableTab || !tab) {
+      return null;
+    }
+
+    if (tab.kind === 'markdown') {
+      return 'Copy As YAML';
+    }
+
+    if (tab.kind === 'yaml') {
+      return 'Copy As Markdown';
+    }
+
+    return null;
+  });
+  const auditTargetLabel = $derived.by(() => {
+    if (isVariableTab || !tab) {
+      return null;
+    }
+
+    if (tab.kind === 'markdown') {
+      return 'Audit YAML Conversion';
+    }
+
+    if (tab.kind === 'yaml') {
+      return 'Audit Markdown Conversion';
+    }
+
+    return null;
+  });
 
   const renderedExecutionOutput = $derived(
     execution?.output ? marked.parse(execution.output) : ''
@@ -313,6 +347,26 @@
               {deletePresetConfirm ? 'Confirm Delete?' : 'Delete Preset'}
             </button>
           {/if}
+        {/if}
+        {#if auditTargetLabel}
+          <button
+            type="button"
+            class="ghost"
+            onclick={() => void onAuditAsset(tab.path)}
+            disabled={tab.isSaving || tab.draftContent !== tab.savedContent}
+          >
+            {auditTargetLabel}
+          </button>
+        {/if}
+        {#if conversionTargetLabel}
+          <button
+            type="button"
+            class="ghost"
+            onclick={() => void onConvertAsset(tab.path)}
+            disabled={tab.isSaving || tab.draftContent !== tab.savedContent}
+          >
+            {conversionTargetLabel}
+          </button>
         {/if}
         {#if isPreviewable}
           <button

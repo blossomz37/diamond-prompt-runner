@@ -3,6 +3,8 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import type {
   AssetContent,
+  AssetConversionAuditResult,
+  AssetConversionResult,
   CreatedPromptBlockResult,
   ExecutionCredentialStatus,
   ExportBundleResult,
@@ -146,6 +148,20 @@ export async function writeProjectAsset(
   content: string
 ): Promise<AssetContent> {
   return invoke<AssetContent>('write_project_asset', { rootPath, relativePath, content });
+}
+
+export async function convertProjectAsset(
+  rootPath: string,
+  relativePath: string
+): Promise<AssetConversionResult> {
+  return invoke<AssetConversionResult>('convert_project_asset', { rootPath, relativePath });
+}
+
+export async function auditProjectAsset(
+  rootPath: string,
+  relativePath: string
+): Promise<AssetConversionAuditResult> {
+  return invoke<AssetConversionAuditResult>('audit_project_asset', { rootPath, relativePath });
 }
 
 export async function validateProjectTemplate(

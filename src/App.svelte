@@ -3,7 +3,9 @@
   import ProjectBrowser from '$lib/components/ProjectBrowser.svelte';
   import WorkspaceShell from '$lib/components/WorkspaceShell.svelte';
   import {
+    auditProjectAsset,
     clearExecutionApiKey,
+    convertProjectAsset,
     createModelPreset,
     createPipeline,
     createProject,
@@ -54,6 +56,8 @@
   } from '$lib/types/project';
   import type {
     AssetContent,
+    AssetConversionAuditResult,
+    AssetConversionResult,
     AssetMetadata,
     ExecutionCredentialStatus,
     CreatedPromptBlockResult,
@@ -81,6 +85,18 @@
   let parentPath = $state('');
   let busy = $state(false);
   let errorMessage = $state<string | null>(null);
+  type WorkspaceFeedback =
+    | {
+        kind: 'audit';
+        result: AssetConversionAuditResult;
+      }
+    | {
+        kind: 'notice';
+        title: string;
+        detail: string;
+      };
+
+  let feedback = $state<WorkspaceFeedback | null>(null);
   let workspace = $state<ProjectSummary | null>(null);
   let assetNodes = $state<ProjectAssetNode[]>([]);
   let projectPipelines = $state<ProjectPipeline[]>([]);
@@ -167,6 +183,10 @@
     }
 
     return next;
+  }
+
+  function clearFeedback(): void {
+    feedback = null;
   }
 
   function buildVariablesMetadata(
@@ -412,6 +432,22 @@
     } finally {
       loadingPath = null;
     }
+  }
+
+  function openAssetFromContent(asset: AssetContent, title?: string): void {
+    const nextTab: WorkspaceTab = {
+      ...asset,
+      title: title ?? asset.metadata.name ?? asset.path.split('/').pop() ?? asset.path,
+      savedContent: asset.content,
+      draftContent: asset.content,
+      isSaving: false
+    };
+
+    const existing = tabs.find((tab) => tab.path === asset.path);
+    tabs = existing
+      ? tabs.map((tab) => (tab.path === asset.path ? nextTab : tab))
+      : [...tabs, nextTab];
+    activePath = asset.path;
   }
 
   async function handleCreatePrompt(promptName: string): Promise<void> {
@@ -986,6 +1022,61 @@
     }
   }
 
+  async function handleConvertAsset(path: string): Promise<void> {
+    if (!workspace) {
+      return;
+    }
+
+    const tab = tabs.find((candidate) => candidate.path === path);
+    if (tab && tab.isEditable && tab.draftContent !== tab.savedContent) {
+      errorMessage = `Save changes to ${tab.title} before converting. Conversion uses the saved file on disk.`;
+      return;
+    }
+
+    errorMessage = null;
+    feedback = null;
+
+    try {
+      const result: AssetConversionResult = await convertProjectAsset(workspace.rootPath, path);
+      assetNodes = await listProjectAssets(workspace.rootPath);
+      openAssetFromContent(result.asset);
+      feedback = {
+        kind: 'notice',
+        title: `Created ${result.targetPath}`,
+        detail: result.assessment
+      };
+    } catch (error) {
+      errorMessage = error instanceof Error ? error.message : `Failed to convert ${path}.`;
+    }
+  }
+
+  async function handleAuditAsset(path: string): Promise<void> {
+    if (!workspace) {
+      return;
+    }
+
+    const tab = tabs.find((candidate) => candidate.path === path);
+    if (tab && tab.isEditable && tab.draftContent !== tab.savedContent) {
+      errorMessage = `Save changes to ${tab.title} before auditing. The audit uses the saved file on disk.`;
+      feedback = null;
+      return;
+    }
+
+    errorMessage = null;
+    feedback = null;
+
+    try {
+      const result: AssetConversionAuditResult = await auditProjectAsset(workspace.rootPath, path);
+      feedback = {
+        kind: 'audit',
+        result
+      };
+    } catch (error) {
+      feedback = null;
+      errorMessage = error instanceof Error ? error.message : `Failed to audit ${path}.`;
+    }
+  }
+
   async function handleSaveExecutionCredential(): Promise<void> {
     if (executionCredentialLoading) {
       return;
@@ -1050,6 +1141,43 @@
     onClearCredential={handleClearExecutionCredential}
   />
 {:else}
+  {#if errorMessage}
+    <p class="error-banner">{errorMessage}</p>
+  {/if}
+
+  {#if feedback}
+    <section class:status-panel={feedback.kind === 'notice'} class:audit-panel={feedback.kind === 'audit'}>
+      <div class="feedback-head">
+        <div>
+          {#if feedback.kind === 'audit'}
+            <p class="feedback-label">Conversion Audit</p>
+            <h2>{feedback.result.status}</h2>
+          {:else}
+            <p class="feedback-label">Update</p>
+            <h2>{feedback.title}</h2>
+          {/if}
+        </div>
+        <button type="button" class="feedback-dismiss" onclick={clearFeedback} aria-label="Dismiss message">×</button>
+      </div>
+
+      {#if feedback.kind === 'audit'}
+        <p class="feedback-text">{feedback.result.assessment}</p>
+        <p class="feedback-meta">Target: {feedback.result.targetPath}</p>
+        {#if feedback.result.warnings.length > 0}
+          <ul class="feedback-list">
+            {#each feedback.result.warnings as warning}
+              <li>{warning}</li>
+            {/each}
+          </ul>
+        {:else}
+          <p class="feedback-text">No warnings.</p>
+        {/if}
+      {:else}
+        <p class="feedback-text">{feedback.detail}</p>
+      {/if}
+    </section>
+  {/if}
+
   <WorkspaceShell
     summary={workspace}
     nodes={assetNodes}
@@ -1070,7 +1198,7 @@
     {modelPresets}
     onSelectAsset={handleSelectAsset}
     onOpenPath={openAssetPath}
-    onSelectTab={(path) => { activePath = path; errorMessage = null; }}
+    onSelectTab={(path) => { activePath = path; errorMessage = null; clearFeedback(); }}
     onCloseTab={(path) => { tabs = tabs.filter(t => t.path !== path); if (activePath === path) activePath = tabs[0]?.path ?? null; }}
     onDraftChange={handleDraftChange}
     onSaveTab={handleSaveTab}
@@ -1108,6 +1236,85 @@
     onDeleteDocument={handleDeleteDocument}
     onDeletePrompt={handleTrashPrompt}
     onRenameDocument={handleRenameDocument}
+    onAuditAsset={handleAuditAsset}
+    onConvertAsset={handleConvertAsset}
     onOpenHelpFile={handleSelectAsset}
   />
 {/if}
+
+<style>
+  .status-panel,
+  .audit-panel {
+    margin: 0 0 0.75rem;
+    padding: 0.85rem 0.95rem;
+    border-radius: 14px;
+    color: var(--text);
+  }
+
+  .status-panel {
+    border: 1px solid rgba(93, 167, 214, 0.35);
+    background: rgba(33, 70, 92, 0.35);
+  }
+
+  .audit-panel {
+    border: 1px solid rgba(208, 176, 88, 0.35);
+    background: rgba(78, 62, 26, 0.3);
+  }
+
+  .feedback-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .feedback-head h2 {
+    margin: 0;
+    font-size: 1rem;
+    text-transform: capitalize;
+  }
+
+  .feedback-label {
+    margin: 0 0 0.2rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .feedback-dismiss {
+    flex: 0 0 auto;
+    min-width: 2rem;
+    min-height: 2rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  .feedback-dismiss:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .feedback-text,
+  .feedback-meta {
+    margin: 0.6rem 0 0;
+  }
+
+  .feedback-meta {
+    color: var(--text-dim);
+    font-size: 0.92rem;
+  }
+
+  .feedback-list {
+    margin: 0.7rem 0 0;
+    padding-left: 1.2rem;
+  }
+
+  .feedback-list li + li {
+    margin-top: 0.35rem;
+  }
+</style>

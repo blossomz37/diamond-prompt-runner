@@ -3,6 +3,7 @@
   import { EditorView, minimalSetup } from 'codemirror';
   import { EditorState } from '@codemirror/state';
   import { markdown } from '@codemirror/lang-markdown';
+  import { yaml as yamlLanguage } from '@codemirror/lang-yaml';
   import { teraLanguage } from '$lib/editor/teraLanguage';
   import { teraFolding, setTeraBlocksFolded } from '$lib/editor/teraFolding';
   import { keymap } from '@codemirror/view';
@@ -82,6 +83,8 @@
     const langExt = [];
     if (kind === 'markdown') {
       langExt.push(markdown());
+    } else if (kind === 'yaml') {
+      langExt.push(yamlLanguage());
     } else if (kind === 'tera') {
       langExt.push(teraLanguage);
       langExt.push(teraFolding);

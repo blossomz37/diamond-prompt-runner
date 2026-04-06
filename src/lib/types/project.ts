@@ -68,6 +68,31 @@ export interface AssetContent {
   parsedJson: unknown | null;
 }
 
+export interface AssetConversionResult {
+  sourcePath: string;
+  targetPath: string;
+  sourceKind: AssetKind;
+  targetKind: AssetKind;
+  assessment: string;
+  warnings: string[];
+  asset: AssetContent;
+}
+
+export type AssetConversionAuditStatus =
+  | 'convertible'
+  | 'partially_convertible'
+  | 'not_safely_convertible';
+
+export interface AssetConversionAuditResult {
+  sourcePath: string;
+  targetPath: string;
+  sourceKind: AssetKind;
+  targetKind: AssetKind;
+  status: AssetConversionAuditStatus;
+  assessment: string;
+  warnings: string[];
+}
+
 export interface WorkspaceTab extends AssetContent {
   title: string;
   savedContent: string;
