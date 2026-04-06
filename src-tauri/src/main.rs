@@ -422,6 +422,20 @@ fn rename_document(
         .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn open_in_os(path: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open").arg(&path).spawn().map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "windows")]
+    std::process::Command::new("explorer").arg(&path).spawn().map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "linux")]
+    std::process::Command::new("xdg-open").arg(&path).spawn().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -465,7 +479,8 @@ pub fn run() {
             delete_prompt_block,
             delete_run,
             delete_document,
-            rename_document
+            rename_document,
+            open_in_os
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

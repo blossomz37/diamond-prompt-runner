@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { invoke } from '@tauri-apps/api/core';
   import type { ExecutionCredentialStatus, ProjectSummary, RecentProjectEntry } from '$lib/types/project';
 
   interface Props {
@@ -60,17 +61,20 @@
       default: return 'missing';
     }
   }
+
+  async function openPathInOs(path: string) {
+    try {
+      await invoke('open_in_os', { path });
+    } catch (e) {
+      console.error('Failed to open path:', e);
+    }
+  }
 </script>
 
 <section class="browser-shell">
   <div class="hero panel">
     <div>
-      <p class="eyebrow">Milestone 1</p>
-      <h1>Diamond Prompt Runner</h1>
-      <p class="summary">
-        Create or open a project, browse the workspace tree, inspect metadata, and open supported
-        files in read-only tabs.
-      </p>
+      <h1>Projects</h1>
     </div>
     <div class="global-credentials">
       <div class="heading">
@@ -121,8 +125,7 @@
   <div class="browser-grid">
     <section class="panel form-card">
       <header>
-        <p class="eyebrow">New Project</p>
-        <h2>Start on disk</h2>
+        <h2>New Project</h2>
       </header>
 
       <label class="field">
@@ -165,8 +168,7 @@
 
     <section class="panel recents-card">
       <header>
-        <p class="eyebrow">Recent Projects</p>
-        <h2>Reopen quickly</h2>
+        <h2>Recent Projects</h2>
       </header>
 
       {#if recentProjects.length === 0}
@@ -179,16 +181,16 @@
           {#each recentProjects as project (project.rootPath)}
             <div class:invalid={!project.lastKnownValid} class="recent-item">
               <div class="recent-heading">
-                <strong>{project.projectName}</strong>
+                <button 
+                  class="project-name-btn"
+                  title={project.rootPath} 
+                  onclick={() => openPathInOs(project.rootPath)}
+                >
+                  {project.projectName}
+                </button>
                 <span class:warning={!project.lastKnownValid}>
                   {project.lastKnownValid ? 'Available' : 'Unavailable'}
                 </span>
-              </div>
-              <p>{project.rootPath}</p>
-              <div class="meta-row">
-                <span>{project.counts.documents} docs</span>
-                <span>{project.counts.prompts} prompts</span>
-                <span>{project.defaultModelPreset}</span>
               </div>
               <div class="recent-actions">
                 {#if !project.lastKnownValid}
@@ -215,7 +217,7 @@
                   onclick={() => onRemoveRecent(project.rootPath)}
                   disabled={busy}
                 >
-                  Remove
+                  Unlink
                 </button>
               </div>
             </div>
@@ -358,6 +360,10 @@
     padding: 1.15rem;
   }
 
+  .form-card {
+    align-content: start;
+  }
+
   .field {
     display: grid;
     gap: 0.45rem;
@@ -407,8 +413,7 @@
   }
 
   .path,
-  .hint,
-  .recent-item p {
+  .hint {
     margin: 0;
     color: var(--text-soft);
     word-break: break-word;
@@ -455,6 +460,25 @@
     justify-content: space-between;
     gap: 0.6rem;
     flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .project-name-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 1.05rem;
+    cursor: pointer;
+    text-align: left;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    transition: text-decoration-color 0.2s;
+  }
+  .project-name-btn:hover {
+    text-decoration-color: var(--text-dim);
   }
 
   .warning {
