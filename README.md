@@ -10,57 +10,75 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 
 - Product spec: `specifications/SPEC_DIAMOND_RUNNER_v1.md`
 - Approved prototype: `Diamond Runner v2 - IDE Pass`
-- App direction: Tauri + Svelte desktop app with an IDE-like shell
-- Current implementation status: Milestone 1, the Editing Slice, the Rendering and Validation Slice, the Single-Block Execution Slice, the Pipeline Runner Slice, the Run History Slice, the Pipeline Authoring Slice, the Export Bundle Slice, the Usage Metrics Slice, the Variable Assignment UI, the Workspace Shell Restructure, the Settings and Model Presets Slice, the Output Target & JSON Slimdown Slice, and the Asset Lifecycle Slice (all 5 phases: pipeline deletion, prompt block removal, run deletion, document CRUD, and pipeline export via UI) are complete
-- Current Rendering and Validation behavior:
-	- markdown, text, `.tera`, and model YAML assets are editable in the workspace
-	- new prompt blocks can be created directly from the explorer without hand-editing `project.json`
-	- `project.json` remains read-only
-	- `.tera` tabs validate against the current draft content
-	- Diamond `doc("...")` references are resolved from `documents/` during preview validation
-	- the bottom panel shows validation status, warnings or errors, context summary, and preview for `.tera` tabs
-	- the bottom panel is toggleable via a chevron button in the pane header and auto-sizes to fit preview content
-	- explorer directory nodes expand and collapse on click
-- Current execution-slice status:
-	- backend-only `execute_prompt_block` support exists in the Tauri layer
-	- the first full execution slice stays on direct Rust HTTP to OpenRouter
-	- execution now resolves the OpenRouter API key from native app keychain storage first, then falls back to `OPENROUTER_API_KEY`
-	- execution fails strictly on invalid or missing `doc("...")` references and on unresolved variables unless the template guards them explicitly
-	- run artifacts are persisted under `runs/` as typed JSON records with `artifactVersion`, prompt and model metadata, a `document_path` reference if writing to the `documents/` pool directly, timestamps, and full `variables` injection tracking
-	- new projects now seed a small curated preset set inferred from `workshop-parts/openrouter/models/` and model presets can now dynamically generate YAML skeletons purely from entering a known model string ID in settings
-	- active editable `.tera` tabs now expose a `Run` action in the editor
-	- the bottom panel shows latest execution metadata and output alongside validation and preview
-	- the bottom panel also exposes minimal save or clear controls for the app-level OpenRouter key
-	- the bottom panel now lists recent persisted runs for the active prompt and can open the JSON artifact in a tab
-	- the left sidebar lists and runs manifest-defined pipelines; pipeline create and edit open in the center pane
-	- manifest-defined pipelines can be created and edited without hand-editing `project.json`
-	- pipeline runs stop on the first failing block and reuse the existing per-block run artifact contract under `runs/`
-	- pipeline runs are guarded against unsaved related `.tera` drafts so the user does not accidentally run stale saved prompt files
-	- the inspector shows project-wide persisted run history sourced from `runs/` and can filter those artifacts by block or pipeline
-	- pipeline-originated block runs now retain pipeline metadata in their persisted artifacts so project history can group and inspect them later
-	- the left sidebar can export selected open tabs into a derived bundle under `exports/` and writes bundle metadata alongside the copied artifacts
-	- export bundles are derived from saved files on disk and block attempts to export unsaved editable drafts
-	- prompts whose first non-empty line is `{# diamond:online #}` now opt into OpenRouter web-backed execution without changing standard prompt runs
-	- online-enabled runs now persist audit metadata for whether online mode was enabled, how many web-search requests were issued, and how many citations were returned
-	- execution results now extract and display usage metrics from the provider response: prompt tokens, completion tokens, total tokens, estimated cost, and output word count
-	- persisted run artifacts and run history entries carry usage metrics extracted from the raw OpenRouter response
-- Current variable and layout status:
-	- global variables persist to `app_data_dir/global-variables.json` and are shared across all projects
-	- project variables persist in `project.json` and override globals with the same name
-	- template context merges global → project → built-in variables
-	- the left sidebar now has collapsible sections: Explorer, Pipelines, Variables, and Exports
-	- pipeline create and edit open in the center pane as virtual tabs
-	- the right inspector is read-only: Project summary, Usage, File Metadata, and Run History
+- App direction: Tauri 2 + Svelte 5 desktop app with an IDE-like shell
 
-- Current asset lifecycle status:
-	- pipelines can be deleted from the Pipelines sidebar with a two-click inline confirmation; deletion removes the pipeline from `project.json` without touching any prompt block templates
-	- prompt blocks can be removed from the manifest via the "Registered Blocks" list in the Explorer sidebar; the underlying `.tera` file is preserved on disk
-	- individual run artifacts can be deleted from the Run History inspector with the same two-click inline confirmation; deletion removes the JSON file from `runs/` and refreshes the usage summary
-	- all three deletions are guarded: they fail cleanly if the target is not found and do not corrupt `project.json`
-	- markdown and text documents in `documents/` support inline rename and delete directly from the Explorer tree; renaming closes the stale tab and re-opens the file at its new path automatically
-	- pipelines can be exported as a bundle from the Pipelines sidebar; export collects all referenced `.tera` templates into a named bundle under `exports/`
+### Implementation Status
 
-Active implementation plan: `implementation-plans/21-PLAN-asset-lifecycle-management.md`
+All MVP slices (Plans 1–21) are complete. Post-MVP work through Plan 28 is partially shipped.
+
+**Completed slices:**
+- Milestone 1 (project create/open, read-only IDE shell, explorer, tabs, inspector)
+- Editing (markdown, text, `.tera`, model YAML; dirty state; `project.json` read-only)
+- Rendering and Validation (`.tera` preview, `doc("...")` resolution, toggleable bottom panel)
+- Single-Block Execution (OpenRouter direct HTTP, keychain credentials, persisted run artifacts)
+- Pipeline Runner (sequential execution, stop-on-failure, unsaved-draft guards)
+- Run History (project-wide + prompt-scoped, pipeline metadata filtering)
+- Pipeline Authoring (create/edit in center pane, no manual JSON editing)
+- Export Bundle (selected tabs to `exports/`, unsaved draft blocking)
+- Usage Metrics (tokens, cost, word count; persisted in run artifacts)
+- Variable Assignment UI (global + project variables, merged template context)
+- Workspace Shell Restructure (collapsible sidebar, center-pane pipeline tabs, read-only inspector)
+- Settings and Model Presets (project settings UI, auto-preset generator, inline overrides)
+- Output Target & JSON Slimdown (`outputTarget: 'document'`, payload cleanup, `document_path` mapping)
+- Asset Lifecycle — all 5 phases (pipeline delete, block removal, run delete, document rename/delete, pipeline export)
+- Online Research — post-MVP extension (`{# diamond:online #}` directive, web-backed execution, citation tracking)
+- Code Audit — backend complete (`types.rs`, `execution.rs`, `credentials.rs`, `history.rs`, `presets.rs`, `variables.rs`, `assets.rs` extracted from `project_store.rs`)
+- Code Audit — frontend partial (`assetUtils.ts`, `textSearch.ts`, `validation.svelte.ts`, `CodeEditor.svelte`, `FindBar.svelte` extracted)
+- UX Overhaul Phase 1 — sidebar reorganized to 10 sections
+- CodeMirror 6 — syntax highlighting for `.tera` + markdown, custom Tera language support, FindBar adapter
+- Tera Custom Filters — `extract_section(start="...", end="...")` for slicing document content by markers
+- Live Events & Resume — `PipelineProgressEvent` emission, resume-from-block skip logic, continue-run UI
+
+**In progress or partially shipped:**
+- UX Overhaul Phases 2–4 (block-level pipeline overrides, help content population)
+- Batch Execution (`extract_section` filter done; batch orchestration UI pending)
+- CSS Audit findings documented (consolidation not started)
+- Code Audit deferred items (App.svelte tab state extraction, WorkspaceShell split evaluation)
+
+**Not started:**
+- Duplicate Project / Pipelines (Plan 29)
+
+### Current Layout
+
+- The left sidebar has 10 collapsible sections: Models, Prompts, Blocks, Pipelines, Runs, Documents, Exports, Settings, Help
+- Pipeline create/edit opens in the center pane as virtual tabs
+- The right inspector is read-only: Project summary, Usage, File Metadata
+- The bottom panel shows validation, preview, execution output, and run history for `.tera` tabs
+- The editor uses CodeMirror 6 with syntax highlighting for Tera templates and markdown
+
+### Execution
+
+- Direct Rust HTTP to OpenRouter (no SDK)
+- API key resolved from native OS keychain first, then `OPENROUTER_API_KEY` env var fallback
+- Strict mode fails on unresolved variables and invalid/missing `doc("...")` references
+- Run artifacts persisted under `runs/` with `artifactVersion`, usage metrics, variable tracking, and `document_path` references
+- Pipelines: sequential execution, stop-on-first-failure, resume-from-block support, live progress events
+- Online: `{# diamond:online #}` directive enables web-backed execution with citation tracking
+- Custom Tera filter: `extract_section(start="...", end="...")` for slicing document content
+
+### Variables
+
+- Global variables persist to `app_data_dir/global-variables.json` and are shared across all projects
+- Project variables persist in `project.json` and override globals with the same name
+- Template context merges global → project → built-in variables
+
+### Asset Lifecycle
+
+- Pipelines: two-click inline delete from sidebar; export as bundle with referenced `.tera` templates
+- Prompt blocks: manifest removal from sidebar (underlying `.tera` preserved on disk)
+- Run artifacts: two-click inline delete from Run History; refreshes usage summary
+- Documents: inline rename and delete from Explorer tree; rename auto-reopens in tab
+- All deletions are guarded and fail cleanly without corrupting `project.json`
 
 ## Recommended Agent Setup
 

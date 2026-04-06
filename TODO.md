@@ -1,6 +1,6 @@
 ---
 created: 2026-04-03 12:57 PM
-modified: 2026-04-04 1:22 PM
+modified: 2026-04-06
 ---
 
 # Rolling TODO List
@@ -66,10 +66,19 @@ Oldest to Newest
 - [x] Post-MVP online extension: add Help-section notes for online-research prompt behavior, constraints, and setup.
 - [x] Post-MVP online extension: decide whether `:online` support belongs in the MVP spec or as a later extension. Decision: post-MVP extension, documented in SPEC_DIAMOND_RUNNER_v1.md §3 Post-MVP Extensions.
 - [x] Code Audit (Plan 23): extract `types.rs`, `execution.rs`, `credentials.rs`, `history.rs`, `presets.rs`, `variables.rs`, `assets.rs` from `project_store.rs`; extract `assetUtils.ts`, `textSearch.ts`, `validation.svelte.ts`, `FindBar.svelte` on frontend.
+- [x] UX Overhaul Phase 1 (Plan 22): sidebar reorganized to 10 sections (Models, Prompts, Blocks, Pipelines, Runs, Documents, Exports, Settings, Help); new sidebar components created.
+- [x] CSS Audit (Plan 24): documented duplication families across `.eyebrow`, `.empty`, `.mini-action`, `.primary` button gradients, and variable panel triplet.
+- [x] CodeMirror 6 (Plan 26): `CodeEditor.svelte` with syntax highlighting for `.tera` and markdown, custom Tera language support (`teraLanguage.ts`), FindBar adapter pattern.
+- [x] Tera Custom Filters (Plan 27 Phase 1): `extract_section` filter for slicing document content by start/end markers.
+- [x] Live Events & Resume (Plan 28): `PipelineProgressEvent` emission, `resume_from_block_id` skip logic, continue-run UI in `PipelineEditorTab`.
+- [ ] UX Overhaul Phases 2–4 (Plan 22): block-level pipeline overrides, progress bar polish, help content population.
+- [ ] Batch Execution (Plan 27 Phases 2–3): batch orchestration backend and batch execution UI.
+- [ ] CSS consolidation: extract shared patterns (`.eyebrow`, `.empty`, `.mini-action`, `.primary`) to `app.css` per Plan 24 findings.
 - [ ] Code Audit deferred: extract App.svelte tab state to `lib/stores/tabs.svelte.ts` (requires WorkspaceShell prop audit first).
 - [ ] Code Audit deferred: evaluate WorkspaceShell.svelte split after App.svelte tab state is resolved.
 - [ ] Code Audit deferred: evaluate PipelineEditorTab.svelte split if a shared two-step confirmation pattern is formalized.
 - [ ] Code Audit deferred: evaluate ProjectBrowser.svelte split (`CredentialsPanel`, `RecentProjectsList`) after App.svelte credential state is reviewed.
+- [ ] Duplicate Project and Pipelines (Plan 29).
 - [ ] Decide whether to create custom Diamond-specific skills for implementation, fixtures, and prompt-pack porting.
 
 
