@@ -19,6 +19,8 @@ coverage/
 
 # Tauri / Rust
 src-tauri/target/
+.rustup/
+.cargo/
 
 # User-specific files
 00-diamond-user-obsidian/
@@ -37,5 +39,5 @@ Test - New Project/
 workshop-parts/
 specifications/UX-Eval.md
 Sample Projects/
-.rustup/
-.cargo/
+target_headless/
+check_errors.log

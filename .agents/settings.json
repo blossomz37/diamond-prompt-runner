@@ -1,0 +1,10 @@
+{
+    "chat.useNestedAgentsMdFiles": true,
+    "chat.mcp.discovery.enabled": {
+        "claude-desktop": true,
+        "cursor-global": true,
+        "cursor-workspace": true
+    },
+    "chat.mcp.gallery.enabled": true,
+    "chat.planAgent.defaultModel": "GPT-5.4 (copilot)"
+}
