@@ -187,7 +187,7 @@ fn validate_project_template(
     .map_err(|error| error.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn execute_prompt_block(
     app: tauri::AppHandle,
     root_path: String,
@@ -206,7 +206,7 @@ fn execute_prompt_block(
     .map_err(|error| error.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 fn execute_pipeline(
     app: tauri::AppHandle,
     root_path: String,

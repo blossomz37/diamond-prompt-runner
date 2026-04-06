@@ -44,7 +44,7 @@ pub(crate) mod variables;
 pub use variables::{get_global_variables, set_global_variables, set_project_variables};
 pub(crate) use variables::{read_global_variables_store, read_workspace_variables_yaml, write_workspace_variables_yaml};
 
-const PROJECT_DIRS: [&str; 7] = ["documents", "prompts", "models", "runs", "exports", "help", "variables"];
+const PROJECT_DIRS: [&str; 8] = ["documents", "prompts", "pipelines", "models", "runs", "exports", "help", "variables"];
 const RECENTS_FILE_NAME: &str = "recent-projects.json";
 const SEEDED_MODEL_PRESETS: [(&str, &str); 5] = [
     (
@@ -379,13 +379,24 @@ pub fn locate_recent_project(
 // export_project_assets, delete_document, rename_document → assets.rs
 
 pub fn list_project_pipelines(root_path: &Path) -> StoreResult<Vec<ProjectPipelineSummary>> {
-    let (_, manifest) = validate_project(root_path)?;
+    let (root_path, manifest) = validate_project(root_path)?;
+    let mut pipelines_list = vec![];
+    let pipelines_dir = root_path.join("pipelines");
 
-    Ok(manifest
-        .pipelines
-        .iter()
-        .map(|pipeline| summarize_pipeline(&manifest, pipeline))
-        .collect())
+    if pipelines_dir.is_dir() {
+        for entry in std::fs::read_dir(pipelines_dir)?.flatten() {
+            if entry.path().is_file() && entry.path().extension().is_some_and(|e| e == "json") {
+                if let Ok(content) = std::fs::read_to_string(entry.path()) {
+                    if let Ok(pipeline) = serde_json::from_str::<Pipeline>(&content) {
+                        pipelines_list.push(summarize_pipeline(&manifest, &pipeline));
+                    }
+                }
+            }
+        }
+    }
+    
+    pipelines_list.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(pipelines_list)
 }
 
 pub fn list_project_prompt_blocks(root_path: &Path) -> StoreResult<Vec<ProjectPromptBlockSummary>> {
@@ -422,13 +433,16 @@ pub fn create_pipeline(
     let (root_path, mut manifest) = validate_project(root_path)?;
     validate_pipeline_block_ids(&manifest, ordered_block_ids, None)?;
 
-    let pipeline_id = unique_pipeline_slug(&manifest, trimmed_name);
-    manifest.pipelines.push(Pipeline {
+    let pipeline_id = unique_pipeline_slug(&root_path, trimmed_name);
+    let pipeline = Pipeline {
         pipeline_id: pipeline_id.clone(),
         name: trimmed_name.to_string(),
         ordered_blocks: ordered_block_ids.to_vec(),
         execution_mode: "sequential".to_string(),
-    });
+    };
+    let pipeline_path = root_path.join("pipelines").join(format!("{}.json", pipeline_id));
+    std::fs::write(pipeline_path, serde_json::to_string_pretty(&pipeline).unwrap_or_default())?;
+
     manifest.updated_at = timestamp();
     write_manifest(&root_path, &manifest)?;
 
@@ -453,19 +467,19 @@ pub fn update_pipeline(
     let (root_path, mut manifest) = validate_project(root_path)?;
     validate_pipeline_block_ids(&manifest, ordered_block_ids, Some(pipeline_id))?;
 
-    let Some(pipeline) = manifest
-        .pipelines
-        .iter_mut()
-        .find(|pipeline| pipeline.pipeline_id == pipeline_id)
-    else {
+    let pipeline_path = root_path.join("pipelines").join(format!("{}.json", pipeline_id));
+    if !pipeline_path.exists() {
         return Err(ProjectStoreError::message(format!(
             "Pipeline `{pipeline_id}` was not found."
         )));
-    };
+    }
 
+    let mut pipeline: Pipeline = serde_json::from_str(&std::fs::read_to_string(&pipeline_path)?)?;
     pipeline.name = trimmed_name.to_string();
     pipeline.ordered_blocks = ordered_block_ids.to_vec();
     pipeline.execution_mode = "sequential".to_string();
+    std::fs::write(&pipeline_path, serde_json::to_string_pretty(&pipeline)?)?;
+
     manifest.updated_at = timestamp();
     write_manifest(&root_path, &manifest)?;
 
@@ -484,9 +498,10 @@ pub fn delete_pipeline(
     app_data_dir: &Path,
 ) -> StoreResult<ProjectSummary> {
     let (root_path, mut manifest) = validate_project(root_path)?;
-    let before_len = manifest.pipelines.len();
-    manifest.pipelines.retain(|p| p.pipeline_id != pipeline_id);
-    if manifest.pipelines.len() == before_len {
+    let pipeline_path = root_path.join("pipelines").join(format!("{}.json", pipeline_id));
+    if pipeline_path.exists() {
+        std::fs::remove_file(pipeline_path)?;
+    } else {
         return Err(ProjectStoreError::message(format!(
             "Pipeline `{pipeline_id}` was not found."
         )));
@@ -589,7 +604,7 @@ pub(crate) fn validate_project(root_path: &Path) -> StoreResult<(PathBuf, Projec
         let directory_path = root_path.join(directory);
         if !directory_path.is_dir() {
             // Auto-create directories that were added after initial project creation
-            if directory == "help" || directory == "variables" {
+            if directory == "help" || directory == "variables" || directory == "pipelines" {
                 fs::create_dir_all(&directory_path)?;
             } else {
                 return Err(ProjectStoreError::message(format!(
@@ -604,7 +619,16 @@ pub(crate) fn validate_project(root_path: &Path) -> StoreResult<(PathBuf, Projec
         return Err(ProjectStoreError::message("Project folder is missing `project.json`."));
     }
 
-    let manifest = read_manifest(&manifest_path)?;
+    let mut manifest = read_manifest(&manifest_path)?;
+
+    // Legacy Pipeline Migration
+    if !manifest.pipelines.is_empty() {
+        for pipeline in manifest.pipelines.drain(..) {
+            let pipeline_path = root_path.join("pipelines").join(format!("{}.json", pipeline.pipeline_id));
+            std::fs::write(pipeline_path, serde_json::to_string_pretty(&pipeline).unwrap_or_default())?;
+        }
+        write_manifest(&root_path, &manifest)?;
+    }
     if manifest.project_id.trim().is_empty()
         || manifest.project_name.trim().is_empty()
         || manifest.default_model_preset.trim().is_empty()
@@ -1030,18 +1054,14 @@ fn unique_prompt_slug(root_path: &Path, manifest: &ProjectManifest, prompt_name:
     }
 }
 
-fn unique_pipeline_slug(manifest: &ProjectManifest, pipeline_name: &str) -> String {
+fn unique_pipeline_slug(root_path: &Path, pipeline_name: &str) -> String {
     let base_slug = slugify_prompt_name(pipeline_name);
     let mut candidate = base_slug.clone();
     let mut suffix = 2usize;
 
     loop {
-        let taken = manifest
-            .pipelines
-            .iter()
-            .any(|pipeline| pipeline.pipeline_id == candidate);
-
-        if !taken {
+        let pipeline_path = root_path.join("pipelines").join(format!("{}.json", candidate));
+        if !pipeline_path.exists() {
             return candidate;
         }
 
@@ -1990,12 +2010,14 @@ mod tests {
             output_target: "run_artifact".to_string(),
             output_filename: None,
         });
-        manifest.pipelines.push(Pipeline {
+        let pipeline = Pipeline {
             pipeline_id: "pipeline-1".to_string(),
             name: "Review Pipeline".to_string(),
             ordered_blocks: vec!["block-1".to_string()],
             execution_mode: "sequential".to_string(),
-        });
+        };
+        std::fs::create_dir_all(root.join("pipelines")).unwrap();
+        std::fs::write(root.join("pipelines").join("pipeline-1.json"), serde_json::to_string(&pipeline).unwrap()).unwrap();
         write_manifest(&root, &manifest).unwrap();
 
         let pipelines = list_project_pipelines(&root).unwrap();
@@ -2081,11 +2103,11 @@ mod tests {
 
         assert_eq!(updated.pipeline_id, "draft-pipeline");
 
-        let manifest = read_manifest(&root.join("project.json")).unwrap();
-        assert_eq!(manifest.pipelines.len(), 1);
-        assert_eq!(manifest.pipelines[0].name, "Draft Pipeline Revised");
-        assert_eq!(manifest.pipelines[0].ordered_blocks, vec!["review", "outline"]);
-        assert_eq!(manifest.pipelines[0].execution_mode, "sequential");
+        let pipelines = list_project_pipelines(&root).unwrap();
+        assert_eq!(pipelines.len(), 1);
+        assert_eq!(pipelines[0].name, "Draft Pipeline Revised");
+        assert_eq!(pipelines[0].blocks.len(), 2);
+        assert_eq!(pipelines[0].execution_mode, "sequential");
     }
 
     #[test]
@@ -2185,12 +2207,13 @@ mod tests {
             output_filename: None,
         });
         manifest.variables.insert("tone".to_string(), json!("precise"));
-        manifest.pipelines.push(Pipeline {
+        let pipeline = Pipeline {
             pipeline_id: "pipeline-1".to_string(),
             name: "Review Pipeline".to_string(),
             ordered_blocks: vec!["review".to_string(), "outline".to_string()],
             execution_mode: "sequential".to_string(),
-        });
+        };
+        std::fs::write(root.join("pipelines").join("pipeline-1.json"), serde_json::to_string(&pipeline).unwrap()).unwrap();
         write_manifest(&root, &manifest).unwrap();
 
         let manifest = read_manifest(&root.join("project.json")).unwrap();
@@ -2208,7 +2231,7 @@ mod tests {
             }))
         };
 
-        let result = execute_pipeline_with_transport(
+        let result = crate::project_store::execution::execute_pipeline_with_transport(
             &root,
             &manifest,
             "pipeline-1",
@@ -2216,6 +2239,9 @@ mod tests {
             "test-key",
             &mut transport,
             &app_data,
+            None,
+            None,
+            None,
         )
         .unwrap();
 
@@ -2382,13 +2408,16 @@ mod tests {
             "dummy_key",
             &mut transport,
             &app_data,
+            None,
+            None,
+            None,
         ).expect("Pipeline failed to cleanly execute in Neon & Nightmares sample folder");
 
-        assert_eq!(result.blocks_completed, 2);
-        assert_eq!(call_count, 2);
+        assert_eq!(result.steps.len(), 7);
+        assert_eq!(call_count, 7);
         
-        // We know that block 0 output Target is replace_document without override, so it makes "draft-chapter-output.md"
-        let output_path = root.join("documents").join("draft-chapter-output.md");
+        // We know that block 0 output target makes "chapter-2-01-plan.md"
+        let output_path = root.join("documents").join("chapter-2-01-plan.md");
         assert!(output_path.exists(), "The pipeline did not write the markdown document correctly!");
         
         // We can safely clean up the test generated files from the sample directory

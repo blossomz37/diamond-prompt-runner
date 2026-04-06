@@ -354,11 +354,11 @@ pub(crate) fn execute_pipeline_with_transport<F>(
 where
     F: FnMut(&str, Value) -> StoreResult<Value>,
 {
-    let pipeline = manifest
-        .pipelines
-        .iter()
-        .find(|pipeline| pipeline.pipeline_id == pipeline_id)
-        .ok_or_else(|| ProjectStoreError::message(format!("Pipeline `{pipeline_id}` was not found.")))?;
+    let pipeline_path = root_path.join("pipelines").join(format!("{}.json", pipeline_id));
+    if !pipeline_path.exists() {
+        return Err(ProjectStoreError::message(format!("Pipeline `{pipeline_id}` was not found.")));
+    }
+    let pipeline: Pipeline = serde_json::from_str(&std::fs::read_to_string(&pipeline_path)?)?;
 
     if pipeline.execution_mode != "sequential" {
         return Err(ProjectStoreError::message(format!(

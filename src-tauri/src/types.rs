@@ -389,6 +389,7 @@ pub struct ProjectManifest {
     pub default_model_preset: String,
     pub variables: BTreeMap<String, Value>,
     pub prompt_blocks: Vec<PromptBlock>,
+    #[serde(default, skip_serializing)]
     pub pipelines: Vec<Pipeline>,
     pub ui_preferences: Value,
 }
