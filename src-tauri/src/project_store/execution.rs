@@ -14,9 +14,12 @@ use uuid::Uuid;
 use crate::types::*;
 use super::{
     classify_asset, default_model_id, detail, is_identifier_like, is_missing_context_warning,
-    load_environment_api_key, load_stored_openrouter_api_key, read_global_variables_store,
-    read_workspace_variables_yaml, sanitize_relative_path, select_openrouter_api_key,
+    read_global_variables_store,
+    read_workspace_variables_yaml, sanitize_relative_path,
     slugify_prompt_name, timestamp, validate_project,
+};
+use super::credentials::{
+    load_environment_api_key, load_stored_openrouter_api_key, select_openrouter_api_key,
     OPENROUTER_API_KEY_ENV,
 };
 
