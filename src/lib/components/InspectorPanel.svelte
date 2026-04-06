@@ -10,19 +10,27 @@
   import type {
     AssetMetadata,
     ProjectSummary,
-    ProjectUsageSummary
+    ProjectUsageSummary,
+    TemplateValidationResult,
+    WorkspaceTab
   } from '$lib/types/project';
 
   interface Props {
     summary: ProjectSummary;
+    tab: WorkspaceTab | null;
     metadata: AssetMetadata | null;
     usageSummary: ProjectUsageSummary | null;
+    validation: TemplateValidationResult | null;
+    validationLoading: boolean;
   }
 
   let {
     summary,
+    tab,
     metadata,
-    usageSummary
+    usageSummary,
+    validation,
+    validationLoading
   }: Props = $props();
 </script>
 
@@ -81,6 +89,50 @@
       </section>
     {/if}
   {:else}
+    {#if tab?.kind === 'tera'}
+      <section class="section">
+        <div class="section-head">
+          <p class="eyebrow">Validation</p>
+          {#if validation}
+            <span class={`badge ${validation.status}`}>{validation.status}</span>
+          {/if}
+        </div>
+
+        {#if validationLoading}
+          <p class="hint">Refreshing validation from the current draft…</p>
+        {:else if validation}
+          {#if validation.errors.length > 0}
+            <div class="message error">
+              {#each validation.errors as error (error)}
+                <p>{error}</p>
+              {/each}
+            </div>
+          {/if}
+
+          {#if validation.warnings.length > 0}
+            <div class="message warning">
+              {#each validation.warnings as warning (warning)}
+                <p>{warning}</p>
+              {/each}
+            </div>
+          {/if}
+
+          {#if validation.contextSummary.length > 0}
+            <dl>
+              {#each validation.contextSummary as item (item.label)}
+                <div>
+                  <dt>{item.label}</dt>
+                  <dd>{item.value}</dd>
+                </div>
+              {/each}
+            </dl>
+          {/if}
+        {:else}
+          <p class="hint">No validation state yet.</p>
+        {/if}
+      </section>
+    {/if}
+
     <section class="section">
       <p class="eyebrow">File Info</p>
       <h3>{metadata.name}</h3>
@@ -128,9 +180,66 @@
     gap: 0.55rem;
   }
 
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
   h3 {
     margin: 0;
     font-size: 1rem;
+  }
+
+  .badge {
+    border-radius: 999px;
+    padding: 0.18rem 0.5rem;
+    font-size: 0.72rem;
+    text-transform: capitalize;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .badge.valid {
+    color: var(--success);
+    border-color: var(--success-border);
+    background: var(--success-bg);
+  }
+
+  .badge.warnings {
+    color: #f4c56a;
+    border-color: rgba(244, 197, 106, 0.25);
+    background: rgba(244, 197, 106, 0.08);
+  }
+
+  .badge.invalid {
+    color: var(--danger);
+    border-color: rgba(255, 141, 161, 0.18);
+    background: var(--danger-bg);
+  }
+
+  .message {
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.65rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-faint);
+  }
+
+  .message.error {
+    background: var(--danger-bg);
+    border-color: rgba(255, 141, 161, 0.16);
+  }
+
+  .message.warning {
+    background: rgba(244, 197, 106, 0.08);
+    border-color: rgba(244, 197, 106, 0.16);
+  }
+
+  .hint {
+    margin: 0;
+    color: var(--text-soft);
   }
 
   dl {

@@ -16,7 +16,7 @@ pub use crate::types::*;
 pub(crate) mod assets;
 pub use assets::{
     list_project_assets, read_project_asset, write_project_asset,
-    export_project_assets, delete_document, rename_document,
+    export_project_assets, delete_document, rename_document, trash_prompt,
 };
 pub(crate) use assets::classify_asset;
 
@@ -171,6 +171,89 @@ pub fn create_prompt_block(
     Ok(CreatedPromptBlockResult {
         summary,
         path: prompt_path,
+    })
+}
+
+pub fn register_prompt_block(
+    root_path: &Path,
+    template_source: &str,
+    app_data_dir: &Path,
+) -> StoreResult<CreatedPromptBlockResult> {
+    let (root_path, mut manifest) = validate_project(root_path)?;
+    let safe_template = sanitize_relative_path(template_source)?;
+    let safe_template_string = safe_template.to_string_lossy().replace('\\', "/");
+
+    if !safe_template_string.starts_with("prompts/") || !safe_template_string.ends_with(".tera") {
+        return Err(ProjectStoreError::message(
+            "Only existing `.tera` files inside `prompts/` can be registered as prompt blocks.",
+        ));
+    }
+
+    let full_path = root_path.join(&safe_template_string);
+    if !full_path.is_file() {
+        return Err(ProjectStoreError::message(format!(
+            "Prompt template `{safe_template_string}` was not found."
+        )));
+    }
+
+    if manifest
+        .prompt_blocks
+        .iter()
+        .any(|block| block.template_source == safe_template_string)
+    {
+        return Err(ProjectStoreError::message(format!(
+            "Prompt template `{safe_template_string}` is already registered as a prompt block."
+        )));
+    }
+
+    let file_stem = full_path
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .ok_or_else(|| ProjectStoreError::message("Prompt template filename is invalid."))?;
+    let base_block_id = slugify_prompt_name(file_stem);
+    let mut block_id = base_block_id.clone();
+    let mut suffix = 2usize;
+
+    while manifest.prompt_blocks.iter().any(|block| block.block_id == block_id) {
+        block_id = format!("{base_block_id}-{suffix}");
+        suffix += 1;
+    }
+
+    let display_name = file_stem
+        .split(['-', '_'])
+        .filter(|segment| !segment.is_empty())
+        .map(|segment| {
+            let mut chars = segment.chars();
+            match chars.next() {
+                Some(first) => format!("{}{}", first.to_uppercase(), chars.as_str()),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    manifest.prompt_blocks.push(PromptBlock {
+        block_id,
+        name: if display_name.is_empty() {
+            file_stem.to_string()
+        } else {
+            display_name
+        },
+        template_source: safe_template_string.clone(),
+        input_bindings: Vec::new(),
+        model_preset: None,
+        output_target: "replace_document".to_string(),
+        output_filename: None,
+    });
+    manifest.updated_at = timestamp();
+    write_manifest(&root_path, &manifest)?;
+
+    let summary = summarize_project(&root_path, &manifest)?;
+    update_recent_projects(app_data_dir, &summary)?;
+
+    Ok(CreatedPromptBlockResult {
+        summary,
+        path: safe_template_string,
     })
 }
 
@@ -2088,6 +2171,41 @@ mod tests {
         assert_eq!(prompt_blocks.len(), 1);
         assert_eq!(prompt_blocks[0].block_id, "review");
         assert_eq!(prompt_blocks[0].model_preset, "models/default.yaml");
+    }
+
+    #[test]
+    fn registers_existing_prompt_template_as_prompt_block() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "PromptRegistration", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let prompt_path = root.join("prompts").join("plan-chapter.tera");
+        fs::write(&prompt_path, "Write the plan.").unwrap();
+
+        let created = register_prompt_block(&root, "prompts/plan-chapter.tera", &app_data).unwrap();
+        assert_eq!(created.path, "prompts/plan-chapter.tera");
+
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        assert_eq!(manifest.prompt_blocks.len(), 1);
+        assert_eq!(manifest.prompt_blocks[0].block_id, "plan-chapter");
+        assert_eq!(manifest.prompt_blocks[0].name, "Plan Chapter");
+        assert_eq!(manifest.prompt_blocks[0].template_source, "prompts/plan-chapter.tera");
+    }
+
+    #[test]
+    fn rejects_registering_prompt_template_twice() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "PromptRegistration", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let prompt_path = root.join("prompts").join("plan-chapter.tera");
+        fs::write(&prompt_path, "Write the plan.").unwrap();
+
+        register_prompt_block(&root, "prompts/plan-chapter.tera", &app_data).unwrap();
+        let error = register_prompt_block(&root, "prompts/plan-chapter.tera", &app_data).unwrap_err();
+        assert!(error.to_string().contains("already registered"));
     }
 
     #[test]

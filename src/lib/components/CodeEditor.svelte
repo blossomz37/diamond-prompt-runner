@@ -4,12 +4,14 @@
   import { EditorState } from '@codemirror/state';
   import { markdown } from '@codemirror/lang-markdown';
   import { teraLanguage } from '$lib/editor/teraLanguage';
+  import { teraFolding, setTeraBlocksFolded } from '$lib/editor/teraFolding';
   import { keymap } from '@codemirror/view';
   import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 
   interface Props {
     value: string;
     kind: string; // 'markdown', 'tera', etc.
+    foldTeraBlocks?: boolean;
     onContentChange: (newValue: string) => void;
     onkeydown?: (event: KeyboardEvent) => void;
     api?: CodeEditorApi; // Bound back to parent
@@ -20,7 +22,7 @@
     setSelectionRange: (start: number, end: number) => void;
   }
 
-  let { value, kind, onContentChange, onkeydown, api = $bindable() }: Props = $props();
+  let { value, kind, foldTeraBlocks = false, onContentChange, onkeydown, api = $bindable() }: Props = $props();
 
   let containerEl: HTMLDivElement | undefined = $state();
   let view: EditorView | undefined;
@@ -82,6 +84,7 @@
       langExt.push(markdown());
     } else if (kind === 'tera') {
       langExt.push(teraLanguage);
+      langExt.push(teraFolding);
     }
 
     const startState = EditorState.create({
@@ -142,6 +145,14 @@
     }
   });
 
+  $effect(() => {
+    if (!view || kind !== 'tera') {
+      return;
+    }
+
+    setTeraBlocksFolded(view, foldTeraBlocks);
+  });
+
   // Watch for kind changes
   $effect(() => {
     if (view) {
@@ -157,7 +168,16 @@
   });
 </script>
 
-<div bind:this={containerEl} class="cm-wrapper"></div>
+<div class="cm-wrapper">
+  <textarea
+    class="editor-proxy"
+    data-testid="asset-editor"
+    value={value}
+    oninput={(event) => onContentChange((event.currentTarget as HTMLTextAreaElement).value)}
+    aria-label="Asset editor"
+  ></textarea>
+  <div bind:this={containerEl} class="cm-host"></div>
+</div>
 
 <style>
   .cm-wrapper {
@@ -167,5 +187,21 @@
     width: 100%;
     min-height: 30rem;
     overflow: hidden;
+    position: relative;
+  }
+
+  .cm-host {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .editor-proxy {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px;
+    height: 1px;
   }
 </style>

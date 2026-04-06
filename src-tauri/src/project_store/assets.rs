@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 use crate::types::*;
 use super::{
     detail, diff_path, sanitize_relative_path, summarize_project,
-    timestamp, validate_project, update_recent_projects, unique_export_slug,
+    timestamp, validate_project, update_recent_projects, unique_export_slug, write_manifest,
 };
 use super::execution::PersistedRunRecord;
 
@@ -217,6 +217,63 @@ pub fn delete_document(root_path: &Path, relative_path: &str) -> StoreResult<()>
     Ok(())
 }
 
+pub fn trash_prompt(root_path: &Path, relative_path: &str, app_data_dir: &Path) -> StoreResult<ProjectSummary> {
+    let (root_path, mut manifest) = validate_project(root_path)?;
+    let safe_relative = sanitize_relative_path(relative_path)?;
+    let safe_relative_string = safe_relative.to_string_lossy().replace('\\', "/");
+
+    if safe_relative.components().next() != Some(Component::Normal("prompts".as_ref())) {
+        return Err(ProjectStoreError::message(
+            "Prompt path must be within the prompts/ directory.",
+        ));
+    }
+
+    if safe_relative.extension().and_then(|value| value.to_str()) != Some("tera") {
+        return Err(ProjectStoreError::message(
+            "Only .tera prompt templates can be moved to Trash.",
+        ));
+    }
+
+    let full_path = root_path.join(&safe_relative);
+    if !full_path.is_file() {
+        return Err(ProjectStoreError::message(format!(
+            "Prompt template not found: {relative_path}"
+        )));
+    }
+
+    let trash_path = unique_trash_path(&root_path, &safe_relative)?;
+    if let Some(parent) = trash_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::rename(&full_path, &trash_path)?;
+
+    let removed_block_ids = manifest
+        .prompt_blocks
+        .iter()
+        .filter(|block| block.template_source == safe_relative_string)
+        .map(|block| block.block_id.clone())
+        .collect::<Vec<_>>();
+
+    if !removed_block_ids.is_empty() {
+        manifest
+            .prompt_blocks
+            .retain(|block| block.template_source != safe_relative_string);
+
+        for pipeline in &mut manifest.pipelines {
+            pipeline
+                .ordered_blocks
+                .retain(|block_id| !removed_block_ids.iter().any(|removed_id| removed_id == block_id));
+        }
+    }
+
+    manifest.updated_at = timestamp();
+    write_manifest(&root_path, &manifest)?;
+
+    let summary = summarize_project(&root_path, &manifest)?;
+    update_recent_projects(app_data_dir, &summary)?;
+    Ok(summary)
+}
+
 pub fn rename_document(root_path: &Path, old_path: &str, new_name: &str) -> StoreResult<String> {
     let (root_path, _) = validate_project(root_path)?;
     let safe_old = sanitize_relative_path(old_path)?;
@@ -321,6 +378,34 @@ fn is_hidden_ui_entry(path: &Path) -> bool {
         .and_then(|name| name.to_str())
         .map(|name| name.starts_with('.'))
         .unwrap_or(false)
+}
+
+fn unique_trash_path(root_path: &Path, relative_path: &Path) -> StoreResult<std::path::PathBuf> {
+    let trash_root = root_path.join("Trash");
+    let candidate = trash_root.join(relative_path);
+    if !candidate.exists() {
+        return Ok(candidate);
+    }
+
+    let stem = candidate
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| ProjectStoreError::message("Prompt filename is invalid."))?;
+    let extension = candidate.extension().and_then(|value| value.to_str()).unwrap_or("");
+
+    let mut suffix = 2usize;
+    loop {
+        let next_name = if extension.is_empty() {
+            format!("{stem}-{suffix}")
+        } else {
+            format!("{stem}-{suffix}.{extension}")
+        };
+        let next_candidate = candidate.with_file_name(next_name);
+        if !next_candidate.exists() {
+            return Ok(next_candidate);
+        }
+        suffix += 1;
+    }
 }
 
 fn build_metadata(
@@ -458,5 +543,54 @@ fn yaml_value_to_string(value: &serde_yaml::Value) -> String {
             .unwrap_or_else(|_| "—".to_string())
             .trim()
             .to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use tempfile::tempdir;
+
+    use super::*;
+
+    #[test]
+    fn trashes_prompt_and_unregisters_dependent_blocks() {
+        let temp = tempdir().unwrap();
+        let app_data_dir = temp.path().join("app-data");
+        let summary = super::super::create_project(temp.path(), "Story Lab", &app_data_dir).unwrap();
+        let root_path = Path::new(&summary.root_path);
+
+        let prompt_path = root_path.join("prompts/review.tera");
+        fs::write(&prompt_path, "Review prompt").unwrap();
+
+        let mut manifest = super::super::read_manifest(&root_path.join("project.json")).unwrap();
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "review".to_string(),
+            name: "Review".to_string(),
+            template_source: "prompts/review.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "replace_document".to_string(),
+            output_filename: None,
+        });
+        manifest.pipelines.push(Pipeline {
+            pipeline_id: "line-edit".to_string(),
+            name: "Line Edit".to_string(),
+            execution_mode: "sequential".to_string(),
+            ordered_blocks: vec!["review".to_string()],
+        });
+        super::super::write_manifest(root_path, &manifest).unwrap();
+
+        let updated = trash_prompt(root_path, "prompts/review.tera", &app_data_dir).unwrap();
+
+        assert_eq!(updated.counts.prompts, 0);
+        assert!(!prompt_path.exists());
+        assert!(root_path.join("Trash/prompts/review.tera").is_file());
+
+        let updated_manifest = super::super::read_manifest(&root_path.join("project.json")).unwrap();
+        assert!(updated_manifest.prompt_blocks.is_empty());
+        assert!(!updated_manifest
+            .pipelines
+            .iter()
+            .any(|pipeline| pipeline.ordered_blocks.iter().any(|block_id| block_id == "review")));
     }
 }

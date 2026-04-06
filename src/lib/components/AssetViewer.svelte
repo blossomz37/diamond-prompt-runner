@@ -1,7 +1,7 @@
 <script lang="ts">
   import { marked } from 'marked';
   import { ONLINE_PROMPT_DIRECTIVE, promptUsesOnlineResearch } from '$lib/promptExecution';
-  import type { PromptExecutionResult, WorkspaceTab } from '$lib/types/project';
+  import type { PromptExecutionResult, TemplateValidationResult, WorkspaceTab } from '$lib/types/project';
   import FindBar from '$lib/components/FindBar.svelte';
   import CodeEditor, { type CodeEditorApi } from '$lib/components/CodeEditor.svelte';
 
@@ -14,13 +14,16 @@
     onSave: (path: string) => void | Promise<void>;
     onReload: (path: string) => void | Promise<void>;
     onExecute: (path: string) => void | Promise<void>;
+    validation: TemplateValidationResult | null;
+    validationLoading: boolean;
     execution: PromptExecutionResult | null;
     executionLoading: boolean;
   }
 
-  let { tab, onDraftChange, onSave, onReload, onExecute, execution, executionLoading }: Props = $props();
+  let { tab, onDraftChange, onSave, onReload, onExecute, validation, validationLoading, execution, executionLoading }: Props = $props();
 
   let previewMode = $state(false);
+  let writingView = $state(false);
   let editorEl: HTMLTextAreaElement | CodeEditorApi | undefined = $state();
   let findBar: FindBar | undefined = $state();
   let currentTabPath = '';
@@ -30,6 +33,7 @@
     if (tab?.path && tab.path !== currentTabPath) {
       currentTabPath = tab.path;
       previewMode = false;
+      writingView = false;
       findBar?.close();
     }
   });
@@ -45,10 +49,15 @@
     }
   }
 
-  const isMarkdown = $derived(tab?.kind === 'markdown' || tab?.kind === 'tera');
+  const isMarkdown = $derived(tab?.kind === 'markdown');
+  const isPreviewable = $derived(tab?.kind === 'markdown' || tab?.kind === 'tera');
 
   const renderedMarkdown = $derived(
-    isMarkdown && previewMode ? marked.parse(tab!.draftContent ?? tab!.content) : ''
+    tab?.kind === 'markdown' && previewMode ? marked.parse(tab!.draftContent ?? tab!.content) : ''
+  );
+
+  const renderedPromptPreview = $derived(
+    tab?.kind === 'tera' && previewMode && validation?.preview ? marked.parse(validation.preview) : ''
   );
 
   const onlineEnabled = $derived(
@@ -78,7 +87,7 @@
         <h2>{tab.title}</h2>
       </div>
       <div class="actions">
-        {#if isMarkdown}
+        {#if isPreviewable}
           <button
             type="button"
             class="ghost toggle-preview"
@@ -89,6 +98,16 @@
           </button>
         {/if}
         {#if tab.kind === 'tera'}
+          {#if !previewMode}
+            <button
+              type="button"
+              class="ghost toggle-preview"
+              class:active={writingView}
+              onclick={() => writingView = !writingView}
+            >
+              {writingView ? 'Expand Tera Blocks' : 'Fold Tera Blocks'}
+            </button>
+          {/if}
           {#if onlineEnabled}
             <span class="online-chip" title={`Opted into online research via ${ONLINE_PROMPT_DIRECTIVE}`}>
               Online enabled
@@ -125,9 +144,24 @@
         </button>
       </div>
     </header>
-    {#if previewMode && isMarkdown}
+    {#if previewMode && tab.kind === 'markdown'}
       <!-- eslint-disable-next-line svelte/no-at-html-tags -- marked with raw HTML disabled -->
       <div class="markdown-preview">{@html renderedMarkdown}</div>
+    {:else if previewMode && tab.kind === 'tera'}
+      {#if validationLoading}
+        <div class="preview-state">
+          <p class="eyebrow">Rendered Preview</p>
+          <p>Refreshing preview from the current draft…</p>
+        </div>
+      {:else if validation?.preview}
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -- marked with raw HTML disabled -->
+        <div class="markdown-preview">{@html renderedPromptPreview}</div>
+      {:else}
+        <div class="preview-state">
+          <p class="eyebrow">Rendered Preview</p>
+          <p>No prompt preview is available for the current draft.</p>
+        </div>
+      {/if}
     {:else}
       <FindBar
         bind:this={findBar}
@@ -135,15 +169,18 @@
         content={tab.draftContent}
         onContentChange={(newContent) => onDraftChange(tab.path, newContent)}
       />
-      {#key tab.path}
-        <CodeEditor
-          bind:api={editorEl as CodeEditorApi}
-          value={tab.draftContent}
-          kind={tab.kind}
-          onContentChange={(newContent) => onDraftChange(tab.path, newContent)}
-          onkeydown={handleEditorKeydown}
-        />
-      {/key}
+      <div class:writing-view={tab.kind === 'tera' && writingView}>
+        {#key tab.path}
+          <CodeEditor
+            bind:api={editorEl as CodeEditorApi}
+            value={tab.draftContent}
+            kind={tab.kind}
+            foldTeraBlocks={tab.kind === 'tera' && writingView}
+            onContentChange={(newContent) => onDraftChange(tab.path, newContent)}
+            onkeydown={handleEditorKeydown}
+          />
+        {/key}
+      </div>
     {/if}
   </section>
 {:else if tab.view === 'text'}
@@ -285,6 +322,20 @@
   .toggle-preview.active {
     background: rgba(132, 173, 255, 0.18);
     border-color: rgba(139, 177, 255, 0.34);
+  }
+
+  .preview-state {
+    display: grid;
+    gap: 0.45rem;
+    min-height: 0;
+    padding: 1rem;
+    border-radius: 18px;
+    background: rgba(5, 8, 15, 0.78);
+    border: 1px solid var(--border-faint);
+  }
+
+  .writing-view {
+    min-height: 0;
   }
 
 

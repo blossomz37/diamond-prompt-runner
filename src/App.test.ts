@@ -36,6 +36,7 @@ const tauri = vi.hoisted(() => ({
   deleteModelPreset: vi.fn(),
   deletePipeline: vi.fn(),
   deletePromptBlock: vi.fn(),
+  trashPrompt: vi.fn(),
   deleteRun: vi.fn(),
   executePipeline: vi.fn(),
   exportProjectAssets: vi.fn(),
@@ -51,7 +52,9 @@ const tauri = vi.hoisted(() => ({
   listProjectAssets: vi.fn(),
   locateRecentProject: vi.fn(),
   openProject: vi.fn(),
+  onPipelineProgress: vi.fn(),
   pickDirectory: vi.fn(),
+  registerPromptBlock: vi.fn(),
   removeRecentProject: vi.fn(),
   readProjectAsset: vi.fn(),
   renameDocument: vi.fn(),
@@ -537,8 +540,11 @@ describe('App', () => {
     tauri.createPipeline.mockResolvedValue(createdPipelineResult);
     tauri.createProject.mockResolvedValue(summary);
     tauri.createPromptBlock.mockResolvedValue(createdPromptResult);
+    tauri.registerPromptBlock.mockResolvedValue(createdPromptResult);
+    tauri.trashPrompt.mockResolvedValue(summary);
     tauri.locateRecentProject.mockResolvedValue(summary);
     tauri.openProject.mockResolvedValue(summary);
+    tauri.onPipelineProgress.mockResolvedValue(() => {});
     tauri.removeRecentProject.mockResolvedValue(undefined);
     tauri.executePipeline.mockResolvedValue(pipelineExecutionResult);
     tauri.listProjectAssets.mockResolvedValue(assetNodes);
@@ -595,7 +601,7 @@ describe('App', () => {
   it('renders recents on load', async () => {
     render(App);
 
-    expect(await screen.findByText('Reopen quickly')).toBeInTheDocument();
+    expect(await screen.findByText('Recent Projects')).toBeInTheDocument();
     expect(screen.getByText('Story Lab')).toBeInTheDocument();
   });
 
@@ -667,6 +673,50 @@ describe('App', () => {
 
     expect(await screen.findAllByText('scene-draft.tera')).not.toHaveLength(0);
     expect(screen.getByTestId('asset-editor')).toHaveValue(createdPromptAssetContent.content);
+  });
+
+  it('moves a prompt template to Trash from the prompts sidebar', async () => {
+    tauri.listProjectAssets
+      .mockResolvedValueOnce(assetNodes)
+      .mockResolvedValueOnce([
+        assetNodes[0],
+        assetNodes[1],
+        {
+          name: 'prompts',
+          path: 'prompts',
+          kind: 'directory',
+          isDirectory: true,
+          children: []
+        },
+        assetNodes[3]
+      ]);
+    tauri.listProjectPromptBlocks
+      .mockResolvedValueOnce(promptBlocks)
+      .mockResolvedValueOnce([]);
+    tauri.listProjectPipelines
+      .mockResolvedValueOnce(pipelines)
+      .mockResolvedValueOnce(pipelines);
+
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    await expandSidebarSection('Prompts');
+  await fireEvent.mouseEnter(screen.getByRole('button', { name: 'TE brief-review.tera' }).parentElement!);
+    await fireEvent.click(screen.getByRole('button', { name: 'Delete brief-review.tera' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Confirm delete brief-review.tera' }));
+
+    await waitFor(() =>
+      expect(tauri.trashPrompt).toHaveBeenCalledWith('/tmp/story-lab', 'prompts/brief-review.tera')
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText('No .tera templates yet.')).toBeInTheDocument()
+    );
   });
 
   it('removes an unavailable recent project', async () => {
@@ -754,7 +804,7 @@ describe('App', () => {
         'The selected folder is a valid Diamond project, but it does not match the missing recent project.'
       )
     ).toBeInTheDocument();
-    expect(screen.getByText('Reopen quickly')).toBeInTheDocument();
+    expect(screen.getByText('Recent Projects')).toBeInTheDocument();
   });
 
   it('runs a manifest pipeline from the sidebar', async () => {
@@ -1049,7 +1099,7 @@ describe('App', () => {
     expect(screen.queryByText('Read-only View')).not.toBeInTheDocument();
   });
 
-  it('shows template preview and validation state in the bottom panel', async () => {
+  it('shows prompt validation in the inspector and renders preview in the editor pane', async () => {
     render(App);
 
     await fireEvent.click(await screen.findByText('Open Existing Project'));
@@ -1069,8 +1119,8 @@ describe('App', () => {
     );
 
     expect(await screen.findByText('valid')).toBeInTheDocument();
-    expect(screen.getByText('Preview')).toBeInTheDocument();
-    expect(screen.getByText(/Diamond Prompt Runner stores prompts/)).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
+    expect(await screen.findByText(/Diamond Prompt Runner stores prompts/)).toBeInTheDocument();
   });
 
   it('clears validation result when switching away from a tera tab', async () => {
@@ -1153,6 +1203,27 @@ describe('App', () => {
         updatedContent
       )
     );
+  });
+
+  it('registers an existing prompt template as a prompt block from the sidebar', async () => {
+    tauri.listProjectPromptBlocks.mockResolvedValueOnce([]).mockResolvedValueOnce(promptBlocks);
+
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    await expandSidebarSection('Prompt Blocks');
+    await fireEvent.click(screen.getByRole('button', { name: 'Register' }));
+
+    await waitFor(() =>
+      expect(tauri.registerPromptBlock).toHaveBeenCalledWith('/tmp/story-lab', 'prompts/brief-review.tera')
+    );
+
+    expect(await screen.findByText('Brief Review')).toBeInTheDocument();
   });
 
   it('shows the online research affordance when the prompt opts in locally', async () => {

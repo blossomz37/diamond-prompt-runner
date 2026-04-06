@@ -65,6 +65,13 @@ export async function createPromptBlock(
   return invoke<CreatedPromptBlockResult>('create_prompt_block', { rootPath, promptName });
 }
 
+export async function registerPromptBlock(
+  rootPath: string,
+  templateSource: string
+): Promise<CreatedPromptBlockResult> {
+  return invoke<CreatedPromptBlockResult>('register_prompt_block', { rootPath, templateSource });
+}
+
 export async function openProject(rootPath: string): Promise<ProjectSummary> {
   return invoke<ProjectSummary>('open_project', { rootPath });
 }
@@ -319,6 +326,13 @@ export async function deleteRun(rootPath: string, runPath: string): Promise<void
 
 export async function deleteDocument(rootPath: string, relativePath: string): Promise<void> {
   return invoke('delete_document', { rootPath, relativePath });
+}
+
+export async function trashPrompt(
+  rootPath: string,
+  relativePath: string
+): Promise<ProjectSummary> {
+  return invoke<ProjectSummary>('trash_prompt', { rootPath, relativePath });
 }
 
 export async function renameDocument(

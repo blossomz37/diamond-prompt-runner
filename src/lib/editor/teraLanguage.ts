@@ -17,6 +17,7 @@ const teraParser: StreamParser<TeraState> = {
         state.inTag = true;
         return 'bracket';
       }
+
       stream.next();
       return null; // plain text
     }
@@ -26,7 +27,6 @@ const teraParser: StreamParser<TeraState> = {
         state.stringQuote = null;
         return 'string';
       }
-      // Eat characters until the next quote or tag boundary
       while (!stream.eol() && stream.peek() !== state.stringQuote && stream.peek() !== '}' && stream.peek() !== '%') {
         stream.next();
       }
@@ -38,17 +38,14 @@ const teraParser: StreamParser<TeraState> = {
       return 'bracket';
     }
 
-    // Match keywords like if, for, in, endfor, endif, set, etc.
     if (stream.match(/^(?:if|else|elif|endif|for|in|endfor|set|macro|endmacro|include|import|from|doc)\b/)) {
       return 'keyword';
     }
 
-    // Match variable names
     if (stream.match(/^[a-zA-Z_][a-zA-Z0-9_]*/)) {
       return 'variable';
     }
 
-    // Match strings
     const ch = stream.peek();
     if (ch === '"' || ch === "'") {
       state.stringQuote = ch;

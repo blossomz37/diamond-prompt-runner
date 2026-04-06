@@ -57,6 +57,21 @@ fn create_prompt_block(
 }
 
 #[tauri::command]
+fn register_prompt_block(
+    app: tauri::AppHandle,
+    root_path: String,
+    template_source: String,
+) -> Result<CreatedPromptBlockResult, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::register_prompt_block(
+        PathBuf::from(root_path).as_path(),
+        &template_source,
+        &app_data_dir,
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn get_recent_projects(app: tauri::AppHandle) -> Result<Vec<RecentProjectEntry>, String> {
     let app_data_dir = app_data_dir(&app)?;
     project_store::get_recent_projects(&app_data_dir).map_err(|error| error.to_string())
@@ -456,6 +471,17 @@ fn delete_document(root_path: String, relative_path: String) -> Result<(), Strin
 }
 
 #[tauri::command]
+fn trash_prompt(
+    app: tauri::AppHandle,
+    root_path: String,
+    relative_path: String,
+) -> Result<ProjectSummary, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::trash_prompt(PathBuf::from(root_path).as_path(), &relative_path, &app_data_dir)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn rename_document(
     root_path: String,
     old_path: String,
@@ -487,6 +513,7 @@ pub fn run() {
             create_project,
             open_project,
             create_prompt_block,
+            register_prompt_block,
             get_recent_projects,
             remove_recent_project,
             locate_recent_project,
@@ -524,6 +551,7 @@ pub fn run() {
             delete_prompt_block,
             delete_run,
             delete_document,
+            trash_prompt,
             rename_document,
             open_in_os
         ])

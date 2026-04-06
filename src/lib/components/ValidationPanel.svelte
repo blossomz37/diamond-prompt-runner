@@ -20,6 +20,8 @@
     recentRunsLoading: boolean;
     onOpenRunPath: (path: string) => void | Promise<void>;
     onExecute: (path: string) => void | Promise<void>;
+    showValidation?: boolean;
+    showPreview?: boolean;
   }
 
   let {
@@ -32,7 +34,9 @@
     recentRuns,
     recentRunsLoading,
     onOpenRunPath,
-    onExecute
+    onExecute,
+    showValidation = true,
+    showPreview = true
   }: Props = $props();
 
   function tone(status: TemplateValidationResult['status']): string {
@@ -72,57 +76,59 @@
 {:else}
   <div class="panel-grid">
     <div class="summary">
-      <div class="heading">
-        <div>
-          <p class="eyebrow">Validation</p>
-          <h3>{tab.title}</h3>
+      {#if showValidation}
+        <div class="heading">
+          <div>
+            <p class="eyebrow">Validation</p>
+            <h3>{tab.title}</h3>
+          </div>
+          {#if validation}
+            <span class={`badge ${tone(validation.status)}`}>{validation.status}</span>
+          {/if}
         </div>
-        {#if validation}
-          <span class={`badge ${tone(validation.status)}`}>{validation.status}</span>
-        {/if}
-      </div>
 
-      {#if loading}
-        <p class="empty-state">Refreshing validation from the current draft…</p>
-      {:else if validation}
-        {#if onlineDraftEnabled}
-          <div class="messages info">
-            <h4>Online Research Mode</h4>
-            <p>This prompt opts into web-backed execution via the <code>{ONLINE_PROMPT_DIRECTIVE}</code> directive on its first non-empty line. During a run, OpenRouter will issue live web search requests and inject citations into the context before generating the response.</p>
-            <p><strong>Constraints:</strong> Online runs consume additional tokens for search context and cost more than standard runs. Citation count and quality depend on the model and search results — they are not guaranteed. The <code>:online</code> directive routes execution through OpenRouter's online feature; it does not call a separate search API.</p>
-            <p><strong>Setup:</strong> No additional configuration is required beyond a valid OpenRouter API key. Any model preset works; OpenRouter selects a compatible online-capable variant automatically.</p>
-            <p><strong>To disable:</strong> Remove or comment out the directive line, or move it below the first non-empty line.</p>
-          </div>
-        {/if}
-
-        {#if validation.errors.length > 0}
-          <div class="messages">
-            <h4>Errors</h4>
-            {#each validation.errors as error (error)}
-              <p>{error}</p>
-            {/each}
-          </div>
-        {/if}
-
-        {#if validation.warnings.length > 0}
-          <div class="messages warnings">
-            <h4>Warnings</h4>
-            {#each validation.warnings as warning (warning)}
-              <p>{warning}</p>
-            {/each}
-          </div>
-        {/if}
-
-        <dl class="context-list">
-          {#each validation.contextSummary as item (item.label)}
-            <div>
-              <dt>{item.label}</dt>
-              <dd>{item.value}</dd>
+        {#if loading}
+          <p class="empty-state">Refreshing validation from the current draft…</p>
+        {:else if validation}
+          {#if onlineDraftEnabled}
+            <div class="messages info">
+              <h4>Online Research Mode</h4>
+              <p>This prompt opts into web-backed execution via the <code>{ONLINE_PROMPT_DIRECTIVE}</code> directive on its first non-empty line. During a run, OpenRouter will issue live web search requests and inject citations into the context before generating the response.</p>
+              <p><strong>Constraints:</strong> Online runs consume additional tokens for search context and cost more than standard runs. Citation count and quality depend on the model and search results — they are not guaranteed. The <code>:online</code> directive routes execution through OpenRouter's online feature; it does not call a separate search API.</p>
+              <p><strong>Setup:</strong> No additional configuration is required beyond a valid OpenRouter API key. Any model preset works; OpenRouter selects a compatible online-capable variant automatically.</p>
+              <p><strong>To disable:</strong> Remove or comment out the directive line, or move it below the first non-empty line.</p>
             </div>
-          {/each}
-        </dl>
-      {:else}
-        <p class="empty-state">No validation state yet.</p>
+          {/if}
+
+          {#if validation.errors.length > 0}
+            <div class="messages">
+              <h4>Errors</h4>
+              {#each validation.errors as error (error)}
+                <p>{error}</p>
+              {/each}
+            </div>
+          {/if}
+
+          {#if validation.warnings.length > 0}
+            <div class="messages warnings">
+              <h4>Warnings</h4>
+              {#each validation.warnings as warning (warning)}
+                <p>{warning}</p>
+              {/each}
+            </div>
+          {/if}
+
+          <dl class="context-list">
+            {#each validation.contextSummary as item (item.label)}
+              <div>
+                <dt>{item.label}</dt>
+                <dd>{item.value}</dd>
+              </div>
+            {/each}
+          </dl>
+        {:else}
+          <p class="empty-state">No validation state yet.</p>
+        {/if}
       {/if}
 
       <div class="execution-card">
@@ -253,16 +259,18 @@
     </div>
 
     <div class="preview">
-      <p class="eyebrow">Preview</p>
-      {#if loading}
-        <p class="empty-state">Waiting for preview…</p>
-      {:else if validation?.preview}
-        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-        <div class="markdown-preview">{@html parsedPreview}</div>
-      {:else if validation}
-        <p class="empty-state">No preview available for the current draft.</p>
-      {:else}
-        <p class="empty-state">Open a `.tera` prompt to generate a preview.</p>
+      {#if showPreview}
+        <p class="eyebrow">Preview</p>
+        {#if loading}
+          <p class="empty-state">Waiting for preview…</p>
+        {:else if validation?.preview}
+          <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+          <div class="markdown-preview">{@html parsedPreview}</div>
+        {:else if validation}
+          <p class="empty-state">No preview available for the current draft.</p>
+        {:else}
+          <p class="empty-state">Open a `.tera` prompt to generate a preview.</p>
+        {/if}
       {/if}
 
       <div class="output-panel">
@@ -503,5 +511,10 @@
     .panel-grid {
       grid-template-columns: 1fr;
     }
+  }
+
+  .panel-grid:has(.summary:only-child),
+  .panel-grid:has(.preview:empty) {
+    grid-template-columns: 1fr;
   }
 </style>

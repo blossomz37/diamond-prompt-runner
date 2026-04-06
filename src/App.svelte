@@ -26,6 +26,7 @@
     openProject,
     pickDirectory,
     readProjectAsset,
+    registerPromptBlock,
     removeRecentProject,
     renameProject,
     saveExecutionApiKey,
@@ -42,6 +43,7 @@
     deletePromptBlock,
     deleteRun,
     deleteDocument,
+    trashPrompt,
     renameDocument,
     cancelPipeline,
     onPipelineProgress
@@ -764,6 +766,33 @@
     return result;
   }
 
+  async function handleRegisterPromptBlock(templateSource: string): Promise<ProjectPromptBlock> {
+    if (!workspace) {
+      throw new Error('No workspace open.');
+    }
+
+    const result = await registerPromptBlock(workspace.rootPath, templateSource);
+    workspace = result.summary;
+    recentProjects = await getRecentProjects();
+
+    const [nodes, pipelines, blocks] = await Promise.all([
+      listProjectAssets(result.summary.rootPath),
+      listProjectPipelines(result.summary.rootPath),
+      listProjectPromptBlocks(result.summary.rootPath)
+    ]);
+
+    assetNodes = nodes;
+    projectPipelines = pipelines;
+    projectPromptBlocks = blocks;
+
+    const createdBlock = blocks.find((block) => block.templateSource === result.path);
+    if (!createdBlock) {
+      throw new Error('Prompt block was registered but could not be loaded back into the workspace.');
+    }
+
+    return createdBlock;
+  }
+
   async function handleDeletePromptBlock(blockId: string): Promise<void> {
     if (!workspace) return;
     const updated = await deletePromptBlock(workspace.rootPath, blockId);
@@ -786,6 +815,23 @@
     tabs = tabs.filter((tab) => tab.path !== relativePath);
     if (activePath === relativePath) activePath = tabs[0]?.path ?? null;
     assetNodes = await listProjectAssets(workspace.rootPath);
+  }
+
+  async function handleTrashPrompt(relativePath: string): Promise<void> {
+    if (!workspace) return;
+    const updated = await trashPrompt(workspace.rootPath, relativePath);
+    workspace = updated;
+    tabs = tabs.filter((tab) => tab.path !== relativePath);
+    if (activePath === relativePath) activePath = tabs[0]?.path ?? null;
+    recentProjects = await getRecentProjects();
+    const [nodes, pipelines, blocks] = await Promise.all([
+      listProjectAssets(workspace.rootPath),
+      listProjectPipelines(workspace.rootPath),
+      listProjectPromptBlocks(workspace.rootPath)
+    ]);
+    assetNodes = nodes;
+    projectPipelines = pipelines;
+    projectPromptBlocks = blocks;
   }
 
   async function handleRenameDocument(relativePath: string, newName: string): Promise<void> {
@@ -937,9 +983,11 @@
     onSetBlockOutputFilename={handleSetBlockOutputFilename}
     onDeletePipeline={handleDeletePipeline}
     onDuplicatePipeline={handleDuplicatePipeline}
+    onRegisterPromptBlock={handleRegisterPromptBlock}
     onDeletePromptBlock={handleDeletePromptBlock}
     onDeleteRun={handleDeleteRun}
     onDeleteDocument={handleDeleteDocument}
+    onDeletePrompt={handleTrashPrompt}
     onRenameDocument={handleRenameDocument}
     onOpenHelpFile={handleSelectAsset}
   />

@@ -104,9 +104,11 @@
     onSetBlockOutputFilename: (blockId: string, filename: string | null) => Promise<void>;
     onDeletePipeline: (pipelineId: string) => Promise<void>;
     onDuplicatePipeline: (pipelineId: string) => Promise<SavedPipelineResult>;
+    onRegisterPromptBlock: (templateSource: string) => Promise<ProjectPromptBlock>;
     onDeletePromptBlock: (blockId: string) => Promise<void>;
     onDeleteRun: (runPath: string) => Promise<void>;
     onDeleteDocument: (relativePath: string) => Promise<void>;
+    onDeletePrompt: (relativePath: string) => Promise<void>;
     onRenameDocument: (relativePath: string, newName: string) => Promise<void>;
     credentialState: ExecutionCredentialStatus | null;
     onOpenHelpFile: (node: ProjectAssetNode) => void;
@@ -166,9 +168,11 @@
     onSetBlockOutputFilename,
     onDeletePipeline,
     onDuplicatePipeline,
+    onRegisterPromptBlock,
     onDeletePromptBlock,
     onDeleteRun,
     onDeleteDocument,
+    onDeletePrompt,
     onRenameDocument,
     onOpenHelpFile
   }: Props = $props();
@@ -195,7 +199,7 @@
   let bottomOpen = $state(true);
 
   // Inspector panel
-  let inspectorOpen = $state(false);
+  let inspectorOpen = $state(true);
 
   // Pipeline editor virtual tab state
   let pipelineEditorActive = $state(false);
@@ -373,6 +377,7 @@
               activePath={pipelineEditorActive ? null : activePath}
               onSelectPath={onSelectAsset}
               {onCreatePrompt}
+              onDeletePrompt={onDeletePrompt}
               {promptCreationLoading}
             />
           </div>
@@ -388,9 +393,14 @@
         {#if promptBlocksOpen}
           <div class="sidebar-body">
             <SidebarPromptBlocks
+              {nodes}
               {promptBlocks}
               activeBlockId={blockEditorActive ? blockEditorTarget?.blockId ?? null : null}
               onSelectBlock={openBlockEditor}
+              onRegisterPromptBlock={async (templateSource) => {
+                const block = await onRegisterPromptBlock(templateSource);
+                openBlockEditor(block);
+              }}
             />
           </div>
         {/if}
@@ -597,6 +607,8 @@
             onSave={onSaveTab}
             onReload={onReloadTab}
             onExecute={onRunTab}
+            validation={validationResult}
+            validationLoading={validationLoading}
             execution={activeExecution}
             executionLoading={executionLoading && activeTab?.kind === 'tera'}
           />
@@ -608,8 +620,11 @@
       <aside class="inspector panel">
         <InspectorPanel
           summary={summary}
+          tab={activeTab}
           metadata={activeTab?.metadata ?? null}
           usageSummary={projectUsageSummary}
+          validation={validationResult}
+          validationLoading={validationLoading}
         />
       </aside>
     {/if}
@@ -618,7 +633,7 @@
       <div class="pane-head">
         <p class="eyebrow">Bottom Panel</p>
         <div class="pane-controls">
-          <span>{activeTab?.kind === 'tera' ? 'Validation + Run' : 'Preview'}</span>
+          <span>{activeTab?.kind === 'tera' ? 'Run Output + History' : 'Preview'}</span>
           <button
             type="button"
             class="pane-toggle"
@@ -639,6 +654,8 @@
           recentRunsLoading={historyLoading}
           onOpenRunPath={onOpenRunPath}
           onExecute={onRunTab}
+          showValidation={false}
+          showPreview={false}
         />
       {/if}
     </section>
