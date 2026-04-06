@@ -66,7 +66,7 @@
 
 <div class="sidebar-exports">
   {#if exportableTabs.length === 0}
-    <p class="empty">Open one or more supported assets in tabs to export them as a derived bundle.</p>
+    <p class="empty-state">Open one or more supported assets in tabs to export them as a derived bundle.</p>
   {:else}
     <form class="export-form" onsubmit={(event) => { event.preventDefault(); void handleExportSubmit(); }}>
       <input
@@ -112,25 +112,13 @@
     gap: 0.55rem;
   }
 
-  .empty {
-    margin: 0;
-    color: var(--text-soft);
-    font-size: 0.82rem;
-  }
-
   .export-form {
     display: grid;
     gap: 0.6rem;
   }
 
   .export-form input[type="text"] {
-    min-height: 2rem;
-    border-radius: 8px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(7, 11, 20, 0.82);
-    color: var(--text);
     padding: 0.35rem 0.55rem;
-    font-size: 0.82rem;
   }
 
   .export-list {
@@ -167,20 +155,5 @@
     margin: 0;
     color: var(--text-soft);
     font-size: 0.78rem;
-  }
-
-  .mini-action {
-    min-height: 2rem;
-    padding: 0.35rem 0.65rem;
-    border-radius: 10px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text);
-    font-size: 0.82rem;
-  }
-
-  .mini-action.primary {
-    background: rgba(139, 177, 255, 0.14);
-    border-color: rgba(139, 177, 255, 0.28);
   }
 </style>

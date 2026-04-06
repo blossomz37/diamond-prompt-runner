@@ -128,14 +128,6 @@
     gap: 0.55rem;
   }
 
-  .eyebrow {
-    margin: 0;
-    color: var(--accent);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
   h3 {
     margin: 0;
     font-size: 1rem;

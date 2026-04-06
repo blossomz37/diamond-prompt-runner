@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { marked } from 'marked';
   import { ONLINE_PROMPT_DIRECTIVE, promptUsesOnlineResearch } from '$lib/promptExecution';
   import type {
     ExecutionCredentialStatus,
@@ -54,12 +55,20 @@
   const onlineDraftEnabled = $derived(
     tab?.kind === 'tera' ? promptUsesOnlineResearch(tab.draftContent) : false
   );
+
+  const parsedPreview = $derived(
+    validation?.preview ? marked.parse(validation.preview) : ''
+  );
+
+  const parsedOutput = $derived(
+    execution?.output ? marked.parse(execution.output) : ''
+  );
 </script>
 
 {#if !tab}
-  <p class="empty">Open a project asset to inspect validation and preview state here.</p>
+  <p class="empty-state">Open a project asset to inspect validation and preview state here.</p>
 {:else if tab.kind !== 'tera'}
-  <p class="empty">Template preview and validation are available for `.tera` prompt templates in this slice.</p>
+  <p class="empty-state">Template preview and validation are available for `.tera` prompt templates in this slice.</p>
 {:else}
   <div class="panel-grid">
     <div class="summary">
@@ -74,7 +83,7 @@
       </div>
 
       {#if loading}
-        <p class="empty">Refreshing validation from the current draft…</p>
+        <p class="empty-state">Refreshing validation from the current draft…</p>
       {:else if validation}
         {#if onlineDraftEnabled}
           <div class="messages info">
@@ -113,7 +122,7 @@
           {/each}
         </dl>
       {:else}
-        <p class="empty">No validation state yet.</p>
+        <p class="empty-state">No validation state yet.</p>
       {/if}
 
       <div class="execution-card">
@@ -130,7 +139,7 @@
 
          {#if executionLoading}
           <div class="run-action state-loading">
-            <p class="empty">Assembling and running prompt…</p>
+            <p class="empty-state">Assembling and running prompt…</p>
           </div>
         {:else if execution}
           <div class="run-action state-done">
@@ -229,7 +238,7 @@
           </dl>
         {:else}
           <div class="run-action state-ready">
-            <p class="empty">Context is ready. Assemble references and execute via OpenRouter.</p>
+            <p class="empty-state">Context is ready. Assemble references and execute via OpenRouter.</p>
             <button
               type="button"
               class="primary run-action-btn"
@@ -246,19 +255,20 @@
     <div class="preview">
       <p class="eyebrow">Preview</p>
       {#if loading}
-        <p class="empty">Waiting for preview…</p>
+        <p class="empty-state">Waiting for preview…</p>
       {:else if validation?.preview}
-        <pre>{validation.preview}</pre>
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        <div class="markdown-preview">{@html parsedPreview}</div>
       {:else if validation}
-        <p class="empty">No preview available for the current draft.</p>
+        <p class="empty-state">No preview available for the current draft.</p>
       {:else}
-        <p class="empty">Open a `.tera` prompt to generate a preview.</p>
+        <p class="empty-state">Open a `.tera` prompt to generate a preview.</p>
       {/if}
 
       <div class="output-panel">
         <p class="eyebrow">Latest Run</p>
         {#if executionLoading}
-          <p class="empty">Waiting for provider response…</p>
+          <p class="empty-state">Waiting for provider response…</p>
         {:else if execution?.documentPath && execution?.output == null}
           <div class="messages info">
             <h4>Saved to Workspace</h4>
@@ -271,11 +281,12 @@
               <p>The output below was also written to <code>{execution.documentPath}</code>.</p>
             </div>
           {/if}
-          <pre>{execution.output}</pre>
+          <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+          <div class="markdown-preview">{@html parsedOutput}</div>
         {:else if execution?.error}
-          <p class="empty">The latest execution failed before producing output.</p>
+          <p class="empty-state">The latest execution failed before producing output.</p>
         {:else}
-          <p class="empty">Run the active `.tera` prompt to inspect output here.</p>
+          <p class="empty-state">Run the active `.tera` prompt to inspect output here.</p>
         {/if}
 
         <div class="history-card">
@@ -287,7 +298,7 @@
           </div>
 
           {#if recentRunsLoading}
-            <p class="empty">Loading persisted runs…</p>
+            <p class="empty-state">Loading persisted runs…</p>
           {:else if recentRuns.length > 0}
             <div class="history-list">
               {#each recentRuns as item (item.runId)}
@@ -295,23 +306,23 @@
                   <div class="history-head">
                     <div>
                       <strong>{item.runId}</strong>
-                      <p class="empty">{item.completedAt}</p>
+                      <p class="empty-state">{item.completedAt}</p>
                     </div>
                     <span class={`badge ${executionTone(item.status)}`}>{item.status}</span>
                   </div>
-                  <p class="empty">{item.modelId}</p>
+                  <p class="empty-state">{item.modelId}</p>
                   {#if item.usage.totalTokens != null || item.usage.cost != null}
-                    <p class="empty">
+                    <p class="empty-state">
                       {#if item.usage.totalTokens != null}{item.usage.totalTokens.toLocaleString()} tokens{/if}{#if item.usage.totalTokens != null && item.usage.cost != null} · {/if}{#if item.usage.cost != null}${item.usage.cost.toFixed(4)}{/if}{#if item.usage.outputWordCount != null} · {item.usage.outputWordCount.toLocaleString()} words{/if}
                     </p>
                   {/if}
                   {#if item.online.enabled}
-                    <p class="empty">
+                    <p class="empty-state">
                       Online research: {item.online.webSearchRequests} web request{item.online.webSearchRequests === 1 ? '' : 's'} / {item.online.citationCount} citation{item.online.citationCount === 1 ? '' : 's'}
                     </p>
                   {/if}
                   {#if item.outputPreview}
-                    <p>{item.outputPreview}</p>
+                    <div class="markdown-preview">{@html marked.parse(item.outputPreview)}</div>
                   {:else if item.error}
                     <p>{item.error}</p>
                   {/if}
@@ -320,7 +331,7 @@
               {/each}
             </div>
           {:else}
-            <p class="empty">No persisted runs yet for this prompt.</p>
+            <p class="empty-state">No persisted runs yet for this prompt.</p>
           {/if}
         </div>
       </div>
@@ -363,7 +374,7 @@
   .history-item {
     padding: 0.8rem;
     border-radius: 14px;
-    border: 1px solid rgba(157, 180, 255, 0.12);
+    border: 1px solid var(--border-faint);
     background: rgba(255, 255, 255, 0.03);
   }
 
@@ -385,18 +396,9 @@
     align-items: flex-start;
   }
 
-  .eyebrow {
-    margin: 0;
-    color: var(--accent);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
   h3,
   h4,
   p,
-  pre,
   dl {
     margin: 0;
   }
@@ -413,26 +415,8 @@
   }
 
   .badge {
-    padding: 0.25rem 0.55rem;
-    border-radius: 999px;
-    border: 1px solid var(--panel-border);
     font-size: 0.8rem;
     text-transform: capitalize;
-  }
-
-  .badge.good {
-    color: var(--success);
-    border-color: rgba(153, 227, 190, 0.3);
-  }
-
-  .badge.warn {
-    color: #ffd57f;
-    border-color: rgba(255, 213, 127, 0.3);
-  }
-
-  .badge.bad {
-    color: var(--danger);
-    border-color: rgba(255, 141, 161, 0.3);
   }
 
   .messages {
@@ -475,7 +459,7 @@
   .run-action.state-loading,
   .run-action.state-done {
     background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(157, 180, 255, 0.12);
+    border-color: var(--border-faint);
   }
 
   .run-action-btn {
@@ -486,7 +470,7 @@
   button {
     border-radius: 999px;
     border: 1px solid var(--panel-border);
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-ghost);
     color: var(--text);
     padding: 0.45rem 0.9rem;
     font: inherit;
@@ -494,8 +478,8 @@
   }
 
   button.primary {
-    background: linear-gradient(135deg, rgba(153, 227, 190, 0.22), rgba(49, 134, 96, 0.28));
-    border-color: rgba(153, 227, 190, 0.3);
+    background: var(--gradient-success);
+    border-color: var(--success-border);
   }
 
   button:disabled {
@@ -513,15 +497,6 @@
   dd,
   .empty {
     color: var(--text-dim);
-  }
-
-  pre {
-    padding: 0.8rem;
-    border-radius: 14px;
-    background: rgba(5, 8, 15, 0.9);
-    border: 1px solid rgba(157, 180, 255, 0.12);
-    white-space: pre-wrap;
-    word-break: break-word;
   }
 
   @media (max-width: 980px) {

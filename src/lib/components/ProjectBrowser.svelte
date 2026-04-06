@@ -256,11 +256,8 @@
   }
 
   .eyebrow {
-    margin: 0 0 0.35rem;
-    color: var(--accent);
+    margin-bottom: 0.35rem;
     font-size: 0.74rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
   }
 
   .summary {
@@ -302,14 +299,7 @@
     padding: 0.15rem 0.45rem;
     border-radius: 4px;
     font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 600;
   }
-
-  .badge.good { background: rgba(153, 227, 190, 0.15); color: #99e3be; }
-  .badge.warn { background: rgba(255, 204, 102, 0.15); color: #ffcc66; }
-  .badge.bad  { background: rgba(255, 102, 102, 0.15); color: #ff6666; }
 
   .credential-input-group {
     display: flex;
@@ -321,7 +311,7 @@
     padding: 0 0.65rem;
     border-radius: 6px;
     border: 1px solid var(--panel-border);
-    background: rgba(7, 11, 20, 0.82);
+    background: var(--input-bg);
     color: var(--text);
     width: 14rem;
   }
@@ -392,8 +382,6 @@
 
   input {
     padding: 0.3rem 0.55rem;
-    background: rgba(7, 11, 20, 0.82);
-    color: var(--text);
   }
 
   .actions {
@@ -410,7 +398,7 @@
   }
 
   .primary {
-    background: linear-gradient(135deg, rgba(132, 173, 255, 0.28), rgba(85, 113, 204, 0.36));
+    background: var(--gradient-accent);
     border-color: rgba(139, 177, 255, 0.34);
   }
 
@@ -499,7 +487,7 @@
   }
 
   .recent-locate {
-    background: rgba(153, 227, 190, 0.12);
+    background: var(--success-bg);
     border-color: rgba(153, 227, 190, 0.28);
   }
 

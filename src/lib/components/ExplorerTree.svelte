@@ -216,12 +216,12 @@
   }
 
   .tree-node:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-ghost);
     color: var(--text);
   }
 
   .tree-node.active {
-    background: rgba(139, 177, 255, 0.14);
+    background: var(--bg-active);
     color: var(--text);
   }
 
@@ -268,7 +268,7 @@
     height: 1.5rem;
     border-radius: 6px;
     border: 1px solid rgba(157, 180, 255, 0.14);
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-ghost);
     color: var(--text-soft);
     font-size: 0.72rem;
     cursor: pointer;
@@ -277,7 +277,7 @@
 
   .doc-action:hover {
     color: var(--text);
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--bg-hover);
   }
 
   .doc-action.danger {
@@ -286,7 +286,7 @@
   }
 
   .doc-action.confirm {
-    border-color: rgba(153, 227, 190, 0.3);
+    border-color: var(--success-border);
     color: #8de8b5;
   }
 

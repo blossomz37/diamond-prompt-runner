@@ -22,10 +22,12 @@
   let previewMode = $state(false);
   let editorEl: HTMLTextAreaElement | undefined = $state();
   let findBar: FindBar | undefined = $state();
+  let currentTabPath = '';
 
   // Reset preview mode and close find bar when switching tabs
   $effect(() => {
-    if (tab?.path) {
+    if (tab?.path && tab.path !== currentTabPath) {
+      currentTabPath = tab.path;
       previewMode = false;
       findBar?.close();
     }
@@ -42,7 +44,7 @@
     }
   }
 
-  const isMarkdown = $derived(tab?.kind === 'markdown');
+  const isMarkdown = $derived(tab?.kind === 'markdown' || tab?.kind === 'tera');
 
   const renderedMarkdown = $derived(
     isMarkdown && previewMode ? marked.parse(tab!.draftContent ?? tab!.content) : ''
@@ -173,14 +175,6 @@
     padding: 1rem 1.15rem;
   }
 
-  .eyebrow {
-    margin: 0;
-    color: var(--accent);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
   h2 {
     margin: 0;
     font-size: 1.1rem;
@@ -214,8 +208,8 @@
   .online-chip {
     padding: 0.3rem 0.6rem;
     border-radius: 999px;
-    border: 1px solid rgba(153, 227, 190, 0.3);
-    background: rgba(153, 227, 190, 0.12);
+    border: 1px solid var(--success-border);
+    background: var(--success-bg);
     color: var(--success);
     font-size: 0.78rem;
   }
@@ -238,17 +232,17 @@
   }
 
   .ghost {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-ghost);
   }
 
   .primary {
-    background: linear-gradient(135deg, rgba(132, 173, 255, 0.28), rgba(85, 113, 204, 0.36));
+    background: var(--gradient-accent);
     border-color: rgba(139, 177, 255, 0.34);
   }
 
   .primary.run {
-    background: linear-gradient(135deg, rgba(153, 227, 190, 0.22), rgba(49, 134, 96, 0.28));
-    border-color: rgba(153, 227, 190, 0.3);
+    background: var(--gradient-success);
+    border-color: var(--success-border);
   }
 
   p {
@@ -263,7 +257,7 @@
     overflow: auto;
     border-radius: 18px;
     background: rgba(5, 8, 15, 0.78);
-    border: 1px solid rgba(157, 180, 255, 0.12);
+    border: 1px solid var(--border-faint);
     color: #dbe5ff;
     white-space: pre-wrap;
     word-break: break-word;
@@ -275,7 +269,7 @@
     flex: 1 1 auto;
     resize: none;
     border-radius: 18px;
-    border: 1px solid rgba(157, 180, 255, 0.12);
+    border: 1px solid var(--border-faint);
     background: rgba(5, 8, 15, 0.9);
     color: #dbe5ff;
     padding: 1rem;
@@ -303,99 +297,5 @@
     border-color: rgba(139, 177, 255, 0.34);
   }
 
-  .markdown-preview {
-    padding: 1rem 1.25rem;
-    min-height: 0;
-    overflow: auto;
-    border-radius: 18px;
-    background: rgba(5, 8, 15, 0.78);
-    border: 1px solid rgba(157, 180, 255, 0.12);
-    color: #dbe5ff;
-    line-height: 1.65;
-    flex: 1 1 auto;
-  }
 
-  .markdown-preview :global(h1),
-  .markdown-preview :global(h2),
-  .markdown-preview :global(h3),
-  .markdown-preview :global(h4) {
-    margin: 1.2em 0 0.4em;
-    color: var(--text);
-  }
-
-  .markdown-preview :global(h1) { font-size: 1.4rem; }
-  .markdown-preview :global(h2) { font-size: 1.2rem; }
-  .markdown-preview :global(h3) { font-size: 1.05rem; }
-
-  .markdown-preview :global(p) {
-    margin: 0.5em 0;
-    color: #dbe5ff;
-  }
-
-  .markdown-preview :global(ul),
-  .markdown-preview :global(ol) {
-    margin: 0.5em 0;
-    padding-left: 1.6em;
-  }
-
-  .markdown-preview :global(li) {
-    margin: 0.25em 0;
-  }
-
-  .markdown-preview :global(table) {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0.8em 0;
-    font-size: 0.92em;
-  }
-
-  .markdown-preview :global(th),
-  .markdown-preview :global(td) {
-    padding: 0.45em 0.7em;
-    border: 1px solid rgba(157, 180, 255, 0.18);
-    text-align: left;
-  }
-
-  .markdown-preview :global(th) {
-    background: rgba(132, 173, 255, 0.1);
-    font-weight: 600;
-  }
-
-  .markdown-preview :global(tr:nth-child(even)) {
-    background: rgba(255, 255, 255, 0.02);
-  }
-
-  .markdown-preview :global(code) {
-    padding: 0.15em 0.4em;
-    border-radius: 4px;
-    background: rgba(132, 173, 255, 0.12);
-    font-size: 0.9em;
-  }
-
-  .markdown-preview :global(pre) {
-    margin: 0.8em 0;
-    padding: 0.8rem 1rem;
-    border-radius: 12px;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(157, 180, 255, 0.1);
-    overflow-x: auto;
-  }
-
-  .markdown-preview :global(pre code) {
-    padding: 0;
-    background: none;
-  }
-
-  .markdown-preview :global(blockquote) {
-    margin: 0.8em 0;
-    padding: 0.4em 1em;
-    border-left: 3px solid rgba(132, 173, 255, 0.35);
-    color: var(--text-soft);
-  }
-
-  .markdown-preview :global(hr) {
-    border: none;
-    border-top: 1px solid rgba(157, 180, 255, 0.15);
-    margin: 1.2em 0;
-  }
 </style>

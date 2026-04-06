@@ -653,15 +653,7 @@
   }
 
   .back-btn:hover {
-    background: var(--hover-bg, rgba(255, 255, 255, 0.08));
-  }
-
-  .eyebrow {
-    margin: 0;
-    color: var(--accent);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    background: var(--hover-bg, var(--bg-hover));
   }
 
   h1 {
@@ -681,8 +673,8 @@
   .counts span {
     padding: 0.28rem 0.55rem;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(157, 180, 255, 0.12);
+    background: var(--bg-ghost);
+    border: 1px solid var(--border-faint);
   }
 
   .shell-grid {
@@ -806,7 +798,7 @@
     gap: 0.35rem;
     overflow-x: auto;
     padding: 0.7rem 0.7rem 0;
-    border-bottom: 1px solid rgba(157, 180, 255, 0.12);
+    border-bottom: 1px solid var(--border-faint);
   }
 
   .tab,
@@ -844,7 +836,7 @@
   }
 
   .error-banner {
-    background: rgba(255, 141, 161, 0.12);
+    background: var(--danger-bg);
     color: var(--danger);
   }
 

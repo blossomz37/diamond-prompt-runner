@@ -62,7 +62,7 @@
   {/if}
 
   {#if promptNodes.length === 0}
-    <p class="empty">No .tera templates yet.</p>
+    <p class="empty-state">No .tera templates yet.</p>
   {:else}
     <div class="prompt-list">
       {#each promptNodes as node (node.path)}
@@ -94,12 +94,6 @@
     font-size: 0.8rem;
   }
 
-  .empty {
-    margin: 0;
-    color: var(--text-soft);
-    font-size: 0.82rem;
-  }
-
   .create-form {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -110,9 +104,6 @@
     min-width: 0;
     min-height: 2.2rem;
     border-radius: 12px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(7, 11, 20, 0.82);
-    color: var(--text);
     padding: 0.55rem 0.75rem;
   }
 
@@ -138,12 +129,12 @@
   }
 
   .prompt-item:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-ghost);
     color: var(--text);
   }
 
   .prompt-item.active {
-    background: rgba(139, 177, 255, 0.14);
+    background: var(--bg-active);
     color: var(--text);
   }
 
@@ -161,19 +152,8 @@
     font-size: 0.86rem;
   }
 
-  .mini-action {
-    min-height: 2rem;
-    padding: 0.35rem 0.65rem;
-    border-radius: 10px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text);
-    font-size: 0.82rem;
-    cursor: pointer;
-  }
-
   .mini-action.primary {
-    background: rgba(139, 177, 255, 0.14);
+    background: var(--bg-active);
     border-color: rgba(139, 177, 255, 0.28);
   }
 </style>

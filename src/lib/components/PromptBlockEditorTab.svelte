@@ -229,14 +229,6 @@
     gap: 0.25rem;
   }
 
-  .eyebrow {
-    margin: 0;
-    color: var(--accent);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
   h2 {
     margin: 0;
     font-size: 1.15rem;
@@ -269,40 +261,23 @@
     letter-spacing: 0.04em;
   }
 
-  .field-select {
-    min-height: 2.4rem;
-    border-radius: 10px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(7, 11, 20, 0.82);
-    color: var(--text);
-    padding: 0.5rem 0.7rem;
-    font-size: 0.88rem;
-    cursor: pointer;
-  }
-
-  .field-select:focus {
-    border-color: rgba(139, 177, 255, 0.35);
-    outline: none;
-  }
-
+  .field-select,
   .field-input {
     min-height: 2.4rem;
     border-radius: 10px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(7, 11, 20, 0.82);
-    color: var(--text);
     padding: 0.5rem 0.7rem;
     font-size: 0.88rem;
+  }
+
+  .field-select {
+    cursor: pointer;
+  }
+
+  .field-input {
     font-family: var(--mono, monospace);
   }
 
-  .field-input:focus {
-    border-color: rgba(139, 177, 255, 0.35);
-    outline: none;
-  }
-
   .field-input::placeholder {
-    color: var(--text-soft);
     opacity: 0.6;
   }
 
@@ -328,7 +303,7 @@
   .template-path {
     font-size: 0.85rem;
     color: var(--text);
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-ghost);
     padding: 0.35rem 0.6rem;
     border-radius: 8px;
     border: 1px solid rgba(157, 180, 255, 0.1);
@@ -339,35 +314,5 @@
     gap: 0.5rem;
     padding-top: 1rem;
     border-top: 1px solid rgba(255, 141, 161, 0.15);
-  }
-
-  .action-btn {
-    min-height: 2.2rem;
-    padding: 0.4rem 0.75rem;
-    border-radius: 10px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text);
-    font-size: 0.82rem;
-    cursor: pointer;
-  }
-
-  .action-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  .action-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  .action-btn.danger {
-    border-color: rgba(255, 141, 161, 0.2);
-    color: var(--text-dim);
-  }
-
-  .action-btn.danger:hover:not(:disabled) {
-    background: rgba(255, 141, 161, 0.12);
-    color: var(--danger);
   }
 </style>

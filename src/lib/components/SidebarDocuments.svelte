@@ -20,7 +20,7 @@
 
 <div class="sidebar-documents">
   {#if documentNodes.length === 0}
-    <p class="empty">No documents yet.</p>
+    <p class="empty-state">No documents yet.</p>
   {:else}
     <ExplorerTree
       nodes={documentNodes}
@@ -36,11 +36,5 @@
   .sidebar-documents {
     display: grid;
     gap: 0.25rem;
-  }
-
-  .empty {
-    margin: 0;
-    color: var(--text-soft);
-    font-size: 0.82rem;
   }
 </style>

@@ -253,7 +253,7 @@
     </div>
 
     {#if pipelineBlocks.length === 0}
-      <p class="empty">Add one or more prompt blocks to define the pipeline order.</p>
+      <p class="empty-state">Add one or more prompt blocks to define the pipeline order.</p>
     {:else}
       <ol class="block-list">
         {#each pipelineBlocks as blockId, index (blockId)}
@@ -358,14 +358,6 @@
     border: 1px solid rgba(157, 180, 255, 0.1);
   }
 
-  .eyebrow {
-    margin: 0;
-    color: var(--accent);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
   h2 {
     margin: 0;
     font-size: 1.15rem;
@@ -392,17 +384,8 @@
   .field select {
     min-height: 2.4rem;
     border-radius: 10px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(7, 11, 20, 0.82);
-    color: var(--text);
     padding: 0.5rem 0.7rem;
     font-size: 0.88rem;
-  }
-
-  .field input:focus,
-  .field select:focus {
-    border-color: rgba(139, 177, 255, 0.35);
-    outline: none;
   }
 
   .block-picker {
@@ -411,9 +394,7 @@
     gap: 0.6rem;
   }
 
-  .empty {
-    margin: 0;
-    color: var(--text-soft);
+  .empty-state {
     font-style: italic;
   }
 
@@ -435,7 +416,7 @@
     padding: 0.6rem 0.85rem;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(157, 180, 255, 0.12);
+    border: 1px solid var(--border-faint);
   }
 
   .block-label::before {
@@ -447,48 +428,6 @@
     display: flex;
     gap: 0.35rem;
     flex-shrink: 0;
-  }
-
-  .action-btn {
-    min-height: 2.2rem;
-    padding: 0.4rem 0.75rem;
-    border-radius: 10px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text);
-    font-size: 0.82rem;
-    cursor: pointer;
-  }
-
-  .action-btn.sm {
-    min-height: 0;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.78rem;
-    border-radius: 8px;
-  }
-
-  .action-btn.primary {
-    background: linear-gradient(135deg, rgba(153, 227, 190, 0.22), rgba(49, 134, 96, 0.28));
-    border-color: rgba(153, 227, 190, 0.28);
-  }
-
-  .action-btn.danger {
-    border-color: rgba(255, 141, 161, 0.2);
-  }
-
-  .action-btn.danger:hover:not(:disabled) {
-    background: rgba(255, 141, 161, 0.12);
-    color: var(--danger);
-  }
-
-  .action-btn.run {
-    background: linear-gradient(135deg, rgba(153, 227, 190, 0.22), rgba(49, 134, 96, 0.28));
-    border-color: rgba(153, 227, 190, 0.28);
-  }
-
-  .action-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
   }
 
   .form-actions {
@@ -530,7 +469,7 @@
     width: 1.5rem;
     height: 1.5rem;
     border-radius: 50%;
-    background: rgba(139, 177, 255, 0.14);
+    background: var(--bg-active);
     color: var(--text-dim);
     font-size: 0.72rem;
     font-weight: 600;

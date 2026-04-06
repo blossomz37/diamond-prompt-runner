@@ -159,7 +159,7 @@
     flex: 1;
     min-height: 1.8rem;
     border-radius: 6px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
+    border: 1px solid var(--border-subtle);
     background: rgba(7, 11, 20, 0.9);
     color: var(--text);
     padding: 0.25rem 0.5rem;
@@ -203,7 +203,7 @@
 
   .case-btn.active {
     background: rgba(132, 173, 255, 0.2);
-    border-color: rgba(139, 177, 255, 0.35);
+    border-color: var(--border-focus);
     color: var(--accent);
   }
 

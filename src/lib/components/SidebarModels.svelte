@@ -209,19 +209,8 @@
 
   .preset-select {
     width: 100%;
-    min-height: 2rem;
-    border-radius: 8px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(7, 11, 20, 0.82);
-    color: var(--text);
-    padding: 0.3rem 0.5rem;
     font-size: 11.5px;
-    outline: none;
     cursor: pointer;
-  }
-
-  .preset-select:focus {
-    border-color: rgba(139, 177, 255, 0.35);
   }
 
   .preset-list {
@@ -297,38 +286,7 @@
   }
 
   .new-preset-form input {
-    min-height: 2rem;
-    border-radius: 8px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(7, 11, 20, 0.82);
-    color: var(--text);
-    padding: 0.3rem 0.5rem;
     font-size: 11.5px;
-    outline: none;
     width: 100%;
-  }
-
-  .new-preset-form input::placeholder {
-    color: var(--text-soft);
-  }
-
-  .new-preset-form input:focus {
-    border-color: rgba(139, 177, 255, 0.35);
-  }
-
-  .mini-action {
-    min-height: 2rem;
-    padding: 0.35rem 0.65rem;
-    border-radius: 10px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(255, 255, 255, 0.04);
-    color: var(--text);
-    font-size: 0.82rem;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-
-  .mini-action:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.08);
   }
 </style>

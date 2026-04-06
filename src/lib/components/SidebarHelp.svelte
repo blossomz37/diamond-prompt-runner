@@ -18,7 +18,7 @@
 
 <div class="sidebar-help">
   {#if helpNodes.length === 0}
-    <p class="empty">No help files yet.</p>
+    <p class="empty-state">No help files yet.</p>
   {:else}
     <ExplorerTree
       nodes={helpNodes}
@@ -32,11 +32,5 @@
   .sidebar-help {
     display: grid;
     gap: 0.25rem;
-  }
-
-  .empty {
-    margin: 0;
-    color: var(--text-soft);
-    font-size: 0.82rem;
   }
 </style>

@@ -16,7 +16,7 @@
 
 <div class="sidebar-blocks">
   {#if promptBlocks.length === 0}
-    <p class="empty">No prompt blocks registered yet.</p>
+    <p class="empty-state">No prompt blocks registered yet.</p>
   {:else}
     <div class="block-list">
       {#each promptBlocks as block (block.blockId)}
@@ -40,12 +40,6 @@
     gap: 0.25rem;
   }
 
-  .empty {
-    margin: 0;
-    color: var(--text-soft);
-    font-size: 0.82rem;
-  }
-
   .block-list {
     display: grid;
     gap: 0.08rem;
@@ -67,12 +61,12 @@
   }
 
   .block-item:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--bg-ghost);
     color: var(--text);
   }
 
   .block-item.active {
-    background: rgba(139, 177, 255, 0.14);
+    background: var(--bg-active);
     color: var(--text);
   }
 

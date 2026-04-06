@@ -86,9 +86,9 @@
   </div>
 
   {#if runHistoryLoading}
-    <p class="empty">Loading runs…</p>
+    <p class="empty-state">Loading runs…</p>
   {:else if filteredHistory.length === 0}
-    <p class="empty">No matching run artifacts yet.</p>
+    <p class="empty-state">No matching run artifacts yet.</p>
   {:else}
     <div class="run-list">
       {#each filteredHistory as item (item.runId)}
@@ -142,20 +142,7 @@
   }
 
   .filter-select {
-    min-height: 2rem;
-    border-radius: 8px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(7, 11, 20, 0.82);
-    color: var(--text);
-    padding: 0.3rem 0.5rem;
     font-size: 11px;
-    outline: none;
-  }
-
-  .empty {
-    margin: 0;
-    color: var(--text-soft);
-    font-size: 0.82rem;
   }
 
   .run-list {
@@ -168,7 +155,7 @@
     gap: 0.35rem;
     padding: 0.65rem;
     border-radius: 12px;
-    border: 1px solid rgba(157, 180, 255, 0.12);
+    border: 1px solid var(--border-faint);
     background: rgba(255, 255, 255, 0.03);
   }
 
@@ -210,12 +197,9 @@
   .action-btn {
     min-height: 2rem;
     border-radius: 8px;
-    border: 1px solid rgba(157, 180, 255, 0.16);
-    background: rgba(7, 11, 20, 0.82);
-    color: var(--text);
+    background: var(--input-bg);
     padding: 0.3rem 0.55rem;
     font-size: 0.78rem;
-    cursor: pointer;
   }
 
   .action-btn.danger {
