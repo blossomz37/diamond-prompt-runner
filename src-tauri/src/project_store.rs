@@ -13,6 +13,13 @@ use uuid::Uuid;
 
 pub use crate::types::*;
 
+pub(crate) mod assets;
+pub use assets::{
+    list_project_assets, read_project_asset, write_project_asset,
+    export_project_assets, delete_document, rename_document,
+};
+pub(crate) use assets::classify_asset;
+
 pub(crate) mod credentials;
 pub use credentials::{get_execution_credential_status, save_execution_api_key, clear_execution_api_key};
 
@@ -364,82 +371,8 @@ pub fn locate_recent_project(
     Ok(summary)
 }
 
-pub fn list_project_assets(root_path: &Path) -> StoreResult<Vec<ProjectAssetNode>> {
-    let (root_path, _) = validate_project(root_path)?;
-    let mut nodes = Vec::with_capacity(PROJECT_DIRS.len() + 1);
-
-    nodes.push(ProjectAssetNode {
-        name: "project.json".to_string(),
-        path: "project.json".to_string(),
-        kind: AssetKind::Manifest,
-        is_directory: false,
-        children: Vec::new(),
-    });
-
-    for directory in PROJECT_DIRS {
-        nodes.push(build_tree_node(&root_path, &root_path.join(directory), directory.to_string())?);
-    }
-
-    Ok(nodes)
-}
-
-pub fn delete_document(root_path: &Path, relative_path: &str) -> StoreResult<()> {
-    let (root_path, _) = validate_project(root_path)?;
-    let safe_relative = sanitize_relative_path(relative_path)?;
-    let first_component = safe_relative.components().next();
-    if first_component != Some(Component::Normal("documents".as_ref())) {
-        return Err(ProjectStoreError::message(
-            "Document path must be within the documents/ directory.",
-        ));
-    }
-    let full_path = root_path.join(&safe_relative);
-    if !full_path.is_file() {
-        return Err(ProjectStoreError::message(format!(
-            "Document not found: {relative_path}"
-        )));
-    }
-    fs::remove_file(full_path)?;
-    Ok(())
-}
-
-pub fn rename_document(root_path: &Path, old_path: &str, new_name: &str) -> StoreResult<String> {
-    let (root_path, _) = validate_project(root_path)?;
-    let safe_old = sanitize_relative_path(old_path)?;
-    let trimmed_name = new_name.trim();
-
-    let first_component = safe_old.components().next();
-    if first_component != Some(Component::Normal("documents".as_ref())) {
-        return Err(ProjectStoreError::message(
-            "Document path must be within the documents/ directory.",
-        ));
-    }
-
-    if trimmed_name.is_empty() {
-        return Err(ProjectStoreError::message("New document name cannot be empty."));
-    }
-    if trimmed_name.contains('/') || trimmed_name.contains('\\') {
-        return Err(ProjectStoreError::message(
-            "New document name cannot contain path separators.",
-        ));
-    }
-
-    let old_full = root_path.join(&safe_old);
-    if !old_full.is_file() {
-        return Err(ProjectStoreError::message(format!(
-            "Document not found: {old_path}"
-        )));
-    }
-
-    let new_full = old_full.with_file_name(trimmed_name);
-    if new_full.exists() {
-        return Err(ProjectStoreError::message(format!(
-            "A document named '{trimmed_name}' already exists."
-        )));
-    }
-
-    fs::rename(&old_full, &new_full)?;
-    Ok(format!("documents/{trimmed_name}"))
-}
+// list_project_assets, read_project_asset, write_project_asset → assets.rs
+// export_project_assets, delete_document, rename_document → assets.rs
 
 pub fn list_project_pipelines(root_path: &Path) -> StoreResult<Vec<ProjectPipelineSummary>> {
     let (_, manifest) = validate_project(root_path)?;
@@ -561,165 +494,7 @@ pub fn delete_pipeline(
     Ok(summary)
 }
 
-pub fn export_project_assets(
-    root_path: &Path,
-    bundle_name: &str,
-    relative_paths: &[String],
-    app_data_dir: &Path,
-) -> StoreResult<ExportBundleResult> {
-    let trimmed_name = bundle_name.trim();
-    if trimmed_name.is_empty() {
-        return Err(ProjectStoreError::message("Export name cannot be empty."));
-    }
-
-    if relative_paths.is_empty() {
-        return Err(ProjectStoreError::message(
-            "Select at least one project asset to export.",
-        ));
-    }
-
-    let (root_path, manifest) = validate_project(root_path)?;
-    let bundle_slug = unique_export_slug(&root_path, trimmed_name);
-    let bundle_path = format!("exports/{bundle_slug}");
-    let bundle_root = root_path.join(&bundle_path);
-    fs::create_dir_all(&bundle_root)?;
-
-    let mut exported_paths = Vec::new();
-    for relative_path in relative_paths {
-        let safe_relative = sanitize_relative_path(relative_path)?;
-        let safe_relative_string = safe_relative.to_string_lossy().replace('\\', "/");
-        let kind = classify_asset(&safe_relative_string, false);
-
-        if !is_exportable_kind(&kind) {
-            return Err(ProjectStoreError::message(format!(
-                "Asset `{safe_relative_string}` cannot be exported in this slice."
-            )));
-        }
-
-        let source_path = root_path.join(&safe_relative);
-        if !source_path.is_file() {
-            return Err(ProjectStoreError::message(format!(
-                "Asset `{safe_relative_string}` was not found on disk."
-            )));
-        }
-
-        let destination_path = bundle_root.join(&safe_relative);
-        if let Some(parent) = destination_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        fs::copy(&source_path, &destination_path)?;
-        exported_paths.push(safe_relative_string);
-    }
-
-    let export_manifest = json!({
-        "bundleName": trimmed_name,
-        "bundlePath": bundle_path,
-        "exportedAt": timestamp(),
-        "projectName": manifest.project_name,
-        "paths": exported_paths,
-    });
-    fs::write(
-        bundle_root.join("export.json"),
-        serde_json::to_string_pretty(&export_manifest)?,
-    )?;
-
-    let summary = summarize_project(&root_path, &manifest)?;
-    update_recent_projects(app_data_dir, &summary)?;
-
-    Ok(ExportBundleResult {
-        summary,
-        bundle_name: trimmed_name.to_string(),
-        bundle_path,
-        exported_paths: relative_paths
-            .iter()
-            .map(|path| path.replace('\\', "/"))
-            .collect(),
-    })
-}
-
-pub fn read_project_asset(root_path: &Path, relative_path: &str) -> StoreResult<AssetContent> {
-    let (root_path, manifest) = validate_project(root_path)?;
-    let safe_relative = sanitize_relative_path(relative_path)?;
-    let safe_relative_string = safe_relative.to_string_lossy().replace('\\', "/");
-    let full_path = root_path.join(&safe_relative);
-
-    if !full_path.exists() {
-        return Err(ProjectStoreError::message(format!(
-            "Asset `{relative_path}` does not exist."
-        )));
-    }
-
-    if full_path.is_dir() {
-        return Err(ProjectStoreError::message("Directories cannot be opened as tabs."));
-    }
-
-    let kind = classify_asset(&safe_relative_string, false);
-    let content = fs::read_to_string(&full_path).unwrap_or_else(|_| String::from("Binary or unreadable file."));
-    let is_editable = is_editable_kind(&kind);
-    let metadata = build_metadata(
-        &root_path,
-        &manifest,
-        &safe_relative_string,
-        &full_path,
-        &content,
-        &kind,
-    )?;
-
-    let (view, parsed_json) = match kind {
-        AssetKind::Manifest | AssetKind::Json => {
-            let value = serde_json::from_str::<Value>(&content).ok();
-            (AssetView::Json, value)
-        }
-        AssetKind::Markdown | AssetKind::Text | AssetKind::Tera | AssetKind::Yaml => (AssetView::Text, None),
-        _ => (
-            AssetView::Placeholder,
-            None,
-        ),
-    };
-
-    let placeholder_content = if view == AssetView::Placeholder {
-        format!("`{relative_path}` is not supported in the milestone-1 viewer.")
-    } else {
-        content
-    };
-
-    Ok(AssetContent {
-        path: safe_relative_string,
-        kind,
-        view,
-        content: placeholder_content,
-        is_editable,
-        metadata,
-        parsed_json,
-    })
-}
-
-pub fn write_project_asset(root_path: &Path, relative_path: &str, content: &str) -> StoreResult<AssetContent> {
-    let (root_path, _) = validate_project(root_path)?;
-    let safe_relative = sanitize_relative_path(relative_path)?;
-    let safe_relative_string = safe_relative.to_string_lossy().replace('\\', "/");
-    let full_path = root_path.join(&safe_relative);
-
-    if !full_path.exists() {
-        return Err(ProjectStoreError::message(format!(
-            "Asset `{relative_path}` does not exist."
-        )));
-    }
-
-    if full_path.is_dir() {
-        return Err(ProjectStoreError::message("Directories cannot be saved as files."));
-    }
-
-    let kind = classify_asset(&safe_relative_string, false);
-    if !is_editable_kind(&kind) {
-        return Err(ProjectStoreError::message(
-            "This asset type is read-only in the editing slice.",
-        ));
-    }
-
-    fs::write(&full_path, content)?;
-    read_project_asset(&root_path, &safe_relative_string)
-}
+// export_project_assets, read_project_asset, write_project_asset → assets.rs
 
 // validate_project_template, execute_prompt_block, execute_pipeline → execution.rs
 // get_execution_credential_status, save_execution_api_key, clear_execution_api_key → credentials.rs
@@ -764,70 +539,7 @@ fn summarize_pipeline(manifest: &ProjectManifest, pipeline: &Pipeline) -> Projec
     }
 }
 
-fn build_tree_node(root_path: &Path, full_path: &Path, relative_path: String) -> StoreResult<ProjectAssetNode> {
-    let metadata = fs::metadata(full_path)?;
-    let is_directory = metadata.is_dir();
-    let name = display_name_for_asset(full_path, &relative_path, is_directory);
-    let mut children = Vec::new();
-
-    if is_directory {
-        let mut entries = fs::read_dir(full_path)?
-            .flatten()
-            .filter(|entry| !is_hidden_ui_entry(entry.path().as_path()))
-            .map(|entry| entry.path())
-            .collect::<Vec<_>>();
-        entries.sort();
-
-        for entry_path in entries {
-            let child_relative = diff_path(root_path, &entry_path)?;
-            children.push(build_tree_node(root_path, &entry_path, child_relative)?);
-        }
-    }
-
-    Ok(ProjectAssetNode {
-        name,
-        path: relative_path.clone(),
-        kind: classify_asset(&relative_path, is_directory),
-        is_directory,
-        children,
-    })
-}
-
-fn display_name_for_asset(full_path: &Path, relative_path: &str, is_directory: bool) -> String {
-    if !is_directory {
-        if let Some(name) = display_name_for_run_record(full_path, relative_path) {
-            return name;
-        }
-    }
-
-    full_path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or_default()
-        .to_string()
-}
-
-fn display_name_for_run_record(full_path: &Path, relative_path: &str) -> Option<String> {
-    if !relative_path.starts_with("runs/") || !relative_path.ends_with(".json") {
-        return None;
-    }
-
-    let content = fs::read_to_string(full_path).ok()?;
-    let record = serde_json::from_str::<PersistedRunRecord>(&content).ok()?;
-    let block_name = record.block_name.trim();
-    if block_name.is_empty() {
-        None
-    } else {
-        Some(block_name.to_string())
-    }
-}
-
-fn is_hidden_ui_entry(path: &Path) -> bool {
-    path.file_name()
-        .and_then(|name| name.to_str())
-        .map(|name| name.starts_with('.'))
-        .unwrap_or(false)
-}
+// build_tree_node, display_name_for_asset, display_name_for_run_record, is_hidden_ui_entry → assets.rs
 
 pub(crate) fn summarize_project(root_path: &Path, manifest: &ProjectManifest) -> StoreResult<ProjectSummary> {
     let counts = ProjectCounts {
@@ -907,92 +619,7 @@ pub(crate) fn validate_project(root_path: &Path) -> StoreResult<(PathBuf, Projec
     Ok((root_path, manifest))
 }
 
-fn build_metadata(
-    root_path: &Path,
-    manifest: &ProjectManifest,
-    relative_path: &str,
-    full_path: &Path,
-    content: &str,
-    kind: &AssetKind,
-) -> StoreResult<AssetMetadata> {
-    let metadata = fs::metadata(full_path)?;
-    let modified_at = metadata
-        .modified()
-        .ok()
-        .map(|time| chrono::DateTime::<Utc>::from(time).to_rfc3339_opts(SecondsFormat::Secs, true));
-
-    let mut details = Vec::new();
-
-    match kind {
-        AssetKind::Manifest => {
-            details.push(detail("Project ID", &manifest.project_id));
-            details.push(detail("Default Preset", &manifest.default_model_preset));
-            details.push(detail("Prompt Blocks", &manifest.prompt_blocks.len().to_string()));
-            details.push(detail("Pipelines", &manifest.pipelines.len().to_string()));
-        }
-        AssetKind::Markdown | AssetKind::Text => {
-            details.push(detail("Lines", &content.lines().count().to_string()));
-            details.push(detail("Words", &content.split_whitespace().count().to_string()));
-        }
-        AssetKind::Tera => {
-            let linked_blocks = manifest
-                .prompt_blocks
-                .iter()
-                .filter(|block| block.template_source == relative_path)
-                .map(|block| block.name.clone())
-                .collect::<Vec<_>>();
-            let linked_blocks_value = if linked_blocks.is_empty() {
-                "None".to_string()
-            } else {
-                linked_blocks.join(", ")
-            };
-            details.push(detail("Lines", &content.lines().count().to_string()));
-            details.push(detail("Linked Blocks", &linked_blocks_value));
-        }
-        AssetKind::Yaml => {
-            match serde_yaml::from_str::<serde_yaml::Value>(content) {
-                Ok(yaml) => {
-                    details.push(detail(
-                        "Model",
-                        yaml.get("model")
-                            .and_then(|value| value.as_str())
-                            .unwrap_or("Unknown"),
-                    ));
-                    details.push(detail(
-                        "Temperature",
-                        &yaml.get("temperature")
-                            .map(yaml_value_to_string)
-                            .unwrap_or_else(|| "—".to_string()),
-                    ));
-                    details.push(detail(
-                        "Max Tokens",
-                        &yaml.get("max_completion_tokens")
-                            .map(yaml_value_to_string)
-                            .unwrap_or_else(|| "—".to_string()),
-                    ));
-                }
-                Err(_) => {
-                    details.push(detail("Model", "Invalid YAML"));
-                    details.push(detail("Temperature", "—"));
-                    details.push(detail("Max Tokens", "—"));
-                }
-            }
-        }
-        _ => {
-            details.push(detail("Status", "Unsupported in milestone 1"));
-            details.push(detail("Project Root", &root_path.to_string_lossy()));
-        }
-    }
-
-    Ok(AssetMetadata {
-        kind: kind.clone(),
-        path: relative_path.to_string(),
-        name: display_name_for_asset(full_path, relative_path, false),
-        size_bytes: Some(metadata.len()),
-        modified_at,
-        details,
-    })
-}
+// build_metadata → assets.rs
 
 pub(crate) fn sanitize_relative_path(relative_path: &str) -> StoreResult<PathBuf> {
     let path = Path::new(relative_path);
@@ -1010,7 +637,7 @@ pub(crate) fn sanitize_relative_path(relative_path: &str) -> StoreResult<PathBuf
     Ok(path.to_path_buf())
 }
 
-fn update_recent_projects(app_data_dir: &Path, summary: &ProjectSummary) -> StoreResult<()> {
+pub(crate) fn update_recent_projects(app_data_dir: &Path, summary: &ProjectSummary) -> StoreResult<()> {
     fs::create_dir_all(app_data_dir)?;
     let mut store = read_recents_store(app_data_dir)?;
     let now = timestamp();
@@ -1419,7 +1046,7 @@ fn unique_pipeline_slug(manifest: &ProjectManifest, pipeline_name: &str) -> Stri
     }
 }
 
-fn unique_export_slug(root_path: &Path, export_name: &str) -> String {
+pub(crate) fn unique_export_slug(root_path: &Path, export_name: &str) -> String {
     let base_slug = slugify_prompt_name(export_name);
     let mut candidate = base_slug.clone();
     let mut suffix = 2usize;
@@ -1487,44 +1114,7 @@ pub(crate) fn slugify_prompt_name(prompt_name: &str) -> String {
     }
 }
 
-pub(crate) fn classify_asset(relative_path: &str, is_directory: bool) -> AssetKind {
-    if is_directory {
-        return AssetKind::Directory;
-    }
-
-    if relative_path == "project.json" {
-        return AssetKind::Manifest;
-    }
-
-    match Path::new(relative_path)
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .unwrap_or_default()
-    {
-        "md" | "markdown" => AssetKind::Markdown,
-        "txt" => AssetKind::Text,
-        "tera" => AssetKind::Tera,
-        "yaml" | "yml" => AssetKind::Yaml,
-        "json" => AssetKind::Json,
-        _ => AssetKind::Unknown,
-    }
-}
-
-fn is_exportable_kind(kind: &AssetKind) -> bool {
-    matches!(
-        kind,
-        AssetKind::Manifest
-            | AssetKind::Markdown
-            | AssetKind::Text
-            | AssetKind::Tera
-            | AssetKind::Yaml
-            | AssetKind::Json
-    )
-}
-
-fn is_editable_kind(kind: &AssetKind) -> bool {
-    matches!(kind, AssetKind::Markdown | AssetKind::Text | AssetKind::Tera | AssetKind::Yaml)
-}
+// classify_asset, is_exportable_kind, is_editable_kind, yaml_value_to_string → assets.rs
 
 pub(crate) fn diff_path(root_path: &Path, path: &Path) -> StoreResult<String> {
     path.strip_prefix(root_path)
@@ -1536,18 +1126,6 @@ pub(crate) fn detail(label: &str, value: &str) -> MetadataField {
     MetadataField {
         label: label.to_string(),
         value: value.to_string(),
-    }
-}
-
-fn yaml_value_to_string(value: &serde_yaml::Value) -> String {
-    match value {
-        serde_yaml::Value::Bool(value) => value.to_string(),
-        serde_yaml::Value::Number(value) => value.to_string(),
-        serde_yaml::Value::String(value) => value.clone(),
-        other => serde_yaml::to_string(other)
-            .unwrap_or_else(|_| "—".to_string())
-            .trim()
-            .to_string(),
     }
 }
 
