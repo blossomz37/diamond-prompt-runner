@@ -8,6 +8,7 @@ This plan outlines the architecture for moving Pipeline data out of the monolith
 > This change modifies how projects are saved to the file system.
 > Pre-existing projects (like Neon & Nightmares) will undergo an automatic, invisible migration when they are loaded via `open_project`. Their `project.json` will be stripped of pipelines, and a new `pipelines/` directory will be created to house them.
 > Do you approve this data migration strategy?
+> YES
 
 ## Proposed Changes
 
