@@ -26,9 +26,15 @@
     activePipelineProgress: PipelineProgressEvent | null;
     onSave: (name: string, orderedBlockIds: string[], existingPipelineId: string | null) => Promise<SavedPipelineResult>;
     onCancel: () => void;
-    onRunPipeline: (pipelineId: string, payload?: Record<string, string>, resumeFromBlockId?: string) => void | Promise<void>;
+    onRunPipeline: (
+      pipelineId: string,
+      payload?: Record<string, string>,
+      resumeFromBlockId?: string,
+      selectedBlockIds?: string[]
+    ) => void | Promise<void>;
     onCancelPipeline: () => void | Promise<void>;
     onDeletePipeline: (pipelineId: string) => Promise<void>;
+    onDuplicatePipeline: (pipelineId: string) => Promise<void>;
     onExportPipeline: (bundleName: string, relativePaths: string[]) => Promise<ExportBundleResult>;
   }
 
@@ -44,6 +50,7 @@
     onRunPipeline,
     onCancelPipeline,
     onDeletePipeline,
+    onDuplicatePipeline,
     onExportPipeline
   }: Props = $props();
 
@@ -51,6 +58,8 @@
   let pipelineBlocks = $state<string[]>([]);
   let blockChoice = $state('');
   let editing = $state(false);
+  let runMode = $state<'all' | 'selected'>('all');
+  let selectedBlockIds = $state<string[]>([]);
 
   // Sync editor state when the target pipeline changes.
   $effect(() => {
@@ -59,6 +68,8 @@
     blockChoice = '';
     // Start in edit mode when creating a new pipeline
     editing = existingPipeline === null;
+    runMode = 'all';
+    selectedBlockIds = existingPipeline?.blocks.map((block) => block.blockId) ?? [];
   });
 
   const isEdit = $derived(existingPipeline !== null);
@@ -99,6 +110,19 @@
       existingPipeline?.pipelineId ?? null
     );
     editing = false;
+  }
+
+  // ── Duplicate ─────────────────────────────────
+  let duplicateLoading = $state(false);
+
+  async function handleDuplicate(): Promise<void> {
+    if (!existingPipeline || duplicateLoading) return;
+    duplicateLoading = true;
+    try {
+      await onDuplicatePipeline(existingPipeline.pipelineId);
+    } finally {
+      duplicateLoading = false;
+    }
   }
 
   // ── Export ────────────────────────────────────
@@ -158,8 +182,14 @@
     if (!existingPipeline || isBatchRunning) return;
     isBatchRunning = true;
     try {
+      const selectedForRun = runMode === 'selected' ? selectedBlockIds : undefined;
       for (let i = batchRunStart; i <= batchRunEnd; i++) {
-        await onRunPipeline(existingPipeline.pipelineId, { [batchIteratorVar]: String(i) });
+        await onRunPipeline(
+          existingPipeline.pipelineId,
+          { [batchIteratorVar]: String(i) },
+          undefined,
+          selectedForRun
+        );
       }
     } finally {
       isBatchRunning = false;
@@ -182,6 +212,68 @@
     }
     return existingPipeline.blocks[thisExecution.steps.length]?.blockId ?? null;
   });
+
+  const selectedBlocksForRun = $derived.by(() => {
+    if (!existingPipeline || runMode !== 'selected') {
+      return undefined;
+    }
+
+    return existingPipeline.blocks
+      .filter((block) => selectedBlockIds.includes(block.blockId))
+      .map((block) => block.blockId);
+  });
+
+  const subsetRunDisabled = $derived(
+    runMode === 'selected' && (selectedBlocksForRun?.length ?? 0) === 0
+  );
+
+  const resumeSubsetConflict = $derived(
+    runMode === 'selected' && !!resumeBlockId && !selectedBlockIds.includes(resumeBlockId)
+  );
+
+  const completedBlockCountLabel = $derived.by(() => {
+    if (!existingPipeline || !thisExecution) {
+      return null;
+    }
+
+    if (thisExecution.status === 'success' && thisExecution.steps.length !== existingPipeline.blocks.length) {
+      return `${thisExecution.steps.length} selected blocks completed`;
+    }
+
+    return `${thisExecution.steps.length} / ${existingPipeline.blocks.length} blocks completed`;
+  });
+
+  function toggleSelectedBlock(blockId: string): void {
+    if (selectedBlockIds.includes(blockId)) {
+      selectedBlockIds = selectedBlockIds.filter((id) => id !== blockId);
+      return;
+    }
+
+    selectedBlockIds = [...selectedBlockIds, blockId];
+  }
+
+  function setRunMode(nextMode: 'all' | 'selected'): void {
+    runMode = nextMode;
+    if (nextMode === 'selected' && existingPipeline) {
+      selectedBlockIds = existingPipeline.blocks.map((block) => block.blockId);
+    }
+  }
+
+  async function handleRun(): Promise<void> {
+    if (!existingPipeline || subsetRunDisabled) {
+      return;
+    }
+
+    await onRunPipeline(existingPipeline.pipelineId, undefined, undefined, selectedBlocksForRun);
+  }
+
+  async function handleContinue(): Promise<void> {
+    if (!existingPipeline || !resumeBlockId || resumeSubsetConflict) {
+      return;
+    }
+
+    await onRunPipeline(existingPipeline.pipelineId, undefined, resumeBlockId, selectedBlocksForRun);
+  }
 </script>
 
 <div class="pipeline-editor">
@@ -203,6 +295,14 @@
             disabled={pipelineLoading || loading || deleteLoading}
           >
             {editing ? 'Cancel Edit' : 'Edit'}
+          </button>
+          <button
+            type="button"
+            class="action-btn"
+            onclick={handleDuplicate}
+            disabled={pipelineLoading || loading || deleteLoading || duplicateLoading}
+          >
+            {duplicateLoading ? '…' : 'Duplicate'}
           </button>
           <button
             type="button"
@@ -236,8 +336,8 @@
               <button
                 type="button"
                 class="action-btn secondary"
-                onclick={() => onRunPipeline(existingPipeline!.pipelineId, undefined, resumeBlockId!)}
-                disabled={loading || deleteLoading || editing || isBatchRunning}
+                onclick={() => { void handleContinue(); }}
+                disabled={loading || deleteLoading || editing || isBatchRunning || resumeSubsetConflict}
               >
                 Continue Pipeline
               </button>
@@ -245,10 +345,10 @@
             <button
               type="button"
               class="action-btn run"
-              onclick={() => onRunPipeline(existingPipeline!.pipelineId)}
-              disabled={loading || deleteLoading || editing || isBatchRunning}
+              onclick={() => { void handleRun(); }}
+              disabled={loading || deleteLoading || editing || isBatchRunning || subsetRunDisabled}
             >
-              Run Pipeline
+              {runMode === 'selected' ? 'Run Selected' : 'Run Pipeline'}
             </button>
           {/if}
         </div>
@@ -276,9 +376,9 @@
         <p class:failed={thisExecution.status === 'failed'} class="meta strong">
           {thisExecution.status === 'success' ? 'Pipeline complete' : 'Pipeline failed'}
         </p>
-        <p class="meta">
-          {thisExecution.steps.length} / {existingPipeline!.blocks.length} blocks completed
-        </p>
+        {#if completedBlockCountLabel}
+          <p class="meta">{completedBlockCountLabel}</p>
+        {/if}
         {#if thisExecution.error}
           <p class="meta failed">{thisExecution.error}</p>
         {/if}
@@ -354,9 +454,35 @@
   {:else if existingPipeline}
     <div class="view-steps">
       <h3>Pipeline Steps</h3>
+      <div class="run-mode-row">
+        <label class="field run-mode-field">
+          <span>Run Mode</span>
+          <select
+            value={runMode}
+            onchange={(event) => setRunMode((event.currentTarget as HTMLSelectElement).value as 'all' | 'selected')}
+            disabled={pipelineLoading || isBatchRunning}
+          >
+            <option value="all">Run all blocks</option>
+            <option value="selected">Run selected blocks</option>
+          </select>
+        </label>
+        {#if runMode === 'selected'}
+          <p class="meta run-mode-meta">Selected {selectedBlocksForRun?.length ?? 0} of {existingPipeline.blocks.length} blocks.</p>
+        {/if}
+      </div>
       <ol class="step-list">
         {#each existingPipeline.blocks as block, index (block.blockId)}
           <li class="step-item">
+            {#if runMode === 'selected'}
+              <label class="step-checkbox">
+                <input
+                  type="checkbox"
+                  checked={selectedBlockIds.includes(block.blockId)}
+                  onchange={() => toggleSelectedBlock(block.blockId)}
+                  disabled={pipelineLoading || isBatchRunning}
+                />
+              </label>
+            {/if}
             <span class="step-number">{index + 1}</span>
             <div class="step-info">
               <span class="step-name">{block.name}</span>
@@ -365,6 +491,12 @@
           </li>
         {/each}
       </ol>
+      {#if subsetRunDisabled}
+        <p class="meta failed">Select at least one block to run.</p>
+      {/if}
+      {#if resumeSubsetConflict}
+        <p class="meta failed">Select the failed block before continuing this pipeline run.</p>
+      {/if}
 
       <div class="batch-panel">
         <h3>Batch Run</h3>
@@ -384,7 +516,11 @@
               <input type="number" bind:value={batchRunEnd} min="1" disabled={isBatchRunning || pipelineLoading} />
             </label>
           </div>
-          <button type="submit" class="action-btn run batch-run-btn" disabled={isBatchRunning || pipelineLoading}>
+          <button
+            type="submit"
+            class="action-btn run batch-run-btn"
+            disabled={isBatchRunning || pipelineLoading || subsetRunDisabled}
+          >
             {isBatchRunning ? 'Running Batch…' : 'Start Batch Run'}
           </button>
         </form>
@@ -395,10 +531,7 @@
 
 <style>
   .pipeline-editor {
-    display: grid;
-    gap: 1.5rem;
     padding: 1.5rem 2rem;
-    max-width: 52rem;
     overflow-y: auto;
   }
 
@@ -568,6 +701,22 @@
     list-style: none;
   }
 
+  .run-mode-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .run-mode-field {
+    max-width: 14rem;
+  }
+
+  .run-mode-meta {
+    padding-bottom: 0.35rem;
+  }
+
   .step-item {
     display: flex;
     align-items: center;
@@ -576,6 +725,20 @@
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(157, 180, 255, 0.1);
+  }
+
+  .step-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .step-checkbox input {
+    width: 0.95rem;
+    height: 0.95rem;
+    margin: 0;
   }
 
   .step-number {

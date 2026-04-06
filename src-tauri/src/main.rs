@@ -213,6 +213,7 @@ fn execute_pipeline(
     pipeline_id: String,
     payload: Option<BTreeMap<String, String>>,
     resume_from_block_id: Option<String>,
+    selected_block_ids: Option<Vec<String>>,
 ) -> Result<PipelineExecutionResult, String> {
     PIPELINE_ABORT_STATE.store(false, Ordering::SeqCst);
     let app_clone = app.clone();
@@ -227,6 +228,7 @@ fn execute_pipeline(
         payload,
         &app_data_dir,
         resume_from_block_id,
+        selected_block_ids,
         Some(&mut on_progress),
         Some(PIPELINE_ABORT_STATE.clone()),
     )
@@ -397,6 +399,21 @@ fn rename_project(
 }
 
 #[tauri::command]
+fn duplicate_pipeline(
+    app: tauri::AppHandle,
+    root_path: String,
+    pipeline_id: String,
+) -> Result<SavedPipelineResult, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::duplicate_pipeline(
+        PathBuf::from(root_path).as_path(),
+        &pipeline_id,
+        &app_data_dir,
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn delete_pipeline(
     app: tauri::AppHandle,
     root_path: String,
@@ -502,6 +519,7 @@ pub fn run() {
             set_block_output_target,
             set_block_output_filename,
             rename_project,
+            duplicate_pipeline,
             delete_pipeline,
             delete_prompt_block,
             delete_run,
@@ -533,7 +551,7 @@ fn main() {
         let app_data = std::env::temp_dir().join("diamond-runner-headless");
         std::fs::create_dir_all(&app_data).unwrap();
 
-        match project_store::execution::execute_pipeline(&project_path, pipeline_id, payload, &app_data, None, None, None) {
+        match project_store::execution::execute_pipeline(&project_path, pipeline_id, payload, &app_data, None, None, None, None) {
             Ok(result) => {
                 if result.status == project_store::ExecutionStatus::Failed {
                     eprintln!("CLI Execute Pipeline FAILED internally:");

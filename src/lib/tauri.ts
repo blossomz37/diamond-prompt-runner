@@ -107,6 +107,16 @@ export async function updatePipeline(
   });
 }
 
+export async function duplicatePipeline(
+  rootPath: string,
+  pipelineId: string
+): Promise<SavedPipelineResult> {
+  return invoke<SavedPipelineResult>('duplicate_pipeline', {
+    rootPath,
+    pipelineId
+  });
+}
+
 export async function exportProjectAssets(
   rootPath: string,
   bundleName: string,
@@ -159,13 +169,15 @@ export async function executePipeline(
   root_path: string,
   pipeline_id: string,
   payload?: Record<string, string>,
-  resumeFromBlockId?: string
+  resumeFromBlockId?: string,
+  selectedBlockIds?: string[]
 ): Promise<PipelineExecutionResult> {
   return invoke<PipelineExecutionResult>('execute_pipeline', {
     rootPath: root_path,
     pipelineId: pipeline_id,
     payload,
-    resumeFromBlockId
+    resumeFromBlockId,
+    selectedBlockIds
   });
 }
 

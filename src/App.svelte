@@ -38,6 +38,7 @@
     updatePipeline,
     writeProjectAsset,
     deletePipeline,
+    duplicatePipeline,
     deletePromptBlock,
     deleteRun,
     deleteDocument,
@@ -64,7 +65,7 @@
     WorkspaceTab,
     PipelineProgressEvent
   } from '$lib/types/project';
-  import { findAssetNode, latestStepForPath } from '$lib/utils/assetUtils';
+  import { findAssetNode } from '$lib/utils/assetUtils';
   import { createValidationStore } from '$lib/stores/validation.svelte';
 
   let mode = $state<'browser' | 'workspace'>('browser');
@@ -321,10 +322,6 @@
     }
   }
 
-  function handleSelectTab(path: string): void {
-    activePath = path;
-  }
-
   function updateTab(path: string, mutate: (tab: WorkspaceTab) => WorkspaceTab): void {
     tabs = tabs.map((tab) => (tab.path === path ? mutate(tab) : tab));
   }
@@ -458,7 +455,12 @@
     }
   }
 
-  async function handleRunPipeline(pipelineId: string, payload?: Record<string, string>, resumeFromBlockId?: string): Promise<void> {
+  async function handleRunPipeline(
+    pipelineId: string,
+    payload?: Record<string, string>,
+    resumeFromBlockId?: string,
+    selectedBlockIds?: string[]
+  ): Promise<void> {
     if (!workspace || pipelineExecutionLoading) {
       return;
     }
@@ -484,7 +486,13 @@
     errorMessage = null;
 
     try {
-      const result = await executePipeline(workspace.rootPath, pipelineId, payload, resumeFromBlockId);
+      const result = await executePipeline(
+        workspace.rootPath,
+        pipelineId,
+        payload,
+        resumeFromBlockId,
+        selectedBlockIds
+      );
       
       let mergedResult = result;
       if (resumeFromBlockId && pipelineExecutionResult) {
@@ -747,6 +755,15 @@
     await refreshPipelineAuthoringState(workspace.rootPath);
   }
 
+  async function handleDuplicatePipeline(pipelineId: string): Promise<SavedPipelineResult> {
+    if (!workspace) throw new Error('No workspace open.');
+    const result = await duplicatePipeline(workspace.rootPath, pipelineId);
+    workspace = result.summary;
+    recentProjects = await getRecentProjects();
+    await refreshPipelineAuthoringState(result.summary.rootPath);
+    return result;
+  }
+
   async function handleDeletePromptBlock(blockId: string): Promise<void> {
     if (!workspace) return;
     const updated = await deletePromptBlock(workspace.rootPath, blockId);
@@ -841,23 +858,6 @@
       executionCredentialLoading = false;
     }
   }
-
-  function handleCloseTab(path: string): void {
-    const index = tabs.findIndex((tab) => tab.path === path);
-    if (index === -1) {
-      return;
-    }
-
-    const nextTabs = tabs.filter((tab) => tab.path !== path);
-    tabs = nextTabs;
-
-    if (activePath !== path) {
-      return;
-    }
-
-    const fallback = nextTabs[index] ?? nextTabs[index - 1] ?? null;
-    activePath = fallback?.path ?? null;
-  }
 </script>
 
 {#if mode === 'browser' || !workspace}
@@ -936,6 +936,7 @@
     onSetBlockOutputTarget={handleSetBlockOutputTarget}
     onSetBlockOutputFilename={handleSetBlockOutputFilename}
     onDeletePipeline={handleDeletePipeline}
+    onDuplicatePipeline={handleDuplicatePipeline}
     onDeletePromptBlock={handleDeletePromptBlock}
     onDeleteRun={handleDeleteRun}
     onDeleteDocument={handleDeleteDocument}

@@ -68,7 +68,12 @@
     onSaveTab: (path: string) => void | Promise<void>;
     onReloadTab: (path: string) => void | Promise<void>;
     onRunTab: (path: string) => void | Promise<void>;
-    onRunPipeline: (pipelineId: string, payload?: Record<string, string>, resumeFromBlockId?: string) => void | Promise<void>;
+    onRunPipeline: (
+      pipelineId: string,
+      payload?: Record<string, string>,
+      resumeFromBlockId?: string,
+      selectedBlockIds?: string[]
+    ) => void | Promise<void>;
     onCancelPipeline: () => void | Promise<void>;
     onCreatePipeline: (name: string, orderedBlockIds: string[]) => Promise<SavedPipelineResult>;
     onUpdatePipeline: (
@@ -98,6 +103,7 @@
     onSetBlockOutputTarget: (blockId: string, target: string) => Promise<void>;
     onSetBlockOutputFilename: (blockId: string, filename: string | null) => Promise<void>;
     onDeletePipeline: (pipelineId: string) => Promise<void>;
+    onDuplicatePipeline: (pipelineId: string) => Promise<SavedPipelineResult>;
     onDeletePromptBlock: (blockId: string) => Promise<void>;
     onDeleteRun: (runPath: string) => Promise<void>;
     onDeleteDocument: (relativePath: string) => Promise<void>;
@@ -159,6 +165,7 @@
     onSetBlockOutputTarget,
     onSetBlockOutputFilename,
     onDeletePipeline,
+    onDuplicatePipeline,
     onDeletePromptBlock,
     onDeleteRun,
     onDeleteDocument,
@@ -259,6 +266,13 @@
     }
     closePipelineEditor();
     return result;
+  }
+
+  async function handlePipelineDuplicate(pipelineId: string): Promise<void> {
+    const result = await onDuplicatePipeline(pipelineId);
+    // Open the newly created duplicate in the editor
+    const fresh = pipelines.find((p) => p.pipelineId === result.pipelineId);
+    if (fresh) openPipelineEditor(fresh);
   }
 </script>
 
@@ -573,6 +587,7 @@
             onRunPipeline={onRunPipeline}
             {onCancelPipeline}
             {onDeletePipeline}
+            onDuplicatePipeline={handlePipelineDuplicate}
             onExportPipeline={onExportAssets}
           />
         {:else}

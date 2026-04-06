@@ -31,7 +31,7 @@ use serde_json::Value;
 #[cfg(test)]
 use execution::{
     PersistedRunRecord, extract_usage_metrics,
-    execute_prompt_block_with_transport, execute_pipeline_with_transport,
+    execute_prompt_block_with_transport,
 };
 
 pub(crate) mod history;
@@ -489,6 +489,42 @@ pub fn update_pipeline(
     Ok(SavedPipelineResult {
         summary,
         pipeline_id: pipeline_id.to_string(),
+    })
+}
+
+pub fn duplicate_pipeline(
+    root_path: &Path,
+    pipeline_id: &str,
+    app_data_dir: &Path,
+) -> StoreResult<SavedPipelineResult> {
+    let (root_path, mut manifest) = validate_project(root_path)?;
+    let source_path = root_path.join("pipelines").join(format!("{}.json", pipeline_id));
+    if !source_path.exists() {
+        return Err(ProjectStoreError::message(format!(
+            "Pipeline `{pipeline_id}` was not found."
+        )));
+    }
+    let source: Pipeline = serde_json::from_str(&std::fs::read_to_string(&source_path)?)?;
+    let new_name = format!("Copy of {}", source.name);
+    let new_id = unique_pipeline_slug(&root_path, &new_name);
+    let new_pipeline = Pipeline {
+        pipeline_id: new_id.clone(),
+        name: new_name,
+        ordered_blocks: source.ordered_blocks,
+        execution_mode: source.execution_mode,
+    };
+    let new_path = root_path.join("pipelines").join(format!("{}.json", new_id));
+    std::fs::write(new_path, serde_json::to_string_pretty(&new_pipeline)?)?;
+
+    manifest.updated_at = timestamp();
+    write_manifest(&root_path, &manifest)?;
+
+    let summary = summarize_project(&root_path, &manifest)?;
+    update_recent_projects(app_data_dir, &summary)?;
+
+    Ok(SavedPipelineResult {
+        summary,
+        pipeline_id: new_id,
     })
 }
 
@@ -2141,6 +2177,47 @@ mod tests {
     }
 
     #[test]
+    fn duplicates_pipeline_with_new_id_and_name() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "DuplicatePipeline", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        let mut manifest = read_manifest(&root.join("project.json")).unwrap();
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "review".to_string(),
+            name: "Review".to_string(),
+            template_source: "prompts/review.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+            output_filename: None,
+        });
+        write_manifest(&root, &manifest).unwrap();
+
+        let created = create_pipeline(
+            &root,
+            "Draft Pipeline",
+            &["review".to_string()],
+            &app_data,
+        )
+        .unwrap();
+
+        let dup = duplicate_pipeline(&root, &created.pipeline_id, &app_data).unwrap();
+
+        assert_eq!(dup.pipeline_id, "copy-of-draft-pipeline");
+        assert_ne!(dup.pipeline_id, created.pipeline_id);
+
+        let pipelines = list_project_pipelines(&root).unwrap();
+        assert_eq!(pipelines.len(), 2);
+
+        let copy = pipelines.iter().find(|p| p.pipeline_id == dup.pipeline_id).unwrap();
+        assert_eq!(copy.name, "Copy of Draft Pipeline");
+        assert_eq!(copy.blocks.len(), 1);
+        assert_eq!(copy.blocks[0].block_id, "review");
+    }
+
+    #[test]
     fn exports_selected_assets_into_a_bundle_directory() {
         let temp = tempdir().unwrap();
         let app_data = temp.path().join("app-data");
@@ -2242,6 +2319,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         )
         .unwrap();
 
@@ -2268,6 +2346,239 @@ mod tests {
         assert_eq!(metrics.total_tokens, Some(300));
         assert!((metrics.cost.unwrap() - 0.0042).abs() < f64::EPSILON);
         assert_eq!(metrics.output_word_count, Some(4));
+    }
+
+    #[test]
+    fn executes_selected_pipeline_blocks_in_pipeline_order() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "PipelineSubset", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        fs::write(root.join("prompts").join("plan.tera"), "Plan").unwrap();
+        fs::write(root.join("prompts").join("draft.tera"), "Draft").unwrap();
+        fs::write(root.join("prompts").join("polish.tera"), "Polish").unwrap();
+
+        let mut manifest = read_manifest(&root.join("project.json")).unwrap();
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "plan".to_string(),
+            name: "Plan".to_string(),
+            template_source: "prompts/plan.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+            output_filename: None,
+        });
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "draft".to_string(),
+            name: "Draft".to_string(),
+            template_source: "prompts/draft.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+            output_filename: None,
+        });
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "polish".to_string(),
+            name: "Polish".to_string(),
+            template_source: "prompts/polish.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+            output_filename: None,
+        });
+        let pipeline = Pipeline {
+            pipeline_id: "pipeline-1".to_string(),
+            name: "Review Pipeline".to_string(),
+            ordered_blocks: vec!["plan".to_string(), "draft".to_string(), "polish".to_string()],
+            execution_mode: "sequential".to_string(),
+        };
+        std::fs::write(
+            root.join("pipelines").join("pipeline-1.json"),
+            serde_json::to_string(&pipeline).unwrap(),
+        )
+        .unwrap();
+        write_manifest(&root, &manifest).unwrap();
+
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        let mut calls = Vec::new();
+        let mut transport = |_api_key: &str, payload: Value| {
+            let prompt = payload["messages"][0]["content"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string();
+            calls.push(prompt.clone());
+            Ok(json!({
+                "choices": [
+                    {
+                        "message": {
+                            "content": prompt
+                        }
+                    }
+                ]
+            }))
+        };
+
+        let result = crate::project_store::execution::execute_pipeline_with_transport(
+            &root,
+            &manifest,
+            "pipeline-1",
+            None,
+            "test-key",
+            &mut transport,
+            &app_data,
+            None,
+            Some(vec!["polish".to_string(), "plan".to_string()]),
+            None,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(result.status, ExecutionStatus::Success);
+        assert_eq!(result.steps.len(), 2);
+        assert_eq!(result.steps[0].block_id.as_deref(), Some("plan"));
+        assert_eq!(result.steps[1].block_id.as_deref(), Some("polish"));
+        assert_eq!(calls, vec!["Plan".to_string(), "Polish".to_string()]);
+    }
+
+    #[test]
+    fn rejects_selected_pipeline_blocks_that_are_not_in_pipeline() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "PipelineSubsetInvalid", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        fs::write(root.join("prompts").join("review.tera"), "Review").unwrap();
+
+        let mut manifest = read_manifest(&root.join("project.json")).unwrap();
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "review".to_string(),
+            name: "Review".to_string(),
+            template_source: "prompts/review.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+            output_filename: None,
+        });
+        let pipeline = Pipeline {
+            pipeline_id: "pipeline-1".to_string(),
+            name: "Review Pipeline".to_string(),
+            ordered_blocks: vec!["review".to_string()],
+            execution_mode: "sequential".to_string(),
+        };
+        std::fs::write(
+            root.join("pipelines").join("pipeline-1.json"),
+            serde_json::to_string(&pipeline).unwrap(),
+        )
+        .unwrap();
+        write_manifest(&root, &manifest).unwrap();
+
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        let mut transport = |_api_key: &str, _payload: Value| {
+            Ok(json!({
+                "choices": [
+                    {
+                        "message": {
+                            "content": "Review"
+                        }
+                    }
+                ]
+            }))
+        };
+
+        let error = crate::project_store::execution::execute_pipeline_with_transport(
+            &root,
+            &manifest,
+            "pipeline-1",
+            None,
+            "test-key",
+            &mut transport,
+            &app_data,
+            None,
+            Some(vec!["missing".to_string()]),
+            None,
+            None,
+        )
+        .unwrap_err();
+
+        assert!(error
+            .to_string()
+            .contains("does not contain selected block(s): missing"));
+    }
+
+    #[test]
+    fn rejects_resume_block_that_is_not_selected_for_subset_run() {
+        let temp = tempdir().unwrap();
+        let app_data = temp.path().join("app-data");
+        let summary = create_project(temp.path(), "PipelineSubsetResume", &app_data).unwrap();
+        let root = PathBuf::from(&summary.root_path);
+
+        fs::write(root.join("prompts").join("review.tera"), "Review").unwrap();
+        fs::write(root.join("prompts").join("outline.tera"), "Outline").unwrap();
+
+        let mut manifest = read_manifest(&root.join("project.json")).unwrap();
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "review".to_string(),
+            name: "Review".to_string(),
+            template_source: "prompts/review.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+            output_filename: None,
+        });
+        manifest.prompt_blocks.push(PromptBlock {
+            block_id: "outline".to_string(),
+            name: "Outline".to_string(),
+            template_source: "prompts/outline.tera".to_string(),
+            input_bindings: Vec::new(),
+            model_preset: None,
+            output_target: "run_artifact".to_string(),
+            output_filename: None,
+        });
+        let pipeline = Pipeline {
+            pipeline_id: "pipeline-1".to_string(),
+            name: "Review Pipeline".to_string(),
+            ordered_blocks: vec!["review".to_string(), "outline".to_string()],
+            execution_mode: "sequential".to_string(),
+        };
+        std::fs::write(
+            root.join("pipelines").join("pipeline-1.json"),
+            serde_json::to_string(&pipeline).unwrap(),
+        )
+        .unwrap();
+        write_manifest(&root, &manifest).unwrap();
+
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        let mut transport = |_api_key: &str, _payload: Value| {
+            Ok(json!({
+                "choices": [
+                    {
+                        "message": {
+                            "content": "Review"
+                        }
+                    }
+                ]
+            }))
+        };
+
+        let error = crate::project_store::execution::execute_pipeline_with_transport(
+            &root,
+            &manifest,
+            "pipeline-1",
+            None,
+            "test-key",
+            &mut transport,
+            &app_data,
+            Some("outline".to_string()),
+            Some(vec!["review".to_string()]),
+            None,
+            None,
+        )
+        .unwrap_err();
+
+        assert!(error
+            .to_string()
+            .contains("Resume block `outline` is not selected for this run"));
     }
 
     #[test]
@@ -2388,7 +2699,7 @@ mod tests {
         std::fs::create_dir_all(&app_data).unwrap();
 
         let mut call_count = 0;
-        let mut transport = |_api_key: &str, payload: Value| {
+        let mut transport = |_api_key: &str, _payload: Value| {
             call_count += 1;
             Ok(json!({
                 "choices": [{ "message": { "content": format!("Simulated response for step {}", call_count) } }],
@@ -2408,6 +2719,7 @@ mod tests {
             "dummy_key",
             &mut transport,
             &app_data,
+            None,
             None,
             None,
             None,

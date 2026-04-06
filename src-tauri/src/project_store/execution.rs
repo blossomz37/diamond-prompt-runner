@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::Path,
 };
@@ -121,6 +121,7 @@ pub fn execute_pipeline(
     payload: Option<BTreeMap<String, String>>,
     app_data_dir: &Path,
     resume_from_block_id: Option<String>,
+    selected_block_ids: Option<Vec<String>>,
     on_progress: Option<&mut dyn FnMut(PipelineProgressEvent)>,
     abort_signal: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
 ) -> StoreResult<PipelineExecutionResult> {
@@ -139,6 +140,7 @@ pub fn execute_pipeline(
         &mut transport,
         app_data_dir,
         resume_from_block_id,
+        selected_block_ids,
         on_progress,
         abort_signal,
     )
@@ -348,6 +350,7 @@ pub(crate) fn execute_pipeline_with_transport<F>(
     transport: &mut F,
     app_data_dir: &Path,
     resume_from_block_id: Option<String>,
+    selected_block_ids: Option<Vec<String>>,
     mut on_progress: Option<&mut dyn FnMut(PipelineProgressEvent)>,
     abort_signal: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
 ) -> StoreResult<PipelineExecutionResult>
@@ -374,6 +377,39 @@ where
         )));
     }
 
+    let blocks_to_run = if let Some(selected_block_ids) = selected_block_ids {
+        if selected_block_ids.is_empty() {
+            return Err(ProjectStoreError::message(format!(
+                "Select at least one block to run in pipeline `{}`.",
+                pipeline.name
+            )));
+        }
+
+        let selected_set: BTreeSet<String> = selected_block_ids.into_iter().collect();
+        let invalid_block_ids: Vec<String> = selected_set
+            .iter()
+            .filter(|block_id| !pipeline.ordered_blocks.contains(block_id))
+            .cloned()
+            .collect();
+
+        if !invalid_block_ids.is_empty() {
+            return Err(ProjectStoreError::message(format!(
+                "Pipeline `{}` does not contain selected block(s): {}.",
+                pipeline.name,
+                invalid_block_ids.join(", ")
+            )));
+        }
+
+        pipeline
+            .ordered_blocks
+            .iter()
+            .filter(|block_id| selected_set.contains(*block_id))
+            .cloned()
+            .collect()
+    } else {
+        pipeline.ordered_blocks.clone()
+    };
+
     let started_at = timestamp();
     let mut steps = Vec::new();
     let mut status = ExecutionStatus::Success;
@@ -385,14 +421,19 @@ where
 
     let mut starting_index = 0;
     if let Some(block_id) = &resume_from_block_id {
-        if let Some(pos) = pipeline.ordered_blocks.iter().position(|id| id == block_id) {
+        if let Some(pos) = blocks_to_run.iter().position(|id| id == block_id) {
             starting_index = pos;
+        } else {
+            return Err(ProjectStoreError::message(format!(
+                "Resume block `{block_id}` is not selected for this run of pipeline `{}`.",
+                pipeline.name
+            )));
         }
     }
 
-    let total_blocks = pipeline.ordered_blocks.len();
+    let total_blocks = blocks_to_run.len();
     for i in starting_index..total_blocks {
-        let block_id = &pipeline.ordered_blocks[i];
+        let block_id = &blocks_to_run[i];
         let block = manifest
             .prompt_blocks
             .iter()
