@@ -491,5 +491,46 @@ pub fn run() {
 }
 
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() >= 4 && args[1] == "cli" && args[2] == "run-pipeline" {
+        let project_path = std::path::PathBuf::from(&args[3]);
+        let pipeline_id = if args.len() > 4 { &args[4] } else { "" };
+        
+        if pipeline_id.is_empty() {
+             eprintln!("Pipeline ID missing");
+             std::process::exit(1);
+        }
+
+        let payload = if args.len() > 5 {
+            let p: BTreeMap<String, String> = serde_json::from_str(&args[5]).expect("Invalid payload JSON");
+            Some(p)
+        } else {
+            None
+        };
+
+        let app_data = std::env::temp_dir().join("diamond-runner-headless");
+        std::fs::create_dir_all(&app_data).unwrap();
+
+        match project_store::execution::execute_pipeline(&project_path, pipeline_id, payload, &app_data) {
+            Ok(result) => {
+                if result.status == project_store::ExecutionStatus::Failed {
+                    eprintln!("CLI Execute Pipeline FAILED internally:");
+                    if let Some(err) = result.error {
+                        eprintln!("Error: {}", err);
+                    }
+                    std::process::exit(1);
+                } else {
+                    println!("CLI Execute Pipeline SUCCESS!");
+                    println!("Blocks Completed: {}", result.steps.len());
+                    std::process::exit(0);
+                }
+            }
+            Err(e) => {
+                eprintln!("CLI Execute Pipeline FATAL: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+
     run();
 }

@@ -2350,4 +2350,49 @@ mod tests {
         assert_eq!(manifest.variables["chapter"], Value::String("12".to_string()));
         assert_eq!(manifest.variables["word_target"], Value::String("5000".to_string()));
     }
+    #[test]
+    fn executes_neon_and_nightmares_sample_project() {
+        let root = std::path::PathBuf::from("../Sample Projects/Neon & Nightmares");
+        
+        // This validates if the project even parses!
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+        
+        let temp_app_data = tempdir().unwrap();
+        let app_data = temp_app_data.path().join("app-data");
+        std::fs::create_dir_all(&app_data).unwrap();
+
+        let mut call_count = 0;
+        let mut transport = |_api_key: &str, payload: Value| {
+            call_count += 1;
+            Ok(json!({
+                "choices": [{ "message": { "content": format!("Simulated response for step {}", call_count) } }],
+                "usage": { "prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15 }
+            }))
+        };
+
+        let mut payload = BTreeMap::new();
+        payload.insert("chapter".to_string(), "2".to_string());
+
+        // Prove the batch-production pipeline successfully extracts logic and outputs the files
+        let result = crate::project_store::execution::execute_pipeline_with_transport(
+            &root,
+            &manifest,
+            "batch-production",
+            Some(payload),
+            "dummy_key",
+            &mut transport,
+            &app_data,
+        ).expect("Pipeline failed to cleanly execute in Neon & Nightmares sample folder");
+
+        assert_eq!(result.blocks_completed, 2);
+        assert_eq!(call_count, 2);
+        
+        // We know that block 0 output Target is replace_document without override, so it makes "draft-chapter-output.md"
+        let output_path = root.join("documents").join("draft-chapter-output.md");
+        assert!(output_path.exists(), "The pipeline did not write the markdown document correctly!");
+        
+        // We can safely clean up the test generated files from the sample directory
+        let _ = std::fs::remove_file(output_path);
+        let _ = std::fs::remove_file(root.join("documents").join("forensic-trope-audit-output.md"));
+    }
 }

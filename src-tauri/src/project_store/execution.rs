@@ -53,7 +53,7 @@ pub fn validate_project_template(
     let mut warnings = prepared.warnings;
 
     let mut errors = Vec::new();
-    let mut tera = build_tera();
+    let mut tera = build_tera(&root_path);
     if let Err(error) = tera.add_raw_template("active", &prepared.content) {
         errors.push(error.to_string());
         return Ok(build_validation_result(
@@ -187,7 +187,7 @@ where
         return Err(ProjectStoreError::message(prepared.errors.join("\n")));
     }
 
-    let rendered_prompt = render_template_for_execution(&prepared.content, &prepared.context)?;
+    let rendered_prompt = render_template_for_execution(&prepared.content, &prepared.context, root_path)?;
     let model_config = load_model_preset_config(root_path, &model_preset)?;
     let payload = build_openrouter_payload(model_config, &rendered_prompt, &model_id, online_enabled);
 
@@ -248,7 +248,13 @@ where
 
     if writes_document {
         let doc_filename = match &output_filename_override {
-            Some(name) => name.clone(),
+            Some(name) => {
+                if name.contains("{{") || name.contains("{%") {
+                    render_template_for_execution(name, &prepared.context, root_path).unwrap_or_else(|_| name.clone())
+                } else {
+                    name.clone()
+                }
+            },
             None => {
                 let block_slug = slugify_prompt_name(&block_name);
                 format!("{block_slug}.md")
@@ -568,7 +574,7 @@ fn preprocess_doc_references(
     content: &str,
     strict: bool,
 ) -> StoreResult<PreparedDocReferences> {
-    let regex = Regex::new(r#"\{\{\s*doc\(\s*"([^"]+)"\s*\)\s*\}\}"#)
+    let regex = Regex::new(r#"doc\(\s*"([^"]+)"\s*\)"#)
         .map_err(|error| ProjectStoreError::message(error.to_string()))?;
     let mut warnings = Vec::new();
     let mut errors = Vec::new();
@@ -613,7 +619,7 @@ fn preprocess_doc_references(
             };
 
             bindings.insert(binding_name.clone(), replacement);
-            format!("{{{{ {binding_name} }}}}")
+            binding_name
         })
         .to_string();
 
@@ -625,10 +631,10 @@ fn preprocess_doc_references(
     })
 }
 
-fn render_template_for_execution(content: &str, context: &Context) -> StoreResult<String> {
-    let mut tera = build_tera();
+fn render_template_for_execution(content: &str, context: &Context, root_path: &Path) -> StoreResult<String> {
+    let mut tera = build_tera(root_path);
     tera.add_raw_template("active", content)
-        .map_err(|error| ProjectStoreError::message(error.to_string()))?;
+        .map_err(|error| ProjectStoreError::message(flatten_error_chain(&error)))?;
 
     tera.render("active", context)
         .map_err(|error| ProjectStoreError::message(execution_render_error_message(&flatten_error_chain(&error))))
@@ -864,10 +870,25 @@ fn extract_section_filter(value: &Value, args: &std::collections::HashMap<String
     Ok(Value::String(slice_from_start[..end_idx].trim().to_string()))
 }
 
-fn build_tera() -> Tera {
+fn build_tera(root_path: &Path) -> Tera {
     let mut tera = Tera::default();
     tera.autoescape_on(Vec::new());
     tera.register_filter("extract_section", extract_section_filter);
+    
+    let doc_root = root_path.to_path_buf();
+    tera.register_filter("doc", move |value: &Value, _: &std::collections::HashMap<String, Value>| -> tera::Result<Value> {
+        let filename = match value.as_str() {
+            Some(s) => s,
+            None => return Err(tera::Error::msg("doc filter requires a string input")),
+        };
+        
+        let path = doc_root.join("documents").join(filename);
+        match fs::read_to_string(&path) {
+            Ok(content) => Ok(Value::String(content)),
+            Err(_) => Ok(Value::String(format!("[Missing document: {}]", filename))),
+        }
+    });
+    
     tera
 }
 
