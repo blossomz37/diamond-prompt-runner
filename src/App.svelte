@@ -41,7 +41,9 @@
     deletePromptBlock,
     deleteRun,
     deleteDocument,
-    renameDocument
+    renameDocument,
+    cancelPipeline,
+    onPipelineProgress
   } from '$lib/tauri';
   import type {
     ExecutionCredentialStatus,
@@ -59,7 +61,8 @@
     ProjectSummary,
     RecentProjectEntry,
     SavedPipelineResult,
-    WorkspaceTab
+    WorkspaceTab,
+    PipelineProgressEvent
   } from '$lib/types/project';
   import { findAssetNode, latestStepForPath } from '$lib/utils/assetUtils';
   import { createValidationStore } from '$lib/stores/validation.svelte';
@@ -92,6 +95,7 @@
   let globalVariables = $state<Record<string, string>>({});
   let pipelineExecutionResult = $state<PipelineExecutionResult | null>(null);
   let pipelineExecutionLoading = $state(false);
+  let activePipelineProgress = $state<PipelineProgressEvent | null>(null);
   let pipelineAuthoringLoading = $state(false);
   let exportLoading = $state(false);
   let promptCreationLoading = $state(false);
@@ -115,6 +119,10 @@
       recentProjects = projects;
       executionCredentialStatus = credentialStatus;
       globalVariables = globals;
+
+      await onPipelineProgress((event) => {
+        activePipelineProgress = event;
+      });
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Failed to load app state.';
     }
@@ -146,6 +154,7 @@
     executionHistoryLoading = false;
     projectRunHistoryLoading = false;
     pipelineExecutionResult = null;
+    activePipelineProgress = null;
     pipelineExecutionLoading = false;
     pipelineAuthoringLoading = false;
     exportLoading = false;
@@ -449,7 +458,7 @@
     }
   }
 
-  async function handleRunPipeline(pipelineId: string, payload?: Record<string, string>): Promise<void> {
+  async function handleRunPipeline(pipelineId: string, payload?: Record<string, string>, resumeFromBlockId?: string): Promise<void> {
     if (!workspace || pipelineExecutionLoading) {
       return;
     }
@@ -475,34 +484,32 @@
     errorMessage = null;
 
     try {
-      const result = await executePipeline(workspace.rootPath, pipelineId, payload);
-      pipelineExecutionResult = result;
-      await refreshProjectRunHistory(workspace.rootPath);
-
-      if (result.steps.length > 0) {
-        executionResult = result.steps[result.steps.length - 1] ?? null;
-        assetNodes = await listProjectAssets(workspace.rootPath);
-
-        if (activePath) {
-          const activeStep = latestStepForPath(result.steps, activePath);
-          if (activeStep) {
-            executionResult = activeStep;
-            await refreshExecutionHistory(workspace.rootPath, activeStep.path);
-          }
-        }
-
-        workspace = {
-          ...workspace,
-          counts: {
-            ...workspace.counts,
-            runs: workspace.counts.runs + result.steps.length
-          }
+      const result = await executePipeline(workspace.rootPath, pipelineId, payload, resumeFromBlockId);
+      
+      let mergedResult = result;
+      if (resumeFromBlockId && pipelineExecutionResult) {
+        mergedResult = {
+            ...result,
+            startedAt: pipelineExecutionResult.startedAt,
+            steps: [...pipelineExecutionResult.steps, ...result.steps]
         };
       }
+      pipelineExecutionResult = mergedResult;
+      
+      await refreshProjectRunHistory(workspace.rootPath);
     } catch (error) {
-      errorMessage = error instanceof Error ? error.message : `Failed to run ${pipeline.name}.`;
+      errorMessage = typeof error === 'string' ? error : 'Pipeline failed to execute.';
     } finally {
       pipelineExecutionLoading = false;
+      activePipelineProgress = null;
+    }
+  }
+
+  async function handleCancelPipeline(): Promise<void> {
+    try {
+      await cancelPipeline();
+    } catch (error) {
+      errorMessage = typeof error === 'string' ? error : 'Failed to cancel pipeline.';
     }
   }
 
@@ -887,21 +894,24 @@
     promptBlocks={projectPromptBlocks}
     pipelineExecution={pipelineExecutionResult}
     pipelineLoading={pipelineExecutionLoading}
+    {activePipelineProgress}
     {pipelineAuthoringLoading}
     {projectRunHistory}
     {projectRunHistoryLoading}
     {projectUsageSummary}
     {globalVariables}
+    {modelPresets}
     onSetGlobalVariables={handleSetGlobalVariables}
     onSetProjectVariables={handleSetProjectVariables}
     onSelectAsset={handleSelectAsset}
-    onSelectTab={handleSelectTab}
-    onCloseTab={handleCloseTab}
+    onSelectTab={(path) => { activePath = path; errorMessage = null; }}
+    onCloseTab={(path) => { tabs = tabs.filter(t => t.path !== path); if (activePath === path) activePath = tabs[0]?.path ?? null; }}
     onDraftChange={handleDraftChange}
     onSaveTab={handleSaveTab}
     onReloadTab={handleReloadTab}
     onRunTab={handleExecuteTab}
     onRunPipeline={handleRunPipeline}
+    onCancelPipeline={handleCancelPipeline}
     onCreatePipeline={handleCreatePipeline}
     onUpdatePipeline={handleUpdatePipeline}
     onExportAssets={handleExportAssets}
@@ -917,7 +927,6 @@
     validationLoading={validation.loading}
     {executionResult}
     {executionLoading}
-    {modelPresets}
     onRenameProject={handleRenameProject}
     onSetDefaultPreset={handleSetDefaultPreset}
     onCreatePreset={handleCreatePreset}

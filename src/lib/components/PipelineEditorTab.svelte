@@ -10,6 +10,7 @@
   import type {
     ExportBundleResult,
     PipelineExecutionResult,
+    PipelineProgressEvent,
     ProjectPipeline,
     ProjectPromptBlock,
     SavedPipelineResult
@@ -22,9 +23,11 @@
     loading: boolean;
     pipelineExecution: PipelineExecutionResult | null;
     pipelineLoading: boolean;
+    activePipelineProgress: PipelineProgressEvent | null;
     onSave: (name: string, orderedBlockIds: string[], existingPipelineId: string | null) => Promise<SavedPipelineResult>;
     onCancel: () => void;
-    onRunPipeline: (pipelineId: string, payload?: Record<string, string>) => void | Promise<void>;
+    onRunPipeline: (pipelineId: string, payload?: Record<string, string>, resumeFromBlockId?: string) => void | Promise<void>;
+    onCancelPipeline: () => void | Promise<void>;
     onDeletePipeline: (pipelineId: string) => Promise<void>;
     onExportPipeline: (bundleName: string, relativePaths: string[]) => Promise<ExportBundleResult>;
   }
@@ -35,9 +38,11 @@
     loading,
     pipelineExecution,
     pipelineLoading,
+    activePipelineProgress,
     onSave,
     onCancel,
     onRunPipeline,
+    onCancelPipeline,
     onDeletePipeline,
     onExportPipeline
   }: Props = $props();
@@ -166,6 +171,17 @@
       ? pipelineExecution
       : null
   );
+
+  const resumeBlockId = $derived.by(() => {
+    if (!existingPipeline || !thisExecution || thisExecution.status !== 'failed') return null;
+    if (thisExecution.steps.length === 0) return existingPipeline.blocks[0]?.blockId ?? null;
+    
+    const lastStep = thisExecution.steps[thisExecution.steps.length - 1];
+    if (lastStep.status === 'failed') {
+      return lastStep.blockId ?? null;
+    }
+    return existingPipeline.blocks[thisExecution.steps.length]?.blockId ?? null;
+  });
 </script>
 
 <div class="pipeline-editor">
@@ -205,14 +221,36 @@
           >
             {deleteConfirm ? 'Confirm Delete?' : 'Delete'}
           </button>
-          <button
-            type="button"
-            class="action-btn run"
-            onclick={() => onRunPipeline(existingPipeline!.pipelineId)}
-            disabled={pipelineLoading || loading || deleteLoading || editing || isBatchRunning}
-          >
-            {pipelineLoading && thisExecution ? 'Running…' : 'Run Pipeline'}
-          </button>
+          
+          {#if pipelineLoading}
+            <button
+              type="button"
+              class="action-btn danger"
+              onclick={onCancelPipeline}
+              disabled={loading || deleteLoading}
+            >
+              Stop Pipeline
+            </button>
+          {:else}
+            {#if resumeBlockId}
+              <button
+                type="button"
+                class="action-btn secondary"
+                onclick={() => onRunPipeline(existingPipeline!.pipelineId, undefined, resumeBlockId!)}
+                disabled={loading || deleteLoading || editing || isBatchRunning}
+              >
+                Continue Pipeline
+              </button>
+            {/if}
+            <button
+              type="button"
+              class="action-btn run"
+              onclick={() => onRunPipeline(existingPipeline!.pipelineId)}
+              disabled={loading || deleteLoading || editing || isBatchRunning}
+            >
+              Run Pipeline
+            </button>
+          {/if}
         </div>
       {/if}
     </div>
@@ -222,7 +260,18 @@
     {#if exportSuccess}
       <p class="meta success">{exportSuccess}</p>
     {/if}
-    {#if thisExecution}
+    {#if activePipelineProgress && activePipelineProgress.pipelineId === existingPipeline?.pipelineId}
+      <div class="pipeline-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" style:width="{(activePipelineProgress.completedBlocks / activePipelineProgress.totalBlocks) * 100}%"></div>
+        </div>
+        <div class="progress-info meta">
+           <span class="strong">{activePipelineProgress.currentBlockName}</span> 
+           ({activePipelineProgress.completedBlocks + 1} / {activePipelineProgress.totalBlocks})
+           — <span class="loading-pulse">{activePipelineProgress.status}</span>
+        </div>
+      </div>
+    {:else if thisExecution}
       <div class="pipeline-status">
         <p class:failed={thisExecution.status === 'failed'} class="meta strong">
           {thisExecution.status === 'success' ? 'Pipeline complete' : 'Pipeline failed'}
@@ -556,5 +605,40 @@
   .step-preset {
     font-size: 0.72rem;
     color: var(--text-soft);
+  }
+
+  .pipeline-progress {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .progress-bar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--primary);
+    transition: width 0.3s ease;
+  }
+
+  .progress-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .loading-pulse {
+    animation: pulse 1.5s infinite ease-in-out;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
   }
 </style>

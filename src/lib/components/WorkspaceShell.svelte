@@ -35,10 +35,11 @@
     ProjectUsageSummary,
     PromptExecutionResult,
     PromptRunHistoryEntry,
-    SavedPipelineResult,
     ProjectSummary,
+    SavedPipelineResult,
     TemplateValidationResult,
-    WorkspaceTab
+    WorkspaceTab,
+    PipelineProgressEvent
   } from '$lib/types/project';
 
   interface Props {
@@ -52,6 +53,7 @@
     promptBlocks: ProjectPromptBlock[];
     pipelineExecution: PipelineExecutionResult | null;
     pipelineLoading: boolean;
+    activePipelineProgress: PipelineProgressEvent | null;
     pipelineAuthoringLoading: boolean;
     projectRunHistory: ProjectRunHistoryEntry[];
     projectRunHistoryLoading: boolean;
@@ -66,7 +68,8 @@
     onSaveTab: (path: string) => void | Promise<void>;
     onReloadTab: (path: string) => void | Promise<void>;
     onRunTab: (path: string) => void | Promise<void>;
-    onRunPipeline: (pipelineId: string, payload?: Record<string, string>) => void | Promise<void>;
+    onRunPipeline: (pipelineId: string, payload?: Record<string, string>, resumeFromBlockId?: string) => void | Promise<void>;
+    onCancelPipeline: () => void | Promise<void>;
     onCreatePipeline: (name: string, orderedBlockIds: string[]) => Promise<SavedPipelineResult>;
     onUpdatePipeline: (
       pipelineId: string,
@@ -114,6 +117,7 @@
     promptBlocks,
     pipelineExecution,
     pipelineLoading,
+    activePipelineProgress,
     pipelineAuthoringLoading,
     projectRunHistory,
     projectRunHistoryLoading,
@@ -129,6 +133,7 @@
     onReloadTab,
     onRunTab,
     onRunPipeline,
+    onCancelPipeline,
     onCreatePipeline,
     onUpdatePipeline,
     onExportAssets,
@@ -562,9 +567,11 @@
             loading={pipelineAuthoringLoading}
             pipelineExecution={pipelineExecution}
             {pipelineLoading}
+            {activePipelineProgress}
             onSave={handlePipelineSave}
             onCancel={closePipelineEditor}
             onRunPipeline={onRunPipeline}
+            {onCancelPipeline}
             {onDeletePipeline}
             onExportPipeline={onExportAssets}
           />

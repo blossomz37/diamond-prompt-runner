@@ -180,6 +180,14 @@ export interface ExportBundleResult {
   exportedPaths: string[];
 }
 
+export interface PipelineProgressEvent {
+  pipelineId: string;
+  totalBlocks: number;
+  completedBlocks: number;
+  currentBlockName: string;
+  status: string;
+}
+
 export interface PipelineExecutionResult {
   pipelineId: string;
   pipelineName: string;

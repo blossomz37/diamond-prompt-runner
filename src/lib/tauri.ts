@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import type {
   AssetContent,
@@ -7,6 +8,7 @@ import type {
   ExportBundleResult,
   ModelPresetSummary,
   PipelineExecutionResult,
+  PipelineProgressEvent,
   ProjectAssetNode,
   ProjectPipeline,
   ProjectPromptBlock,
@@ -156,12 +158,26 @@ export async function executePromptBlock(
 export async function executePipeline(
   root_path: string,
   pipeline_id: string,
-  payload?: Record<string, string>
+  payload?: Record<string, string>,
+  resumeFromBlockId?: string
 ): Promise<PipelineExecutionResult> {
   return invoke<PipelineExecutionResult>('execute_pipeline', {
     rootPath: root_path,
     pipelineId: pipeline_id,
-    payload
+    payload,
+    resumeFromBlockId
+  });
+}
+
+export async function cancelPipeline(): Promise<void> {
+  return invoke('cancel_pipeline');
+}
+
+export async function onPipelineProgress(
+  callback: (event: PipelineProgressEvent) => void
+): Promise<UnlistenFn> {
+  return listen<PipelineProgressEvent>('pipeline-progress', (event) => {
+    callback(event.payload);
   });
 }
 
