@@ -186,12 +186,14 @@ fn execute_prompt_block(
     root_path: String,
     relative_path: String,
     content: String,
+    payload: Option<BTreeMap<String, String>>,
 ) -> Result<PromptExecutionResult, String> {
     let app_data_dir = app_data_dir(&app)?;
     project_store::execute_prompt_block(
         PathBuf::from(root_path).as_path(),
         &relative_path,
         &content,
+        payload,
         &app_data_dir,
     )
     .map_err(|error| error.to_string())
@@ -202,11 +204,13 @@ fn execute_pipeline(
     app: tauri::AppHandle,
     root_path: String,
     pipeline_id: String,
+    payload: Option<BTreeMap<String, String>>,
 ) -> Result<PipelineExecutionResult, String> {
     let app_data_dir = app_data_dir(&app)?;
     project_store::execute_pipeline(
         PathBuf::from(root_path).as_path(),
         &pipeline_id,
+        payload,
         &app_data_dir,
     )
     .map_err(|error| error.to_string())

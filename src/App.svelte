@@ -449,7 +449,7 @@
     }
   }
 
-  async function handleRunPipeline(pipelineId: string): Promise<void> {
+  async function handleRunPipeline(pipelineId: string, payload?: Record<string, string>): Promise<void> {
     if (!workspace || pipelineExecutionLoading) {
       return;
     }
@@ -475,7 +475,7 @@
     errorMessage = null;
 
     try {
-      const result = await executePipeline(workspace.rootPath, pipelineId);
+      const result = await executePipeline(workspace.rootPath, pipelineId, payload);
       pipelineExecutionResult = result;
       await refreshProjectRunHistory(workspace.rootPath);
 

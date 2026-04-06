@@ -48,13 +48,12 @@ pub fn validate_project_template(
         ));
     }
 
-    let prepared = prepare_template_context(&root_path, &manifest, content, false, None, Some(app_data_dir))?;
+    let prepared = prepare_template_context(&root_path, &manifest, content, false, None, None, Some(app_data_dir))?;
     let model_id = prepared.model_id.clone();
     let mut warnings = prepared.warnings;
 
     let mut errors = Vec::new();
-    let mut tera = Tera::default();
-    tera.autoescape_on(Vec::new());
+    let mut tera = build_tera();
     if let Err(error) = tera.add_raw_template("active", &prepared.content) {
         errors.push(error.to_string());
         return Ok(build_validation_result(
@@ -94,6 +93,7 @@ pub fn execute_prompt_block(
     root_path: &Path,
     relative_path: &str,
     content: &str,
+    payload: Option<BTreeMap<String, String>>,
     app_data_dir: &Path,
 ) -> StoreResult<PromptExecutionResult> {
     let api_key = load_execution_api_key()?;
@@ -108,6 +108,7 @@ pub fn execute_prompt_block(
         relative_path,
         content,
         None,
+        payload,
         &api_key,
         &mut transport,
         app_data_dir,
@@ -117,6 +118,7 @@ pub fn execute_prompt_block(
 pub fn execute_pipeline(
     root_path: &Path,
     pipeline_id: &str,
+    payload: Option<BTreeMap<String, String>>,
     app_data_dir: &Path,
 ) -> StoreResult<PipelineExecutionResult> {
     let api_key = load_execution_api_key()?;
@@ -125,7 +127,7 @@ pub fn execute_pipeline(
         post_openrouter_chat_completion(OPENROUTER_CHAT_COMPLETIONS_URL, api_key, &payload)
     };
 
-    execute_pipeline_with_transport(&root_path, &manifest, pipeline_id, &api_key, &mut transport, app_data_dir)
+    execute_pipeline_with_transport(&root_path, &manifest, pipeline_id, payload, &api_key, &mut transport, app_data_dir)
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
@@ -142,6 +144,7 @@ pub(crate) fn execute_prompt_block_with_transport<F>(
     relative_path: &str,
     content: &str,
     pipeline_context: Option<&PipelineExecutionContext>,
+    payload: Option<BTreeMap<String, String>>,
     api_key: &str,
     transport: &mut F,
     app_data_dir: &Path,
@@ -176,6 +179,7 @@ where
         content,
         true,
         Some(model_id.clone()),
+        payload,
         Some(app_data_dir),
     )?;
 
@@ -319,6 +323,7 @@ pub(crate) fn execute_pipeline_with_transport<F>(
     root_path: &Path,
     manifest: &ProjectManifest,
     pipeline_id: &str,
+    payload: Option<BTreeMap<String, String>>,
     api_key: &str,
     transport: &mut F,
     app_data_dir: &Path,
@@ -384,6 +389,7 @@ where
             &relative_path,
             &content,
             Some(&pipeline_context),
+            payload.clone(),
             api_key,
             transport,
             app_data_dir,
@@ -455,6 +461,7 @@ fn prepare_template_context(
     content: &str,
     strict_doc_references: bool,
     model_id_override: Option<String>,
+    payload: Option<BTreeMap<String, String>>,
     app_data_dir: Option<&Path>,
 ) -> StoreResult<PreparedTemplateContext> {
     let model_id = model_id_override
@@ -514,6 +521,15 @@ fn prepare_template_context(
                     _ => value.to_string(),
                 };
                 resolved_variables.insert(name.clone(), stringified);
+            }
+        }
+    }
+
+    if let Some(payload_vars) = payload {
+        for (name, value) in &payload_vars {
+            if is_identifier_like(name) {
+                context.insert(name, value);
+                resolved_variables.insert(name.clone(), value.clone());
             }
         }
     }
@@ -610,8 +626,7 @@ fn preprocess_doc_references(
 }
 
 fn render_template_for_execution(content: &str, context: &Context) -> StoreResult<String> {
-    let mut tera = Tera::default();
-    tera.autoescape_on(Vec::new());
+    let mut tera = build_tera();
     tera.add_raw_template("active", content)
         .map_err(|error| ProjectStoreError::message(error.to_string()))?;
 
@@ -813,6 +828,47 @@ fn post_openrouter_chat_completion(url: &str, api_key: &str, payload: &Value) ->
     }
 
     Ok(json_body)
+}
+
+fn extract_section_filter(value: &Value, args: &std::collections::HashMap<String, Value>) -> tera::Result<Value> {
+    let input = match value.as_str() {
+        Some(s) => s,
+        None => return Err(tera::Error::msg("extract_section filter requires a string input")),
+    };
+
+    let start_marker = args.get("start").and_then(|v| v.as_str());
+    let end_marker = args.get("end").and_then(|v| v.as_str());
+
+    if start_marker.is_none() && end_marker.is_none() {
+        return Err(tera::Error::msg("extract_section requires at least a `start` or `end` argument"));
+    }
+
+    let mut start_idx = 0;
+    if let Some(start_str) = start_marker {
+        if let Some(idx) = input.find(start_str) {
+            start_idx = idx + start_str.len();
+        } else {
+            return Ok(Value::String(format!("[extract_section warning: start marker '{}' not found]", start_str)));
+        }
+    }
+
+    let slice_from_start = &input[start_idx..];
+
+    let mut end_idx = slice_from_start.len();
+    if let Some(end_str) = end_marker {
+        if let Some(idx) = slice_from_start.find(&end_str) {
+            end_idx = idx;
+        }
+    }
+
+    Ok(Value::String(slice_from_start[..end_idx].trim().to_string()))
+}
+
+fn build_tera() -> Tera {
+    let mut tera = Tera::default();
+    tera.autoescape_on(Vec::new());
+    tera.register_filter("extract_section", extract_section_filter);
+    tera
 }
 
 fn extract_completion_text(response: &Value) -> String {

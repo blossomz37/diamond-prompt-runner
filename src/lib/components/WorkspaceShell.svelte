@@ -66,7 +66,7 @@
     onSaveTab: (path: string) => void | Promise<void>;
     onReloadTab: (path: string) => void | Promise<void>;
     onRunTab: (path: string) => void | Promise<void>;
-    onRunPipeline: (pipelineId: string) => void | Promise<void>;
+    onRunPipeline: (pipelineId: string, payload?: Record<string, string>) => void | Promise<void>;
     onCreatePipeline: (name: string, orderedBlockIds: string[]) => Promise<SavedPipelineResult>;
     onUpdatePipeline: (
       pipelineId: string,
@@ -182,6 +182,9 @@
   // Bottom panel
   let bottomOpen = $state(true);
 
+  // Inspector panel
+  let inspectorOpen = $state(false);
+
   // Pipeline editor virtual tab state
   let pipelineEditorActive = $state(false);
   let pipelineEditorTarget = $state<ProjectPipeline | null>(null);
@@ -268,6 +271,14 @@
       <span>{summary.counts.prompts} prompts</span>
       <span>{summary.counts.models} models</span>
       <span>{summary.defaultModelPreset}</span>
+      <button
+        type="button"
+        class="pane-toggle"
+        onclick={() => (inspectorOpen = !inspectorOpen)}
+        aria-label={inspectorOpen ? 'Collapse inspector' : 'Expand inspector'}
+      >
+        Inspector {inspectorOpen ? '▾' : '▸'}
+      </button>
     </div>
   </header>
 
@@ -275,7 +286,7 @@
     <p class="error-banner">{errorMessage}</p>
   {/if}
 
-  <div class="shell-grid" class:bottom-closed={!bottomOpen}>
+  <div class="shell-grid" class:bottom-closed={!bottomOpen} class:inspector-closed={!inspectorOpen}>
     <aside class="sidebar panel">
       <!-- 1. Models -->
       <div class="sidebar-section" class:collapsed={!modelsOpen}>
@@ -571,13 +582,15 @@
       </div>
     </main>
 
-    <aside class="inspector panel">
-      <InspectorPanel
-        summary={summary}
-        metadata={activeTab?.metadata ?? null}
-        usageSummary={projectUsageSummary}
-      />
-    </aside>
+    {#if inspectorOpen}
+      <aside class="inspector panel">
+        <InspectorPanel
+          summary={summary}
+          metadata={activeTab?.metadata ?? null}
+          usageSummary={projectUsageSummary}
+        />
+      </aside>
+    {/if}
 
     <section class="bottom panel">
       <div class="pane-head">
@@ -688,6 +701,10 @@
 
   .shell-grid.bottom-closed {
     grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .shell-grid.inspector-closed {
+    grid-template-columns: minmax(15rem, 18rem) minmax(0, 1fr);
   }
 
   .sidebar,
@@ -855,6 +872,10 @@
     gap: 0.45rem;
     padding: 0.8rem 1rem;
     color: var(--text-dim);
+  }
+
+  .shell-grid.inspector-closed .bottom {
+    grid-column: 1 / span 2;
   }
 
   .bottom p {

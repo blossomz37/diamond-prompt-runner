@@ -24,7 +24,7 @@
     pipelineLoading: boolean;
     onSave: (name: string, orderedBlockIds: string[], existingPipelineId: string | null) => Promise<SavedPipelineResult>;
     onCancel: () => void;
-    onRunPipeline: (pipelineId: string) => void | Promise<void>;
+    onRunPipeline: (pipelineId: string, payload?: Record<string, string>) => void | Promise<void>;
     onDeletePipeline: (pipelineId: string) => Promise<void>;
     onExportPipeline: (bundleName: string, relativePaths: string[]) => Promise<ExportBundleResult>;
   }
@@ -143,6 +143,24 @@
     if (existingPipeline) deleteConfirm = false;
   });
 
+  // ── Batch Run ─────────────────────────────────
+  let batchRunStart = $state(1);
+  let batchRunEnd = $state(1);
+  let batchIteratorVar = $state('chapter');
+  let isBatchRunning = $state(false);
+
+  async function handleBatchRun(): Promise<void> {
+    if (!existingPipeline || isBatchRunning) return;
+    isBatchRunning = true;
+    try {
+      for (let i = batchRunStart; i <= batchRunEnd; i++) {
+        await onRunPipeline(existingPipeline.pipelineId, { [batchIteratorVar]: String(i) });
+      }
+    } finally {
+      isBatchRunning = false;
+    }
+  }
+
   const thisExecution = $derived(
     existingPipeline && pipelineExecution?.pipelineId === existingPipeline.pipelineId
       ? pipelineExecution
@@ -191,7 +209,7 @@
             type="button"
             class="action-btn run"
             onclick={() => onRunPipeline(existingPipeline!.pipelineId)}
-            disabled={pipelineLoading || loading || deleteLoading || editing}
+            disabled={pipelineLoading || loading || deleteLoading || editing || isBatchRunning}
           >
             {pipelineLoading && thisExecution ? 'Running…' : 'Run Pipeline'}
           </button>
@@ -298,6 +316,30 @@
           </li>
         {/each}
       </ol>
+
+      <div class="batch-panel">
+        <h3>Batch Run</h3>
+        <p class="meta">Run this pipeline in a loop, injecting a variable into the template context for each iteration.</p>
+        <form class="batch-form" onsubmit={(e) => { e.preventDefault(); void handleBatchRun(); }}>
+          <label class="field">
+            <span>Iterator Variable</span>
+            <input type="text" bind:value={batchIteratorVar} placeholder="e.g. chapter" disabled={isBatchRunning || pipelineLoading} />
+          </label>
+          <div class="batch-grid">
+            <label class="field">
+              <span>Start</span>
+              <input type="number" bind:value={batchRunStart} min="1" disabled={isBatchRunning || pipelineLoading} />
+            </label>
+            <label class="field">
+              <span>End</span>
+              <input type="number" bind:value={batchRunEnd} min="1" disabled={isBatchRunning || pipelineLoading} />
+            </label>
+          </div>
+          <button type="submit" class="action-btn run batch-run-btn" disabled={isBatchRunning || pipelineLoading}>
+            {isBatchRunning ? 'Running Batch…' : 'Start Batch Run'}
+          </button>
+        </form>
+      </div>
     </div>
   {/if}
 </div>
@@ -436,12 +478,37 @@
     padding-top: 0.5rem;
   }
 
-  /* ── View mode ──────────────────────────────── */
-  .view-steps h3 {
+  .view-steps h3, .batch-panel h3 {
     margin: 0 0 0.65rem;
     font-size: 0.88rem;
     color: var(--text-dim);
     letter-spacing: 0.04em;
+  }
+
+  .batch-panel {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-faint);
+  }
+
+  .batch-form {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-faint);
+    border-radius: 10px;
+  }
+
+  .batch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .batch-run-btn {
+    align-self: flex-start;
   }
 
   .step-list {

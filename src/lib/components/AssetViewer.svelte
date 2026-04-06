@@ -135,13 +135,15 @@
         content={tab.draftContent}
         onContentChange={(newContent) => onDraftChange(tab.path, newContent)}
       />
-      <CodeEditor
-        bind:api={editorEl as CodeEditorApi}
-        value={tab.draftContent}
-        kind={tab.kind}
-        onContentChange={(newContent) => onDraftChange(tab.path, newContent)}
-        onkeydown={handleEditorKeydown}
-      />
+      {#key tab.path}
+        <CodeEditor
+          bind:api={editorEl as CodeEditorApi}
+          value={tab.draftContent}
+          kind={tab.kind}
+          onContentChange={(newContent) => onDraftChange(tab.path, newContent)}
+          onkeydown={handleEditorKeydown}
+        />
+      {/key}
     {/if}
   </section>
 {:else if tab.view === 'text'}

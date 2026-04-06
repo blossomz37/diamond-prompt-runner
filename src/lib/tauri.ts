@@ -154,12 +154,14 @@ export async function executePromptBlock(
 }
 
 export async function executePipeline(
-  rootPath: string,
-  pipelineId: string
+  root_path: string,
+  pipeline_id: string,
+  payload?: Record<string, string>
 ): Promise<PipelineExecutionResult> {
   return invoke<PipelineExecutionResult>('execute_pipeline', {
-    rootPath,
-    pipelineId
+    rootPath: root_path,
+    pipelineId: pipeline_id,
+    payload
   });
 }
 
