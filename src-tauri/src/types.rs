@@ -88,6 +88,16 @@ pub struct ExportBundleResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct PipelineProgressEvent {
+    pub pipeline_id: String,
+    pub total_blocks: usize,
+    pub completed_blocks: usize,
+    pub current_block_name: String,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProjectUsageSummary {
     pub total_runs: u32,
     pub successful_runs: u32,

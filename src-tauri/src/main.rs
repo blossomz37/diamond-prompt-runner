@@ -3,16 +3,23 @@ mod types;
 // execution is a submodule of project_store — declared there
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use lazy_static::lazy_static;
 
 use project_store::{
     AssetContent, CreatedPromptBlockResult, ExecutionCredentialStatus, ExportBundleResult,
-    ModelPresetSummary, PipelineExecutionResult, ProjectAssetNode, ProjectPipelineSummary,
+    ModelPresetSummary, PipelineExecutionResult, PipelineProgressEvent, ProjectAssetNode, ProjectPipelineSummary,
     ProjectPromptBlockSummary, ProjectRunHistoryEntry, ProjectSummary, ProjectUsageSummary,
     PromptExecutionResult, PromptRunHistoryEntry, RecentProjectEntry, SavedPipelineResult,
     TemplateValidationResult,
 };
 use std::collections::BTreeMap;
-use tauri::Manager;
+use tauri::{Manager, Emitter};
+
+lazy_static! {
+    static ref PIPELINE_ABORT_STATE: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+}
 
 fn app_data_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     app.path()
@@ -205,15 +212,30 @@ fn execute_pipeline(
     root_path: String,
     pipeline_id: String,
     payload: Option<BTreeMap<String, String>>,
+    resume_from_block_id: Option<String>,
 ) -> Result<PipelineExecutionResult, String> {
+    PIPELINE_ABORT_STATE.store(false, Ordering::SeqCst);
+    let app_clone = app.clone();
+    let mut on_progress = |progress: PipelineProgressEvent| {
+        let _ = app_clone.emit("pipeline-progress", progress);
+    };
+
     let app_data_dir = app_data_dir(&app)?;
     project_store::execute_pipeline(
         PathBuf::from(root_path).as_path(),
         &pipeline_id,
         payload,
         &app_data_dir,
+        resume_from_block_id,
+        Some(&mut on_progress),
+        Some(PIPELINE_ABORT_STATE.clone()),
     )
     .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn cancel_pipeline() {
+    PIPELINE_ABORT_STATE.store(true, Ordering::SeqCst);
 }
 
 #[tauri::command]
@@ -462,6 +484,7 @@ pub fn run() {
             validate_project_template,
             execute_prompt_block,
             execute_pipeline,
+            cancel_pipeline,
             get_execution_credential_status,
             save_execution_api_key,
             clear_execution_api_key,
@@ -502,8 +525,7 @@ fn main() {
         }
 
         let payload = if args.len() > 5 {
-            let p: BTreeMap<String, String> = serde_json::from_str(&args[5]).expect("Invalid payload JSON");
-            Some(p)
+            serde_json::from_str(&args[5]).ok()
         } else {
             None
         };
@@ -511,7 +533,7 @@ fn main() {
         let app_data = std::env::temp_dir().join("diamond-runner-headless");
         std::fs::create_dir_all(&app_data).unwrap();
 
-        match project_store::execution::execute_pipeline(&project_path, pipeline_id, payload, &app_data) {
+        match project_store::execution::execute_pipeline(&project_path, pipeline_id, payload, &app_data, None, None, None) {
             Ok(result) => {
                 if result.status == project_store::ExecutionStatus::Failed {
                     eprintln!("CLI Execute Pipeline FAILED internally:");

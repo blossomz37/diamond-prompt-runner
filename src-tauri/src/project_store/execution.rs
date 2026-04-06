@@ -120,6 +120,9 @@ pub fn execute_pipeline(
     pipeline_id: &str,
     payload: Option<BTreeMap<String, String>>,
     app_data_dir: &Path,
+    resume_from_block_id: Option<String>,
+    on_progress: Option<&mut dyn FnMut(PipelineProgressEvent)>,
+    abort_signal: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
 ) -> StoreResult<PipelineExecutionResult> {
     let api_key = load_execution_api_key()?;
     let (root_path, manifest) = validate_project(root_path)?;
@@ -127,7 +130,18 @@ pub fn execute_pipeline(
         post_openrouter_chat_completion(OPENROUTER_CHAT_COMPLETIONS_URL, api_key, &payload)
     };
 
-    execute_pipeline_with_transport(&root_path, &manifest, pipeline_id, payload, &api_key, &mut transport, app_data_dir)
+    execute_pipeline_with_transport(
+        &root_path,
+        &manifest,
+        pipeline_id,
+        payload,
+        &api_key,
+        &mut transport,
+        app_data_dir,
+        resume_from_block_id,
+        on_progress,
+        abort_signal,
+    )
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
@@ -333,6 +347,9 @@ pub(crate) fn execute_pipeline_with_transport<F>(
     api_key: &str,
     transport: &mut F,
     app_data_dir: &Path,
+    resume_from_block_id: Option<String>,
+    mut on_progress: Option<&mut dyn FnMut(PipelineProgressEvent)>,
+    abort_signal: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
 ) -> StoreResult<PipelineExecutionResult>
 where
     F: FnMut(&str, Value) -> StoreResult<Value>,
@@ -366,7 +383,16 @@ where
         pipeline_name: pipeline.name.clone(),
     };
 
-    for block_id in &pipeline.ordered_blocks {
+    let mut starting_index = 0;
+    if let Some(block_id) = &resume_from_block_id {
+        if let Some(pos) = pipeline.ordered_blocks.iter().position(|id| id == block_id) {
+            starting_index = pos;
+        }
+    }
+
+    let total_blocks = pipeline.ordered_blocks.len();
+    for i in starting_index..total_blocks {
+        let block_id = &pipeline.ordered_blocks[i];
         let block = manifest
             .prompt_blocks
             .iter()
@@ -377,6 +403,30 @@ where
                     pipeline.name
                 ))
             })?;
+
+        if let Some(abort) = &abort_signal {
+            if abort.load(std::sync::atomic::Ordering::Relaxed) {
+                return Ok(PipelineExecutionResult {
+                    pipeline_id: pipeline.pipeline_id.clone(),
+                    pipeline_name: pipeline.name.clone(),
+                    status: ExecutionStatus::Failed,
+                    started_at,
+                    completed_at: timestamp(),
+                    error: Some("Pipeline execution cancelled by user.".to_string()),
+                    steps,
+                });
+            }
+        }
+
+        if let Some(ref mut callback) = on_progress {
+            callback(PipelineProgressEvent {
+                pipeline_id: pipeline.pipeline_id.clone(),
+                current_block_name: block.name.clone(),
+                completed_blocks: i,
+                total_blocks: total_blocks,
+                status: "running".to_string(),
+            });
+        }
 
         let template_path = sanitize_relative_path(&block.template_source)?;
         let relative_path = template_path.to_string_lossy().replace('\\', "/");
