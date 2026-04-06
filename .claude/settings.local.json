@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /Users/carlo/diamond-runner/src/lib/components/*.svelte)",
+      "Bash(git commit -m ':*)",
+      "Bash(python3 -)",
+      "Bash(cargo build:*)"
+    ]
+  }
+}

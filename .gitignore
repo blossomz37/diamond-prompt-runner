@@ -24,15 +24,12 @@ src-tauri/target/
 00-diamond-user-obsidian/
 .env
 .vscode/tasks.json
-fixtures/sample-project/runs/
+fixtures/sample-project/runs/*
+!fixtures/sample-project/runs/.gitkeep
 workshop-parts/openrouter/OpenRouter Quickstart.md
-.gitignore
 CLAUDE.md
-.gitignore
 .antigravity/settings.json
 .antigravity/tasks.json
-.gitignore
-.gitignore
 dev-mockups/variables-panel.html
 .claude/settings.json
 GEMINI.md
