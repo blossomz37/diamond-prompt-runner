@@ -14,7 +14,7 @@ GitHub: <https://github.com/blossomz37/diamond-prompt-runner>
 
 ### Implementation Status
 
-All MVP slices (Plans 1–21) are complete. Post-MVP work through Plan 28 is partially shipped.
+All MVP slices (Plans 1–21) are complete. Post-MVP Plans 22–28 are shipped; some phases in Plans 22 (UX Overhaul) and 27 (Batch Execution) remain in progress.
 
 **Completed slices:**
 - Milestone 1 (project create/open, read-only IDE shell, explorer, tabs, inspector)
@@ -97,3 +97,8 @@ Recommended custom-instruction themes:
 - keep local commits milestone-based and pushes explicit
 
 See `implementation-plans/04-PLAN-agent-tooling-and-workflows.md` for the detailed tooling audit and workflow guidance.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
