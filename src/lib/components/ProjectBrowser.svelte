@@ -292,7 +292,6 @@
   .global-credentials {
     display: grid;
     gap: 0.5rem;
-    align-self: start;
     justify-items: end;
   }
 
