@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
   import type { ExecutionCredentialStatus, ProjectSummary, RecentProjectEntry } from '$lib/types/project';
+  import appIcon from '$lib/assets/icon.png';
 
   interface Props {
     recentProjects: RecentProjectEntry[];
@@ -73,7 +74,8 @@
 
 <section class="browser-shell">
   <div class="hero panel">
-    <div>
+    <div class="hero-title">
+      <img src={appIcon} alt="" class="hero-icon" width="40" height="40" />
       <h1>Projects</h1>
     </div>
     <div class="global-credentials">
@@ -248,6 +250,16 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 1.3rem 1.4rem;
+  }
+
+  .hero-title {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .hero-icon {
+    border-radius: 8px;
   }
 
   .hero h1,
