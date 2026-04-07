@@ -369,33 +369,6 @@
         </div>
         <button
           type="button"
-          class="pane-toggle theme-toggle"
-          onclick={cycleTheme}
-          title={themeLabel}
-          aria-label={themeLabel}
-        >
-          {themeIcon}
-        </button>
-        <button
-          type="button"
-          class="pane-toggle update-btn"
-          class:update-available={updateAvailable}
-          onclick={updateAvailable ? onInstallUpdate : onCheckForUpdate}
-          disabled={updateInstalling || updateChecking}
-          title={updateInstalling ? 'Installing update…' : updateAvailable ? `Update available: ${updateVersion}` : updateChecking ? 'Checking for updates…' : 'Check for updates'}
-          aria-label={updateInstalling ? 'Installing update' : updateAvailable ? `Update to ${updateVersion}` : updateChecking ? 'Checking for updates' : 'Check for updates'}
-        >
-          {#if updateInstalling || updateChecking}
-            <span class="inline-spinner" aria-label={updateInstalling ? 'Installing' : 'Checking'}></span>
-          {:else}
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          {/if}
-        </button>
-        <button
-          type="button"
           class="pane-toggle"
           onclick={() => (inspectorOpen = !inspectorOpen)}
           aria-label={inspectorOpen ? 'Collapse inspector' : 'Expand inspector'}
@@ -613,6 +586,36 @@
             />
           </div>
         {/if}
+      </div>
+
+      <div class="sidebar-utility">
+        <button
+          type="button"
+          class="sidebar-util-btn"
+          onclick={cycleTheme}
+          title={themeLabel}
+          aria-label={themeLabel}
+        >
+          {themeIcon}
+        </button>
+        <button
+          type="button"
+          class="sidebar-util-btn"
+          class:update-available={updateAvailable}
+          onclick={updateAvailable ? onInstallUpdate : onCheckForUpdate}
+          disabled={updateInstalling || updateChecking}
+          title={updateInstalling ? 'Installing update…' : updateAvailable ? `Update available: ${updateVersion}` : updateChecking ? 'Checking for updates…' : 'Check for updates'}
+          aria-label={updateInstalling ? 'Installing update' : updateAvailable ? `Update to ${updateVersion}` : updateChecking ? 'Checking for updates' : 'Check for updates'}
+        >
+          {#if updateInstalling || updateChecking}
+            <span class="inline-spinner" aria-label={updateInstalling ? 'Installing' : 'Checking'}></span>
+          {:else}
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          {/if}
+        </button>
       </div>
     </aside>
 
@@ -906,6 +909,37 @@
     padding: 0;
   }
 
+  .sidebar-utility {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid var(--panel-border);
+  }
+
+  .sidebar-util-btn {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    padding: 0.25rem 0.4rem;
+    cursor: pointer;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .sidebar-util-btn:hover {
+    border-color: rgba(157, 180, 255, 0.2);
+    color: var(--text);
+  }
+
+  .sidebar-util-btn.update-available {
+    color: var(--accent);
+  }
+
   .sidebar-section {
     border-bottom: 1px solid var(--panel-border);
   }
@@ -965,16 +999,6 @@
   .pane-toggle:hover {
     border-color: rgba(157, 180, 255, 0.2);
     color: var(--text);
-  }
-
-  .update-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
-  }
-
-  .update-btn.update-available {
-    color: var(--accent);
   }
 
   /* ── Editor ── */
