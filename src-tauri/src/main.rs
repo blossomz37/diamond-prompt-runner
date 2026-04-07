@@ -15,7 +15,7 @@ use project_store::{
     TemplateValidationResult,
 };
 use std::collections::BTreeMap;
-use tauri::{Manager, Emitter};
+use tauri::{Manager, Emitter, RunEvent};
 
 lazy_static! {
     static ref PIPELINE_ABORT_STATE: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
@@ -580,8 +580,33 @@ pub fn run() {
             rename_document,
             open_in_os
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            match &event {
+                // When the user closes the window, hide it instead of destroying it.
+                // The app stays in the dock so the updater can still check/apply updates.
+                RunEvent::WindowEvent {
+                    label,
+                    event: tauri::WindowEvent::CloseRequested { api, .. },
+                    ..
+                } => {
+                    api.prevent_close();
+                    if let Some(win) = app.get_webview_window(label) {
+                        let _ = win.hide();
+                    }
+                }
+                // When the user clicks the dock icon (or re-activates), show the window.
+                RunEvent::Reopen { .. } => {
+                    if let Some(win) = app.get_webview_window("main") {
+                        let _ = win.show();
+                        let _ = win.set_focus();
+                    }
+                }
+                _ => {}
+            }
+        });
 }
 
 fn main() {
