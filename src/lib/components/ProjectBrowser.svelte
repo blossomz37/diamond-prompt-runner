@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
   import type { ExecutionCredentialStatus, ProjectSummary, RecentProjectEntry } from '$lib/types/project';
+  import { getThemePreference, cycleTheme, type ThemePreference } from '$lib/stores/theme.svelte';
   import appIcon from '$lib/assets/icon.png';
 
   interface Props {
@@ -23,6 +24,12 @@
     onCredentialInput: (value: string) => void;
     onSaveCredential: () => void | Promise<void>;
     onClearCredential: () => void | Promise<void>;
+    updateAvailable: boolean;
+    updateVersion: string | null;
+    updateInstalling: boolean;
+    updateChecking: boolean;
+    onInstallUpdate: () => void | Promise<void>;
+    onCheckForUpdate: () => void | Promise<void>;
   }
 
   let {
@@ -44,8 +51,28 @@
     credentialError,
     onCredentialInput,
     onSaveCredential,
-    onClearCredential
+    onClearCredential,
+    updateAvailable,
+    updateVersion,
+    updateInstalling,
+    updateChecking,
+    onInstallUpdate,
+    onCheckForUpdate
   }: Props = $props();
+
+  const themeIcon = $derived.by(() => {
+    const pref = getThemePreference();
+    if (pref === 'dark') return '🌙';
+    if (pref === 'light') return '☀️';
+    return '🖥️';
+  });
+
+  const themeLabel = $derived.by((): string => {
+    const pref = getThemePreference();
+    if (pref === 'dark') return 'Theme: Dark';
+    if (pref === 'light') return 'Theme: Light';
+    return 'Theme: System';
+  });
 
   function credentialTone(source: ExecutionCredentialStatus['source']): string {
     switch (source) {
@@ -77,6 +104,35 @@
     <div class="hero-title">
       <img src={appIcon} alt="" class="hero-icon" width="40" height="40" />
       <h1>Projects</h1>
+      <div class="hero-utils">
+        <button
+          type="button"
+          class="hero-util-btn"
+          onclick={cycleTheme}
+          title={themeLabel}
+          aria-label={themeLabel}
+        >
+          {themeIcon}
+        </button>
+        <button
+          type="button"
+          class="hero-util-btn"
+          class:update-available={updateAvailable}
+          onclick={updateAvailable ? onInstallUpdate : onCheckForUpdate}
+          disabled={updateInstalling || updateChecking}
+          title={updateInstalling ? 'Installing update…' : updateAvailable ? `Update available: ${updateVersion}` : updateChecking ? 'Checking for updates…' : 'Check for updates'}
+          aria-label={updateInstalling ? 'Installing update' : updateAvailable ? `Update to ${updateVersion}` : updateChecking ? 'Checking for updates' : 'Check for updates'}
+        >
+          {#if updateInstalling || updateChecking}
+            <span class="inline-spinner" aria-label={updateInstalling ? 'Installing' : 'Checking'}></span>
+          {:else}
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          {/if}
+        </button>
+      </div>
     </div>
     <div class="global-credentials">
       <div class="heading">
@@ -261,6 +317,35 @@
 
   .hero-icon {
     border-radius: 8px;
+  }
+
+  .hero-utils {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+  }
+
+  .hero-util-btn {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    padding: 0.25rem 0.4rem;
+    cursor: pointer;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .hero-util-btn:hover {
+    border-color: rgba(157, 180, 255, 0.2);
+    color: var(--text);
+  }
+
+  .hero-util-btn.update-available {
+    color: var(--accent);
   }
 
   .hero h1,

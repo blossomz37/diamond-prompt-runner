@@ -1288,6 +1288,12 @@
     onCredentialInput={(value) => (executionCredentialDraft = value)}
     onSaveCredential={handleSaveExecutionCredential}
     onClearCredential={handleClearExecutionCredential}
+    {updateAvailable}
+    {updateVersion}
+    {updateInstalling}
+    {updateChecking}
+    onInstallUpdate={handleInstallUpdate}
+    onCheckForUpdate={checkForUpdate}
   />
 {:else}
   {#if errorMessage}
