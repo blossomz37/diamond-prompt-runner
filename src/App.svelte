@@ -376,6 +376,7 @@
   function handleCloseProject(): void {
     mode = 'browser';
     workspace = null;
+    errorMessage = null;
   }
 
   $effect(() => {
@@ -1196,6 +1197,7 @@
 
     executionCredentialLoading = true;
     executionCredentialError = null;
+    errorMessage = null;
 
     try {
       executionCredentialStatus = await saveExecutionApiKey(apiKey);

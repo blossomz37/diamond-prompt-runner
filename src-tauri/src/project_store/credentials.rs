@@ -1,64 +1,67 @@
 use std::env;
+use std::fs;
+use std::path::Path;
+
+use serde::{Deserialize, Serialize};
 
 use crate::types::*;
 
 pub(crate) const OPENROUTER_API_KEY_ENV: &str = "OPENROUTER_API_KEY";
-const OPENROUTER_KEYCHAIN_SERVICE: &str = "com.blossomz37.diamondrunner";
-const OPENROUTER_KEYCHAIN_ACCOUNT: &str = "openrouter-api-key";
+const CREDENTIAL_STORE_FILE: &str = "credentials.json";
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct CredentialStore {
+    /// Base64-encoded API key (obfuscated, not encrypted).
+    #[serde(default)]
+    openrouter_api_key: Option<String>,
+}
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-pub fn get_execution_credential_status() -> StoreResult<ExecutionCredentialStatus> {
-    // Keychain access can fail in unsigned dev builds or sandboxed contexts.
-    // Treat errors as "no stored key" so the app can still load.
-    let has_stored_key = match load_stored_openrouter_api_key() {
-        Ok(key) => key.is_some(),
-        Err(error) => {
-            eprintln!("[diamond] keychain probe failed (non-fatal): {error}");
-            false
-        }
-    };
+pub fn get_execution_credential_status(app_data_dir: &Path) -> StoreResult<ExecutionCredentialStatus> {
+    let has_stored_key = load_stored_openrouter_api_key(app_data_dir)?.is_some();
     Ok(build_execution_credential_status(
         has_stored_key,
         load_environment_api_key().is_some(),
     ))
 }
 
-pub fn save_execution_api_key(api_key: &str) -> StoreResult<ExecutionCredentialStatus> {
+pub fn save_execution_api_key(app_data_dir: &Path, api_key: &str) -> StoreResult<ExecutionCredentialStatus> {
     let trimmed = api_key.trim();
     if trimmed.is_empty() {
         return Err(ProjectStoreError::message("API key cannot be empty."));
     }
 
-    openrouter_keyring_entry()?
-        .set_password(trimmed)
-        .map_err(keyring_error)?;
+    fs::create_dir_all(app_data_dir)?;
+    let mut store = read_credential_store(app_data_dir);
+    store.openrouter_api_key = Some(encode_key(trimmed));
+    write_credential_store(app_data_dir, &store)?;
 
-    // Return a definitive success status after a confirmed write.
-    // Re-probing via get_execution_credential_status() can silently fail in unsigned
-    // dev builds — get_password() returns an error that is swallowed as "no key", which
-    // makes the frontend revert to the empty input state even though the write succeeded.
     Ok(ExecutionCredentialStatus {
-        source: CredentialSource::Keychain,
+        source: CredentialSource::Stored,
         has_stored_key: true,
     })
 }
 
-pub fn clear_execution_api_key() -> StoreResult<ExecutionCredentialStatus> {
-    match openrouter_keyring_entry()?.delete_credential() {
-        Ok(()) | Err(keyring::Error::NoEntry) => get_execution_credential_status(),
-        Err(error) => Err(keyring_error(error)),
+pub fn clear_execution_api_key(app_data_dir: &Path) -> StoreResult<ExecutionCredentialStatus> {
+    let mut store = read_credential_store(app_data_dir);
+    store.openrouter_api_key = None;
+    if app_data_dir.join(CREDENTIAL_STORE_FILE).exists() {
+        write_credential_store(app_data_dir, &store)?;
     }
+    get_execution_credential_status(app_data_dir)
 }
 
 // ── Helpers (crate-visible for execution.rs) ──────────────────────────────────
 
-pub(crate) fn load_stored_openrouter_api_key() -> StoreResult<Option<String>> {
-    match openrouter_keyring_entry()?.get_password() {
-        Ok(password) if password.trim().is_empty() => Ok(None),
-        Ok(password) => Ok(Some(password)),
-        Err(keyring::Error::NoEntry) => Ok(None),
-        Err(error) => Err(keyring_error(error)),
+pub(crate) fn load_stored_openrouter_api_key(app_data_dir: &Path) -> StoreResult<Option<String>> {
+    let store = read_credential_store(app_data_dir);
+    match store.openrouter_api_key {
+        Some(encoded) => {
+            let decoded = decode_key(&encoded);
+            if decoded.trim().is_empty() { Ok(None) } else { Ok(Some(decoded)) }
+        }
+        None => Ok(None),
     }
 }
 
@@ -85,7 +88,7 @@ fn build_execution_credential_status(
     has_environment_key: bool,
 ) -> ExecutionCredentialStatus {
     let source = if has_stored_key {
-        CredentialSource::Keychain
+        CredentialSource::Stored
     } else if has_environment_key {
         CredentialSource::Environment
     } else {
@@ -98,13 +101,37 @@ fn build_execution_credential_status(
     }
 }
 
-fn openrouter_keyring_entry() -> StoreResult<keyring::Entry> {
-    keyring::Entry::new(OPENROUTER_KEYCHAIN_SERVICE, OPENROUTER_KEYCHAIN_ACCOUNT)
-        .map_err(keyring_error)
+fn read_credential_store(app_data_dir: &Path) -> CredentialStore {
+    let path = app_data_dir.join(CREDENTIAL_STORE_FILE);
+    if !path.exists() {
+        return CredentialStore::default();
+    }
+    match fs::read_to_string(&path) {
+        Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+        Err(_) => CredentialStore::default(),
+    }
 }
 
-fn keyring_error(error: keyring::Error) -> ProjectStoreError {
-    ProjectStoreError::message(format!("Credential storage failed: {error}"))
+fn write_credential_store(app_data_dir: &Path, store: &CredentialStore) -> StoreResult<()> {
+    let path = app_data_dir.join(CREDENTIAL_STORE_FILE);
+    let json = serde_json::to_string_pretty(store)
+        .map_err(|e| ProjectStoreError::message(format!("Failed to serialize credentials: {e}")))?;
+    fs::write(&path, json)?;
+    Ok(())
+}
+
+fn encode_key(key: &str) -> String {
+    use base64::Engine;
+    base64::engine::general_purpose::STANDARD.encode(key.as_bytes())
+}
+
+fn decode_key(encoded: &str) -> String {
+    use base64::Engine;
+    base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .ok()
+        .and_then(|bytes| String::from_utf8(bytes).ok())
+        .unwrap_or_default()
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -112,6 +139,7 @@ fn keyring_error(error: keyring::Error) -> ProjectStoreError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
 
     #[test]
     fn prefers_stored_execution_api_key_over_environment() {
@@ -136,5 +164,43 @@ mod tests {
 
         assert_eq!(status.source, CredentialSource::Missing);
         assert!(!status.has_stored_key);
+    }
+
+    #[test]
+    fn round_trips_api_key_through_app_data_file() {
+        let dir = TempDir::new().unwrap();
+        let app_data = dir.path();
+
+        save_execution_api_key(app_data, "sk-or-v1-test123").unwrap();
+        let loaded = load_stored_openrouter_api_key(app_data).unwrap();
+        assert_eq!(loaded.as_deref(), Some("sk-or-v1-test123"));
+
+        let status = get_execution_credential_status(app_data).unwrap();
+        assert_eq!(status.source, CredentialSource::Stored);
+        assert!(status.has_stored_key);
+    }
+
+    #[test]
+    fn clear_removes_stored_key() {
+        let dir = TempDir::new().unwrap();
+        let app_data = dir.path();
+
+        save_execution_api_key(app_data, "sk-or-v1-test123").unwrap();
+        clear_execution_api_key(app_data).unwrap();
+
+        let loaded = load_stored_openrouter_api_key(app_data).unwrap();
+        assert_eq!(loaded, None);
+    }
+
+    #[test]
+    fn key_is_base64_obfuscated_on_disk() {
+        let dir = TempDir::new().unwrap();
+        let app_data = dir.path();
+
+        save_execution_api_key(app_data, "my-secret-key").unwrap();
+
+        let raw = std::fs::read_to_string(app_data.join("credentials.json")).unwrap();
+        assert!(!raw.contains("my-secret-key"), "plaintext key should not appear in file");
+        assert!(raw.contains("bXktc2VjcmV0LWtleQ=="), "base64 encoded key should appear");
     }
 }

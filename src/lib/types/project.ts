@@ -240,7 +240,7 @@ export interface CreatedPromptBlockResult {
   path: string;
 }
 
-export type ExecutionCredentialSource = 'keychain' | 'environment' | 'missing';
+export type ExecutionCredentialSource = 'stored' | 'environment' | 'missing';
 
 export interface ExecutionCredentialStatus {
   source: ExecutionCredentialSource;

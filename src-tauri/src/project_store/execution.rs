@@ -96,7 +96,7 @@ pub fn execute_prompt_block(
     payload: Option<BTreeMap<String, String>>,
     app_data_dir: &Path,
 ) -> StoreResult<PromptExecutionResult> {
-    let api_key = load_execution_api_key()?;
+    let api_key = load_execution_api_key(app_data_dir)?;
     let (root_path, manifest) = validate_project(root_path)?;
     let mut transport = |api_key: &str, payload: Value| {
         post_openrouter_chat_completion(OPENROUTER_CHAT_COMPLETIONS_URL, api_key, &payload)
@@ -125,7 +125,7 @@ pub fn execute_pipeline(
     on_progress: Option<&mut dyn FnMut(PipelineProgressEvent)>,
     abort_signal: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
 ) -> StoreResult<PipelineExecutionResult> {
-    let api_key = load_execution_api_key()?;
+    let api_key = load_execution_api_key(app_data_dir)?;
     let (root_path, manifest) = validate_project(root_path)?;
     let mut transport = |api_key: &str, payload: Value| {
         post_openrouter_chat_completion(OPENROUTER_CHAT_COMPLETIONS_URL, api_key, &payload)
@@ -1159,8 +1159,8 @@ fn persisted_run_record_version() -> u32 {
     PERSISTED_RUN_RECORD_VERSION
 }
 
-fn load_execution_api_key() -> StoreResult<String> {
-    let stored_key = load_stored_openrouter_api_key()?;
+fn load_execution_api_key(app_data_dir: &Path) -> StoreResult<String> {
+    let stored_key = load_stored_openrouter_api_key(app_data_dir)?;
     let environment_key = load_environment_api_key();
 
     select_openrouter_api_key(stored_key, environment_key).ok_or_else(|| {

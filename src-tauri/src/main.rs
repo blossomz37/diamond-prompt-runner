@@ -301,18 +301,21 @@ fn set_project_variables(
 }
 
 #[tauri::command]
-fn get_execution_credential_status() -> Result<ExecutionCredentialStatus, String> {
-    project_store::get_execution_credential_status().map_err(|error| error.to_string())
+fn get_execution_credential_status(app: tauri::AppHandle) -> Result<ExecutionCredentialStatus, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::get_execution_credential_status(&app_data_dir).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-fn save_execution_api_key(api_key: String) -> Result<ExecutionCredentialStatus, String> {
-    project_store::save_execution_api_key(&api_key).map_err(|error| error.to_string())
+fn save_execution_api_key(app: tauri::AppHandle, api_key: String) -> Result<ExecutionCredentialStatus, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::save_execution_api_key(&app_data_dir, &api_key).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-fn clear_execution_api_key() -> Result<ExecutionCredentialStatus, String> {
-    project_store::clear_execution_api_key().map_err(|error| error.to_string())
+fn clear_execution_api_key(app: tauri::AppHandle) -> Result<ExecutionCredentialStatus, String> {
+    let app_data_dir = app_data_dir(&app)?;
+    project_store::clear_execution_api_key(&app_data_dir).map_err(|error| error.to_string())
 }
 
 #[tauri::command]

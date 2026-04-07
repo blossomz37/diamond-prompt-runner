@@ -370,7 +370,7 @@ pub struct ExecutionCredentialStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum CredentialSource {
-    Keychain,
+    Stored,
     Environment,
     Missing,
 }

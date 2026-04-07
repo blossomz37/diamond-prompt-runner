@@ -335,7 +335,7 @@ const missingCredentialStatus: ExecutionCredentialStatus = {
 };
 
 const keychainCredentialStatus: ExecutionCredentialStatus = {
-  source: 'keychain',
+  source: 'stored',
   hasStoredKey: true
 };
 
@@ -1468,8 +1468,8 @@ describe('App', () => {
 
     await waitFor(() => expect(tauri.saveExecutionApiKey).toHaveBeenCalledWith('sk-test-123'));
 
-    // After saving, the badge changes to 'keychain' and a mask replaces the input
-    expect(await screen.findByText('keychain')).toBeInTheDocument();
+    // After saving, the badge changes to 'saved' and a mask replaces the input
+    expect(await screen.findByText('saved')).toBeInTheDocument();
   });
 
   it('shows prompt run history and opens a persisted run artifact', async () => {

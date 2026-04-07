@@ -48,7 +48,7 @@
 
   function credentialTone(source: ExecutionCredentialStatus['source']): string {
     switch (source) {
-      case 'keychain': return 'good';
+      case 'stored': return 'good';
       case 'environment': return 'warn';
       default: return 'bad';
     }
@@ -56,7 +56,7 @@
 
   function credentialLabel(source: ExecutionCredentialStatus['source']): string {
     switch (source) {
-      case 'keychain': return 'keychain';
+      case 'stored': return 'saved';
       case 'environment': return 'env fallback';
       default: return 'missing';
     }
