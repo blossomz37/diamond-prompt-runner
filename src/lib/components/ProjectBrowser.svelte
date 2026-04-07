@@ -248,8 +248,9 @@
   .hero {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     gap: 1rem;
-    padding: 1.3rem 1.4rem;
+    padding: 0.75rem 1.4rem;
   }
 
   .hero-title {
