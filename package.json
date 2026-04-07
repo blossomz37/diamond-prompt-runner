@@ -12,7 +12,8 @@
     "tauri:dev": "tauri dev",
     "typecheck": "svelte-check --tsconfig ./tsconfig.app.json",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "updater:json": "node scripts/generate-updater-json.mjs"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.3",
@@ -23,6 +24,8 @@
     "@codemirror/view": "^6.41.0",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-dialog": "^2.4.1",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-updater": "^2.10.1",
     "codemirror": "^6.0.2",
     "marked": "^17.0.6",
     "svelte": "^5.39.3",

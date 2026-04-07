@@ -1,0 +1,8 @@
+{
+  "pipelineId": "research-genre",
+  "name": "Research Genre",
+  "orderedBlocks": [
+    "genre-research"
+  ],
+  "executionMode": "sequential"
+}

@@ -27,6 +27,15 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "icon": []
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU2RTQ2MjJFMzY3MTMyNEMKUldSTU1uRTJMbUxrNXNxaGsrM0dZMDgva3laNFdCai9oL1lFOXRvdGpyOU9Va2tPTDN0a1lGeUoK",
+      "endpoints": [
+        "https://github.com/blossomz37/diamond-prompt-runner/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

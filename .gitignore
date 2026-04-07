@@ -19,6 +19,7 @@ coverage/
 
 # Tauri / Rust
 src-tauri/target/
+.tauri/
 .rustup/
 .cargo/
 
@@ -43,3 +44,5 @@ target_headless/
 check_errors.log
 test-output/
 image.png
+release-procedure.md
+notebooks/

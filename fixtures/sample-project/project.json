@@ -89,24 +89,6 @@
       "outputTarget": "run_artifact"
     }
   ],
-  "pipelines": [
-    {
-      "pipelineId": "review-pipeline",
-      "name": "Review Pipeline",
-      "orderedBlocks": [
-        "brief-review"
-      ],
-      "executionMode": "sequential"
-    },
-    {
-      "pipelineId": "research-genre",
-      "name": "Research Genre",
-      "orderedBlocks": [
-        "genre-research"
-      ],
-      "executionMode": "sequential"
-    }
-  ],
   "uiPreferences": {
     "density": "dense",
     "theme": "ide-pass"

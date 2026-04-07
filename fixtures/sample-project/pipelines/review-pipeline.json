@@ -1,0 +1,8 @@
+{
+  "pipelineId": "review-pipeline",
+  "name": "Review Pipeline",
+  "orderedBlocks": [
+    "brief-review"
+  ],
+  "executionMode": "sequential"
+}

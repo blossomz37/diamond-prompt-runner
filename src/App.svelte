@@ -78,6 +78,8 @@
   } from '$lib/types/project';
   import { createValidationStore } from '$lib/stores/validation.svelte';
   import { pipelineActivityStore } from '$lib/stores/pipelineActivity.svelte';
+  import { check } from '@tauri-apps/plugin-updater';
+  import { relaunch } from '@tauri-apps/plugin-process';
 
   let mode = $state<'browser' | 'workspace'>('browser');
   let recentProjects = $state<RecentProjectEntry[]>([]);
@@ -133,6 +135,36 @@
   let executionCredentialLoading = $state(false);
   let executionCredentialError = $state<string | null>(null);
   let executionHistoryRequestId = 0;
+  let updateAvailable = $state(false);
+  let updateVersion = $state<string | null>(null);
+  let updateInstalling = $state(false);
+
+  async function checkForUpdate(): Promise<void> {
+    try {
+      const update = await check();
+      if (update) {
+        updateAvailable = true;
+        updateVersion = update.version;
+      }
+    } catch {
+      // Silently ignore update check failures (offline, private repo, etc.)
+    }
+  }
+
+  async function handleInstallUpdate(): Promise<void> {
+    if (updateInstalling) return;
+    updateInstalling = true;
+    try {
+      const update = await check();
+      if (update) {
+        await update.downloadAndInstall();
+        await relaunch();
+      }
+    } catch (err) {
+      errorMessage = `Update failed: ${err instanceof Error ? err.message : String(err)}`;
+      updateInstalling = false;
+    }
+  }
 
   function summarizeProjectRunHistory(entries: ProjectRunHistoryEntry[]): ProjectUsageSummary {
     return entries.reduce(
@@ -309,6 +341,9 @@
       recentProjects = projects;
       executionCredentialStatus = credentialStatus;
       globalVariables = globals;
+
+      // Fire-and-forget update check on startup
+      void checkForUpdate();
 
       await onPipelineProgress((event) => {
         const previous = activePipelineProgress;
@@ -1348,6 +1383,10 @@
     onAuditAsset={handleAuditAsset}
     onConvertAsset={handleConvertAsset}
     onOpenHelpFile={handleSelectAsset}
+    {updateAvailable}
+    {updateVersion}
+    {updateInstalling}
+    onInstallUpdate={handleInstallUpdate}
   />
 {/if}
 
