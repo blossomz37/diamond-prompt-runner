@@ -70,12 +70,12 @@
   --panel-border: rgba(60, 80, 140, 0.14);
   --panel-border-strong: rgba(60, 80, 140, 0.24);
   --text: #1a1e2e;
-  --text-dim: #555c72;
-  --text-soft: #7a8299;
-  --accent: #3b6fd4;
-  --accent-strong: #2756b0;
-  --danger: #d4405a;
-  --success: #2a8a5a;
+  --text-dim: #474d63;
+  --text-soft: #5c637a;
+  --accent: #2c5bb5;
+  --accent-strong: #1e4490;
+  --danger: #b5303f;
+  --success: #1e7048;
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.08);
   --input-bg: rgba(255, 255, 255, 0.9);
   --bg-ghost: rgba(0, 0, 0, 0.03);
