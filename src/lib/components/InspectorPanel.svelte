@@ -338,7 +338,7 @@
     resize: vertical;
     border-radius: 12px;
     border: 1px solid var(--border-faint);
-    background: rgba(6, 10, 18, 0.82);
+    background: var(--input-bg);
     color: var(--text-dim);
     padding: 0.65rem 0.75rem;
     font: inherit;

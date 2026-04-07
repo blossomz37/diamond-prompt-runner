@@ -23,6 +23,7 @@
   import SidebarGlobalVariables from '$lib/components/SidebarGlobalVariables.svelte';
   import SidebarWorkspaceVariables from '$lib/components/SidebarWorkspaceVariables.svelte';
   import { pipelineActivityStore } from '$lib/stores/pipelineActivity.svelte';
+  import { getThemePreference, cycleTheme, type ThemePreference } from '$lib/stores/theme.svelte';
   import type {
     ExportBundleResult,
     ExecutionCredentialStatus,
@@ -190,6 +191,19 @@
     activeTab && executionResult?.path === activeTab.path ? executionResult : null
   );
 
+  const themeIcon = $derived.by(() => {
+    const pref = getThemePreference();
+    if (pref === 'dark') return '🌙';
+    if (pref === 'light') return '☀️';
+    return '🖥';
+  });
+  const themeLabel = $derived.by((): string => {
+    const pref = getThemePreference();
+    if (pref === 'dark') return 'Theme: Dark';
+    if (pref === 'light') return 'Theme: Light';
+    return 'Theme: System';
+  });
+
   const pipelineStatusLabel = $derived.by(() => {
     if (activePipelineProgress) {
       return `Running ${activePipelineProgress.completedBlocks}/${activePipelineProgress.totalBlocks}`;
@@ -349,6 +363,15 @@
             {/each}
           </div>
         </div>
+        <button
+          type="button"
+          class="pane-toggle theme-toggle"
+          onclick={cycleTheme}
+          title={themeLabel}
+          aria-label={themeLabel}
+        >
+          {themeIcon}
+        </button>
         {#if updateAvailable}
           <button
             type="button"
@@ -724,7 +747,7 @@
   }
 
   .panel {
-    background: linear-gradient(180deg, rgba(15, 22, 38, 0.94), rgba(7, 11, 20, 0.96));
+    background: var(--panel);
     border: 1px solid var(--panel-border);
     border-radius: 20px;
     box-shadow: var(--shadow);

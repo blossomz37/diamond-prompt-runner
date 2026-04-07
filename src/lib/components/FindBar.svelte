@@ -146,8 +146,8 @@
     gap: 4px;
     padding: 0.5rem 0.6rem;
     border-radius: 12px;
-    background: rgba(15, 20, 35, 0.92);
-    border: 1px solid rgba(157, 180, 255, 0.18);
+    background: var(--panel);
+    border: 1px solid var(--border-subtle);
   }
 
   .find-row {
@@ -161,7 +161,7 @@
     min-height: 1.8rem;
     border-radius: 6px;
     border: 1px solid var(--border-subtle);
-    background: rgba(7, 11, 20, 0.9);
+    background: var(--input-bg);
     color: var(--text);
     padding: 0.25rem 0.5rem;
     font-size: 0.82rem;
@@ -169,7 +169,7 @@
   }
 
   .find-input:focus {
-    border-color: rgba(139, 177, 255, 0.4);
+    border-color: var(--border-focus);
   }
 
   .match-count {

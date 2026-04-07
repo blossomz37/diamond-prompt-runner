@@ -719,9 +719,9 @@
     min-height: 0;
     overflow: auto;
     border-radius: 18px;
-    background: rgba(5, 8, 15, 0.78);
+    background: var(--input-bg);
     border: 1px solid var(--border-faint);
-    color: #dbe5ff;
+    color: var(--text);
     white-space: pre-wrap;
     word-break: break-word;
   }
@@ -754,7 +754,7 @@
     min-height: 0;
     padding: 1rem;
     border-radius: 18px;
-    background: rgba(5, 8, 15, 0.78);
+    background: var(--input-bg);
     border: 1px solid var(--border-faint);
   }
 
@@ -784,7 +784,7 @@
   .latest-run {
     padding: 1rem;
     border-radius: 18px;
-    background: rgba(5, 8, 15, 0.78);
+    background: var(--input-bg);
     border: 1px solid var(--border-faint);
   }
 
@@ -803,7 +803,7 @@
     gap: 0.35rem;
     padding: 0.8rem;
     border-radius: 14px;
-    background: rgba(5, 8, 15, 0.62);
+    background: var(--bg-ghost);
     border: 1px solid var(--border-faint);
   }
 
@@ -856,7 +856,7 @@
     gap: 0.75rem;
     padding: 0.95rem;
     border-radius: 18px;
-    background: rgba(5, 8, 15, 0.62);
+    background: var(--bg-ghost);
     border: 1px solid var(--border-faint);
   }
 

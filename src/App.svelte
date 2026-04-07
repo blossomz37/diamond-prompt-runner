@@ -78,6 +78,7 @@
   } from '$lib/types/project';
   import { createValidationStore } from '$lib/stores/validation.svelte';
   import { pipelineActivityStore } from '$lib/stores/pipelineActivity.svelte';
+  import '$lib/stores/theme.svelte'; // side-effect: applies saved theme on load
   import { check } from '@tauri-apps/plugin-updater';
   import { relaunch } from '@tauri-apps/plugin-process';
 

@@ -237,7 +237,7 @@
   }
 
   .panel {
-    background: linear-gradient(180deg, rgba(17, 23, 40, 0.92), rgba(10, 14, 25, 0.94));
+    background: var(--panel);
     border: 1px solid var(--panel-border);
     border-radius: 22px;
     box-shadow: var(--shadow);
@@ -322,8 +322,8 @@
     display: flex;
     align-items: center;
     color: var(--accent);
-    background: rgba(139, 177, 255, 0.05);
-    border-color: rgba(139, 177, 255, 0.15);
+    background: var(--bg-ghost);
+    border-color: var(--border-subtle);
   }
 
   .save-key, .clear-key {
@@ -340,8 +340,8 @@
   .pill {
     padding: 0.38rem 0.72rem;
     border-radius: 999px;
-    background: rgba(139, 177, 255, 0.12);
-    border: 1px solid rgba(139, 177, 255, 0.24);
+    background: var(--bg-active);
+    border: 1px solid var(--border-subtle);
     color: var(--accent-strong);
     font-size: 0.82rem;
   }
@@ -405,11 +405,11 @@
 
   .primary {
     background: var(--gradient-accent);
-    border-color: rgba(139, 177, 255, 0.34);
+    border-color: var(--border-focus);
   }
 
   .secondary {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-ghost);
   }
 
   .path,
@@ -446,8 +446,8 @@
     padding: 0.9rem;
     border-radius: 16px;
     text-align: left;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(150, 176, 255, 0.16);
+    background: var(--bg-ghost);
+    border: 1px solid var(--border-subtle);
   }
 
   .recent-item.invalid {
@@ -507,16 +507,16 @@
   }
 
   .recent-open {
-    background: rgba(139, 177, 255, 0.12);
+    background: var(--bg-active);
   }
 
   .recent-locate {
     background: var(--success-bg);
-    border-color: rgba(153, 227, 190, 0.28);
+    border-color: var(--success-border);
   }
 
   .recent-remove {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--bg-ghost);
     color: var(--text-dim);
   }
 

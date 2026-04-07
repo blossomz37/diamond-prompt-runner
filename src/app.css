@@ -1,5 +1,4 @@
 :root {
-  color-scheme: dark;
   font-family:
     'IBM Plex Sans',
     'Avenir Next',
@@ -7,14 +6,20 @@
     sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  background:
-    radial-gradient(circle at top, rgba(81, 107, 189, 0.18), transparent 28%),
-    linear-gradient(180deg, #0f1527 0%, #090d19 52%, #060910 100%);
-  color: #f3f5ff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Dark theme (default) ── */
+[data-theme="dark"],
+:root:not([data-theme]) {
+  color-scheme: dark;
+  background:
+    radial-gradient(circle at top, rgba(81, 107, 189, 0.18), transparent 28%),
+    linear-gradient(180deg, #0f1527 0%, #090d19 52%, #060910 100%);
+  color: #f3f5ff;
   --bg: rgba(6, 10, 18, 0.88);
   --bg-strong: rgba(13, 19, 34, 0.96);
   --panel: rgba(18, 26, 44, 0.82);
@@ -29,27 +34,69 @@
   --danger: #ff8da1;
   --success: #99e3be;
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
-
-  /* ── Surface tokens ── */
   --input-bg: rgba(7, 11, 20, 0.82);
   --bg-ghost: rgba(255, 255, 255, 0.04);
   --bg-hover: rgba(255, 255, 255, 0.08);
   --bg-active: rgba(139, 177, 255, 0.14);
-
-  /* ── Border tokens ── */
   --border-subtle: rgba(157, 180, 255, 0.16);
   --border-faint: rgba(157, 180, 255, 0.12);
   --border-focus: rgba(139, 177, 255, 0.35);
-
-  /* ── Status tokens ── */
   --success-bg: rgba(153, 227, 190, 0.12);
   --success-border: rgba(153, 227, 190, 0.3);
   --danger-bg: rgba(255, 141, 161, 0.12);
   --danger-border: rgba(255, 141, 161, 0.2);
-
-  /* ── Gradient tokens ── */
   --gradient-accent: linear-gradient(135deg, rgba(132, 173, 255, 0.28), rgba(85, 113, 204, 0.36));
   --gradient-success: linear-gradient(135deg, rgba(153, 227, 190, 0.22), rgba(49, 134, 96, 0.28));
+
+  /* CodeMirror sync */
+  --cm-bg: rgba(5, 8, 15, 0.9);
+  --cm-text: #dbe5ff;
+  --cm-gutter-bg: rgba(5, 8, 15, 0.9);
+  --cm-active-line: rgba(255, 255, 255, 0.05);
+  --cm-selection: rgba(139, 177, 255, 0.25);
+}
+
+/* ── Light theme ── */
+[data-theme="light"] {
+  color-scheme: light;
+  background:
+    radial-gradient(circle at top, rgba(120, 140, 200, 0.08), transparent 28%),
+    linear-gradient(180deg, #f4f6fb 0%, #eaecf3 52%, #e2e5ef 100%);
+  color: #1a1e2e;
+  --bg: rgba(255, 255, 255, 0.92);
+  --bg-strong: rgba(240, 242, 248, 0.96);
+  --panel: rgba(255, 255, 255, 0.88);
+  --panel-soft: rgba(245, 247, 252, 0.82);
+  --panel-border: rgba(60, 80, 140, 0.14);
+  --panel-border-strong: rgba(60, 80, 140, 0.24);
+  --text: #1a1e2e;
+  --text-dim: #555c72;
+  --text-soft: #7a8299;
+  --accent: #3b6fd4;
+  --accent-strong: #2756b0;
+  --danger: #d4405a;
+  --success: #2a8a5a;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.08);
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --bg-ghost: rgba(0, 0, 0, 0.03);
+  --bg-hover: rgba(0, 0, 0, 0.06);
+  --bg-active: rgba(59, 111, 212, 0.1);
+  --border-subtle: rgba(60, 80, 140, 0.16);
+  --border-faint: rgba(60, 80, 140, 0.1);
+  --border-focus: rgba(59, 111, 212, 0.4);
+  --success-bg: rgba(42, 138, 90, 0.08);
+  --success-border: rgba(42, 138, 90, 0.25);
+  --danger-bg: rgba(212, 64, 90, 0.08);
+  --danger-border: rgba(212, 64, 90, 0.2);
+  --gradient-accent: linear-gradient(135deg, rgba(59, 111, 212, 0.15), rgba(39, 86, 176, 0.22));
+  --gradient-success: linear-gradient(135deg, rgba(42, 138, 90, 0.12), rgba(30, 100, 65, 0.18));
+
+  /* CodeMirror sync */
+  --cm-bg: #fafbfe;
+  --cm-text: #1a1e2e;
+  --cm-gutter-bg: #f2f4f9;
+  --cm-active-line: rgba(0, 0, 0, 0.04);
+  --cm-selection: rgba(59, 111, 212, 0.18);
 }
 
 * {
@@ -225,7 +272,7 @@ textarea::placeholder {
   align-items: center;
   padding: 5px 7px;
   border-radius: 8px;
-  background: rgba(7, 11, 20, 0.6);
+  background: var(--input-bg);
   border: 1px solid var(--panel-border);
 }
 
@@ -301,9 +348,9 @@ textarea::placeholder {
 }
 
 .badge.warn {
-  color: #ffcc66;
-  border-color: rgba(255, 204, 102, 0.3);
-  background: rgba(255, 204, 102, 0.15);
+  color: var(--warn, #ffcc66);
+  border-color: var(--warn-border, rgba(255, 204, 102, 0.3));
+  background: var(--warn-bg, rgba(255, 204, 102, 0.15));
 }
 
 .badge.bad {
@@ -319,9 +366,9 @@ textarea::placeholder {
   min-height: 0;
   overflow: auto;
   border-radius: 18px;
-  background: rgba(5, 8, 15, 0.78);
+  background: var(--input-bg);
   border: 1px solid var(--border-faint);
-  color: #dbe5ff;
+  color: var(--text);
   line-height: 1.65;
   flex: 1 1 auto;
 }
@@ -340,7 +387,7 @@ textarea::placeholder {
 
 .markdown-preview p {
   margin: 0.5em 0;
-  color: #dbe5ff;
+  color: var(--text);
 }
 
 .markdown-preview ul,
@@ -363,23 +410,23 @@ textarea::placeholder {
 .markdown-preview th,
 .markdown-preview td {
   padding: 0.45em 0.7em;
-  border: 1px solid rgba(157, 180, 255, 0.18);
+  border: 1px solid var(--border-subtle);
   text-align: left;
 }
 
 .markdown-preview th {
-  background: rgba(132, 173, 255, 0.1);
+  background: var(--bg-active);
   font-weight: 600;
 }
 
 .markdown-preview tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-ghost);
 }
 
 .markdown-preview code {
   padding: 0.15em 0.4em;
   border-radius: 4px;
-  background: rgba(132, 173, 255, 0.12);
+  background: var(--bg-active);
   font-size: 0.9em;
 }
 
@@ -387,8 +434,8 @@ textarea::placeholder {
   margin: 0.8em 0;
   padding: 0.8rem 1rem;
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(157, 180, 255, 0.1);
+  background: var(--bg-strong);
+  border: 1px solid var(--border-faint);
   overflow-x: auto;
 }
 
@@ -400,12 +447,12 @@ textarea::placeholder {
 .markdown-preview blockquote {
   margin: 0.8em 0;
   padding: 0.4em 1em;
-  border-left: 3px solid rgba(132, 173, 255, 0.35);
+  border-left: 3px solid var(--border-focus);
   color: var(--text-soft);
 }
 
 .markdown-preview hr {
   border: none;
-  border-top: 1px solid rgba(157, 180, 255, 0.15);
+  border-top: 1px solid var(--border-subtle);
   margin: 1.2em 0;
 }

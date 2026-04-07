@@ -42,8 +42,8 @@
   // We use CSS variables to sync with the main app theme.
   const appTheme = EditorView.theme({
     "&": {
-      color: "#dbe5ff",
-      backgroundColor: "rgba(5, 8, 15, 0.9)",
+      color: "var(--cm-text, #dbe5ff)",
+      backgroundColor: "var(--cm-bg, rgba(5, 8, 15, 0.9))",
       minHeight: "30rem", // Matches the native textarea
       height: "100%",
       borderRadius: "18px",
@@ -58,7 +58,7 @@
       border: "1px solid var(--border-subtle)"
     },
     ".cm-gutters": {
-      backgroundColor: "rgba(5, 8, 15, 0.9)",
+      backgroundColor: "var(--cm-gutter-bg, rgba(5, 8, 15, 0.9))",
       color: "var(--text-soft)",
       border: "none",
       borderRight: "1px solid var(--border-faint)",
@@ -66,13 +66,13 @@
       borderBottomLeftRadius: "18px",
     },
     ".cm-activeLineGutter": {
-      backgroundColor: "rgba(255, 255, 255, 0.05)"
+      backgroundColor: "var(--cm-active-line, rgba(255, 255, 255, 0.05))"
     },
     ".cm-cursor": {
       borderLeftColor: "var(--accent)"
     },
     ".cm-selectionBackground, ::selection": {
-      backgroundColor: "rgba(139, 177, 255, 0.25) !important"
+      backgroundColor: "var(--cm-selection, rgba(139, 177, 255, 0.25)) !important"
     }
   }, { dark: true });
 
