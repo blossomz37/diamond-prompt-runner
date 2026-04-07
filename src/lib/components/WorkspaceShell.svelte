@@ -116,7 +116,9 @@
     updateAvailable: boolean;
     updateVersion: string | null;
     updateInstalling: boolean;
+    updateChecking: boolean;
     onInstallUpdate: () => void | Promise<void>;
+    onCheckForUpdate: () => void | Promise<void>;
   }
 
   let {
@@ -183,7 +185,9 @@
     updateAvailable,
     updateVersion,
     updateInstalling,
-    onInstallUpdate
+    updateChecking,
+    onInstallUpdate,
+    onCheckForUpdate
   }: Props = $props();
 
   const activeTab = $derived(tabs.find((tab) => tab.path === activePath) ?? null);
@@ -372,25 +376,24 @@
         >
           {themeIcon}
         </button>
-        {#if updateAvailable}
-          <button
-            type="button"
-            class="pane-toggle update-badge"
-            onclick={onInstallUpdate}
-            disabled={updateInstalling}
-            title={updateInstalling ? 'Installing update…' : `Update available: ${updateVersion}`}
-            aria-label={updateInstalling ? 'Installing update' : `Update to ${updateVersion}`}
-          >
-            {#if updateInstalling}
-              <span class="inline-spinner" aria-label="Installing"></span>
-            {:else}
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-            {/if}
-          </button>
-        {/if}
+        <button
+          type="button"
+          class="pane-toggle update-btn"
+          class:update-available={updateAvailable}
+          onclick={updateAvailable ? onInstallUpdate : onCheckForUpdate}
+          disabled={updateInstalling || updateChecking}
+          title={updateInstalling ? 'Installing update…' : updateAvailable ? `Update available: ${updateVersion}` : updateChecking ? 'Checking for updates…' : 'Check for updates'}
+          aria-label={updateInstalling ? 'Installing update' : updateAvailable ? `Update to ${updateVersion}` : updateChecking ? 'Checking for updates' : 'Check for updates'}
+        >
+          {#if updateInstalling || updateChecking}
+            <span class="inline-spinner" aria-label={updateInstalling ? 'Installing' : 'Checking'}></span>
+          {:else}
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          {/if}
+        </button>
         <button
           type="button"
           class="pane-toggle"
@@ -964,11 +967,14 @@
     color: var(--text);
   }
 
-  .update-badge {
-    color: var(--accent, #60a5fa);
+  .update-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.2rem;
+  }
+
+  .update-btn.update-available {
+    color: var(--accent);
   }
 
   /* ── Editor ── */

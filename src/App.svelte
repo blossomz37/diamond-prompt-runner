@@ -139,8 +139,10 @@
   let updateAvailable = $state(false);
   let updateVersion = $state<string | null>(null);
   let updateInstalling = $state(false);
+  let updateChecking = $state(false);
 
   async function checkForUpdate(): Promise<void> {
+    updateChecking = true;
     try {
       const update = await check();
       if (update) {
@@ -149,6 +151,8 @@
       }
     } catch {
       // Silently ignore update check failures (offline, private repo, etc.)
+    } finally {
+      updateChecking = false;
     }
   }
 
@@ -1387,7 +1391,9 @@
     {updateAvailable}
     {updateVersion}
     {updateInstalling}
+    {updateChecking}
     onInstallUpdate={handleInstallUpdate}
+    onCheckForUpdate={checkForUpdate}
   />
 {/if}
 
