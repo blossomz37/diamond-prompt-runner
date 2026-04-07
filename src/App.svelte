@@ -17,7 +17,6 @@
     getExecutionCredentialStatus,
     getGlobalVariables,
     getRecentProjects,
-    getProjectUsageSummary,
     listModelPresets,
     listProjectPromptBlocks,
     listProjectRunHistory,
@@ -78,6 +77,7 @@
     PipelineProgressEvent
   } from '$lib/types/project';
   import { createValidationStore } from '$lib/stores/validation.svelte';
+  import { pipelineActivityStore } from '$lib/stores/pipelineActivity.svelte';
 
   let mode = $state<'browser' | 'workspace'>('browser');
   let recentProjects = $state<RecentProjectEntry[]>([]);
@@ -120,6 +120,7 @@
   let pipelineExecutionResult = $state<PipelineExecutionResult | null>(null);
   let pipelineExecutionLoading = $state(false);
   let activePipelineProgress = $state<PipelineProgressEvent | null>(null);
+  let activePipelineRunLabel = $state<string | null>(null);
   let pipelineAuthoringLoading = $state(false);
   let exportLoading = $state(false);
   let promptCreationLoading = $state(false);
@@ -132,6 +133,62 @@
   let executionCredentialLoading = $state(false);
   let executionCredentialError = $state<string | null>(null);
   let executionHistoryRequestId = 0;
+
+  function summarizeProjectRunHistory(entries: ProjectRunHistoryEntry[]): ProjectUsageSummary {
+    return entries.reduce(
+      (summary, entry) => {
+        summary.totalRuns += 1;
+
+        if (entry.status === 'success') {
+          summary.successfulRuns += 1;
+        } else {
+          summary.failedRuns += 1;
+        }
+
+        summary.totalPromptTokens += entry.usage.promptTokens ?? 0;
+        summary.totalCompletionTokens += entry.usage.completionTokens ?? 0;
+        summary.totalTokens += entry.usage.totalTokens ?? 0;
+        summary.totalCost += entry.usage.cost ?? 0;
+        summary.totalOutputWords += entry.usage.outputWordCount ?? 0;
+        summary.totalRetries += entry.usage.retryCount ?? 0;
+        return summary;
+      },
+      {
+        totalRuns: 0,
+        successfulRuns: 0,
+        failedRuns: 0,
+        totalPromptTokens: 0,
+        totalCompletionTokens: 0,
+        totalTokens: 0,
+        totalCost: 0,
+        totalOutputWords: 0,
+        totalRetries: 0
+      }
+    );
+  }
+
+  function describePipelinePayload(payload?: Record<string, string>): string | null {
+    if (!payload) {
+      return null;
+    }
+
+    const entries = Object.entries(payload).filter(([, value]) => value.trim().length > 0);
+    if (entries.length === 0) {
+      return null;
+    }
+
+    if (entries.length === 1) {
+      const [name, value] = entries[0];
+      return `${name} ${value}`;
+    }
+
+    return entries.map(([name, value]) => `${name}=${value}`).join(', ');
+  }
+
+  function formatPipelineRunLabel(pipelineName: string, payload?: Record<string, string>): string {
+    const payloadLabel = describePipelinePayload(payload);
+    return payloadLabel ? `${pipelineName} · ${payloadLabel}` : pipelineName;
+  }
 
   function serializeVariables(variables: Record<string, string>, scope: 'global' | 'workspace'): string {
     const header =
@@ -254,6 +311,28 @@
       globalVariables = globals;
 
       await onPipelineProgress((event) => {
+        const previous = activePipelineProgress;
+
+        if (
+          previous &&
+          previous.pipelineId === event.pipelineId &&
+          event.completedBlocks > previous.completedBlocks
+        ) {
+          pipelineActivityStore.push(
+            'success',
+            `Completed ${previous.currentBlockName}`,
+            `${event.completedBlocks}/${event.totalBlocks} · ${activePipelineRunLabel ?? 'Pipeline run'}`,
+            event.pipelineId
+          );
+        }
+
+        pipelineActivityStore.push(
+          'info',
+          `Starting ${event.currentBlockName}`,
+          `${event.completedBlocks + 1}/${event.totalBlocks} · ${activePipelineRunLabel ?? 'Pipeline run'}`,
+          event.pipelineId
+        );
+
         activePipelineProgress = event;
       });
     } catch (error) {
@@ -263,19 +342,18 @@
 
   async function enterWorkspace(summary: ProjectSummary): Promise<void> {
     workspace = summary;
-    const [nodes, pipelines, promptBlocks, runHistory, usageSummary, presets] = await Promise.all([
+    const [nodes, pipelines, promptBlocks, runHistory, presets] = await Promise.all([
       listProjectAssets(summary.rootPath),
       listProjectPipelines(summary.rootPath),
       listProjectPromptBlocks(summary.rootPath),
       listProjectRunHistory(summary.rootPath),
-      getProjectUsageSummary(summary.rootPath),
       listModelPresets(summary.rootPath)
     ]);
     assetNodes = nodes;
     projectPipelines = pipelines;
     projectPromptBlocks = promptBlocks;
     projectRunHistory = runHistory;
-    projectUsageSummary = usageSummary;
+    projectUsageSummary = summarizeProjectRunHistory(runHistory);
     modelPresets = presets;
     tabs = [];
     activePath = null;
@@ -288,6 +366,7 @@
     projectRunHistoryLoading = false;
     pipelineExecutionResult = null;
     activePipelineProgress = null;
+    pipelineActivityStore.reset();
     pipelineExecutionLoading = false;
     pipelineAuthoringLoading = false;
     exportLoading = false;
@@ -585,7 +664,7 @@
     try {
       executionResult = await executePromptBlock(workspace.rootPath, path, tab.draftContent);
       await refreshExecutionHistory(workspace.rootPath, path);
-      await refreshProjectRunHistory(workspace.rootPath);
+      void refreshProjectRunHistory(workspace.rootPath);
       assetNodes = await listProjectAssets(workspace.rootPath);
       workspace = {
         ...workspace,
@@ -662,6 +741,16 @@
 
     pipelineExecutionLoading = true;
     errorMessage = null;
+    const runLabel = formatPipelineRunLabel(pipeline.name, payload);
+    activePipelineRunLabel = runLabel;
+    pipelineActivityStore.push(
+      'info',
+      resumeFromBlockId ? `Resuming ${runLabel}` : `Started ${runLabel}`,
+      selectedBlockIds?.length
+        ? `${selectedBlockIds.length} selected blocks`
+        : `${pipeline.blocks.length} blocks queued`,
+      pipeline.pipelineId
+    );
 
     try {
       const result = await executePipeline(
@@ -681,13 +770,36 @@
         };
       }
       pipelineExecutionResult = mergedResult;
-      
-      await refreshProjectRunHistory(workspace.rootPath);
+
+      if (activePipelineProgress?.pipelineId === pipeline.pipelineId) {
+        pipelineActivityStore.push(
+          'success',
+          `Completed ${activePipelineProgress.currentBlockName}`,
+          `${activePipelineProgress.totalBlocks}/${activePipelineProgress.totalBlocks} · ${runLabel}`,
+          pipeline.pipelineId
+        );
+      }
+
+      pipelineActivityStore.push(
+        result.status === 'success' ? 'success' : 'error',
+        result.status === 'success' ? `Finished ${runLabel}` : `Failed ${runLabel}`,
+        result.error ?? `${result.steps.length} steps recorded`,
+        pipeline.pipelineId
+      );
+
+      void refreshProjectRunHistory(workspace.rootPath);
     } catch (error) {
       errorMessage = typeof error === 'string' ? error : 'Pipeline failed to execute.';
+      pipelineActivityStore.push(
+        'error',
+        `Failed ${runLabel}`,
+        typeof error === 'string' ? error : 'Pipeline failed to execute.',
+        pipeline.pipelineId
+      );
     } finally {
       pipelineExecutionLoading = false;
       activePipelineProgress = null;
+      activePipelineRunLabel = null;
     }
   }
 
@@ -790,13 +902,12 @@
     projectRunHistoryLoading = true;
 
     try {
-      [projectRunHistory, projectUsageSummary] = await Promise.all([
-        listProjectRunHistory(rootPath),
-        getProjectUsageSummary(rootPath)
-      ]);
+      const history = await listProjectRunHistory(rootPath);
+      projectRunHistory = history;
+      projectUsageSummary = summarizeProjectRunHistory(history);
     } catch {
       projectRunHistory = [];
-      projectUsageSummary = null;
+      projectUsageSummary = summarizeProjectRunHistory([]);
     } finally {
       projectRunHistoryLoading = false;
     }
@@ -1006,19 +1117,15 @@
     if (!workspace) return;
     // Optimistic removal for instant feedback.
     projectRunHistory = projectRunHistory.filter((item) => item.runPath !== runPath);
+    projectUsageSummary = summarizeProjectRunHistory(projectRunHistory);
     try {
       await deleteRun(workspace.rootPath, runPath);
-      // Refresh usage summary since a run was removed.
-      projectUsageSummary = await getProjectUsageSummary(workspace.rootPath);
     } catch (error) {
       // On failure, refetch the full history to restore consistent state.
       errorMessage = error instanceof Error ? error.message : 'Failed to delete run artifact.';
-      const [history, usage] = await Promise.all([
-        listProjectRunHistory(workspace.rootPath),
-        getProjectUsageSummary(workspace.rootPath)
-      ]);
+      const history = await listProjectRunHistory(workspace.rootPath);
       projectRunHistory = history;
-      projectUsageSummary = usage;
+      projectUsageSummary = summarizeProjectRunHistory(history);
     }
   }
 
@@ -1165,7 +1272,7 @@
         <p class="feedback-meta">Target: {feedback.result.targetPath}</p>
         {#if feedback.result.warnings.length > 0}
           <ul class="feedback-list">
-            {#each feedback.result.warnings as warning}
+            {#each feedback.result.warnings as warning (warning)}
               <li>{warning}</li>
             {/each}
           </ul>

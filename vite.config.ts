@@ -13,7 +13,24 @@ export default defineConfig({
   },
   server: {
     port: 1420,
-    strictPort: true
+    strictPort: true,
+    watch: {
+      ignored: [
+        '**/Sample Projects/**',
+        '**/fixtures/**/documents/**',
+        '**/fixtures/**/runs/**',
+        '**/fixtures/**/exports/**',
+        '**/documents/**',
+        '**/runs/**',
+        '**/exports/**',
+        '**/help/**',
+        '**/variables/**',
+        '**/pipelines/**',
+        '**/models/**',
+        '**/prompts/**',
+        '**/project.json'
+      ]
+    }
   },
   test: {
     environment: 'jsdom',

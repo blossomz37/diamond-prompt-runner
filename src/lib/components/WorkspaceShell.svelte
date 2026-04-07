@@ -22,6 +22,7 @@
   import SidebarSettings from '$lib/components/SidebarSettings.svelte';
   import SidebarGlobalVariables from '$lib/components/SidebarGlobalVariables.svelte';
   import SidebarWorkspaceVariables from '$lib/components/SidebarWorkspaceVariables.svelte';
+  import { pipelineActivityStore } from '$lib/stores/pipelineActivity.svelte';
   import type {
     ExportBundleResult,
     ExecutionCredentialStatus,
@@ -41,7 +42,7 @@
     PipelineProgressEvent
   } from '$lib/types/project';
 
-  interface Props {
+  export interface Props {
     summary: ProjectSummary;
     nodes: ProjectAssetNode[];
     tabs: WorkspaceTab[];
@@ -205,6 +206,21 @@
     return 'Use the Pipelines section to run a workflow.';
   });
 
+  const visiblePipelineActivity = $derived(pipelineActivityStore.items.slice(0, 3));
+
+  const pipelineStatusSegments = $derived.by(() => {
+    const segments: string[] = [pipelineStatusLabel, pipelineStatusDetail];
+
+    for (const item of visiblePipelineActivity) {
+      segments.push(item.message);
+      if (item.detail) {
+        segments.push(item.detail);
+      }
+    }
+
+    return segments.filter((segment) => segment.trim().length > 0);
+  });
+
   // Sidebar section collapse states (workflow order)
   let modelsOpen = $state(false);
   let globalVarsOpen = $state(false);
@@ -310,19 +326,30 @@
       </div>
     </div>
     <div class="status-strip">
-      <div class="pipeline-status" class:failed={pipelineExecution?.status === 'failed'} class:running={activePipelineProgress !== null}>
-        <p class="eyebrow">Pipeline Status</p>
-        <strong>{pipelineStatusLabel}</strong>
-        <span>{pipelineStatusDetail}</span>
+      <div class="status-cluster">
+        <div class="pipeline-status-inline" class:failed={pipelineExecution?.status === 'failed'} class:running={activePipelineProgress !== null} aria-live="polite">
+          {#if pipelineLoading}
+            <span class="inline-spinner" aria-label="Pipeline running"></span>
+          {/if}
+          <span class="pipeline-inline-label">Pipeline Status</span>
+          <div class="pipeline-inline-track">
+            {#each pipelineStatusSegments as segment, index (`${index}-${segment}`)}
+              {#if index > 0}
+                <span class="pipeline-inline-separator" aria-hidden="true">|</span>
+              {/if}
+              <span class="pipeline-inline-segment">{segment}</span>
+            {/each}
+          </div>
+        </div>
+        <button
+          type="button"
+          class="pane-toggle"
+          onclick={() => (inspectorOpen = !inspectorOpen)}
+          aria-label={inspectorOpen ? 'Collapse inspector' : 'Expand inspector'}
+        >
+          Inspector {inspectorOpen ? '▾' : '▸'}
+        </button>
       </div>
-      <button
-        type="button"
-        class="pane-toggle"
-        onclick={() => (inspectorOpen = !inspectorOpen)}
-        aria-label={inspectorOpen ? 'Collapse inspector' : 'Expand inspector'}
-      >
-        Inspector {inspectorOpen ? '▾' : '▸'}
-      </button>
     </div>
   </header>
 
@@ -713,37 +740,88 @@
 
   .status-strip {
     display: flex;
-    gap: 0.8rem;
-    align-items: center;
+    justify-content: flex-end;
+    align-items: flex-start;
+    min-width: min(42rem, 58vw);
   }
 
-  .pipeline-status {
+  .status-cluster {
     display: grid;
-    gap: 0.1rem;
-    min-width: min(28rem, 48vw);
-    padding: 0.55rem 0.8rem;
-    border-radius: 16px;
+    justify-items: end;
+    gap: 0.45rem;
+    min-width: min(44rem, 58vw);
+  }
+
+  .pipeline-status-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: min(52rem, 58vw);
+    min-height: 2.4rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
     background: var(--bg-ghost);
     border: 1px solid var(--border-faint);
     color: var(--text-dim);
+    overflow: hidden;
   }
 
-  .pipeline-status strong {
-    color: var(--text);
-    font-size: 0.92rem;
+  .pipeline-inline-label {
+    flex: 0 0 auto;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
   }
 
-  .pipeline-status span {
-    color: var(--text-soft);
+  .pipeline-inline-track {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+
+  .pipeline-inline-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pipeline-inline-segment {
+    flex: 0 0 auto;
     font-size: 0.8rem;
+    color: var(--text-soft);
   }
 
-  .pipeline-status.running {
+  .pipeline-inline-segment:first-of-type {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .pipeline-inline-separator {
+    flex: 0 0 auto;
+    color: rgba(157, 180, 255, 0.38);
+  }
+
+  .inline-spinner {
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 999px;
+    border: 2px solid rgba(157, 180, 255, 0.2);
+    border-top-color: rgba(157, 180, 255, 0.9);
+    animation: shell-spin 0.85s linear infinite;
+    flex-shrink: 0;
+  }
+
+  .pipeline-status-inline.running {
     border-color: rgba(139, 177, 255, 0.34);
     background: rgba(132, 173, 255, 0.1);
   }
 
-  .pipeline-status.failed {
+  .pipeline-status-inline.failed {
     border-color: rgba(255, 141, 161, 0.2);
     background: rgba(255, 141, 161, 0.08);
   }
@@ -923,12 +1001,23 @@
 
     .status-strip {
       width: 100%;
-      justify-content: space-between;
+      min-width: 0;
     }
 
-    .pipeline-status {
+    .status-cluster,
+    .pipeline-status-inline {
+      width: 100%;
       min-width: 0;
-      flex: 1;
+    }
+
+    .status-cluster {
+      justify-items: stretch;
+    }
+  }
+
+  @keyframes shell-spin {
+    to {
+      transform: rotate(360deg);
     }
   }
 </style>

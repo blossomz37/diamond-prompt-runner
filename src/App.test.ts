@@ -15,6 +15,7 @@ import type {
   CreatedPromptBlockResult,
   ExecutionCredentialStatus,
   ExportBundleResult,
+  PipelineProgressEvent,
   PipelineExecutionResult,
   ProjectAssetNode,
   ProjectPipeline,
@@ -27,6 +28,8 @@ import type {
   SavedPipelineResult,
   TemplateValidationResult
 } from '$lib/types/project';
+
+let pipelineProgressHandler: ((event: PipelineProgressEvent) => void) | null = null;
 
 const tauri = vi.hoisted(() => ({
   auditProjectAsset: vi.fn(),
@@ -569,6 +572,7 @@ async function expandSidebarSection(sectionName: string): Promise<void> {
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pipelineProgressHandler = null;
     tauri.getRecentProjects.mockResolvedValue(recents);
     tauri.exportProjectAssets.mockResolvedValue(exportBundleResult);
     tauri.getExecutionCredentialStatus.mockResolvedValue(missingCredentialStatus);
@@ -591,7 +595,10 @@ describe('App', () => {
     tauri.trashPrompt.mockResolvedValue(summary);
     tauri.locateRecentProject.mockResolvedValue(summary);
     tauri.openProject.mockResolvedValue(summary);
-    tauri.onPipelineProgress.mockResolvedValue(() => {});
+    tauri.onPipelineProgress.mockImplementation(async (callback: (event: PipelineProgressEvent) => void) => {
+      pipelineProgressHandler = callback;
+      return () => {};
+    });
     tauri.removeRecentProject.mockResolvedValue(undefined);
     tauri.executePipeline.mockResolvedValue(pipelineExecutionResult);
     tauri.auditProjectAsset.mockResolvedValue(conversionAuditResult);
@@ -886,6 +893,48 @@ describe('App', () => {
     expect(screen.getByText('1 / 1 blocks completed')).toBeInTheDocument();
     expect(screen.getByText('Last pipeline succeeded')).toBeInTheDocument();
     expect(screen.getByText('Review Pipeline · 1 steps')).toBeInTheDocument();
+  });
+
+  it('shows live pipeline activity in the status strip while a pipeline is running', async () => {
+    let resolvePipeline!: (value: PipelineExecutionResult) => void;
+    tauri.executePipeline.mockImplementation(
+      () =>
+        new Promise<PipelineExecutionResult>((resolve) => {
+          resolvePipeline = resolve;
+        })
+    );
+
+    render(App);
+
+    await fireEvent.click(await screen.findByText('Open Existing Project'));
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Story Lab', level: 1 })).toBeInTheDocument()
+    );
+
+    await expandSidebarSection('Pipelines');
+    await fireEvent.click(screen.getByText('Review Pipeline'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Run Pipeline' }));
+
+    expect(await screen.findByText('Started Review Pipeline')).toBeInTheDocument();
+    expect(screen.getByText('1 blocks queued')).toBeInTheDocument();
+
+    pipelineProgressHandler?.({
+      pipelineId: 'review-pipeline',
+      totalBlocks: 1,
+      completedBlocks: 0,
+      currentBlockName: 'Brief Review',
+      status: 'running'
+    });
+
+    expect(await screen.findByText('Starting Brief Review')).toBeInTheDocument();
+    expect(screen.getByText('Running 0/1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Stop Pipeline' })).toBeInTheDocument();
+
+    resolvePipeline(pipelineExecutionResult);
+
+    await waitFor(() => expect(screen.getByText('Finished Review Pipeline')).toBeInTheDocument());
+    expect(screen.getByText('Completed Brief Review')).toBeInTheDocument();
   });
 
   it('creates a pipeline from the sidebar and center pane editor', async () => {

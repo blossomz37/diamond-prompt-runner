@@ -216,6 +216,15 @@ export interface PipelineProgressEvent {
   status: string;
 }
 
+export interface PipelineActivityItem {
+  id: string;
+  pipelineId: string | null;
+  level: 'info' | 'success' | 'error';
+  message: string;
+  detail: string | null;
+  timestamp: string;
+}
+
 export interface PipelineExecutionResult {
   pipelineId: string;
   pipelineName: string;

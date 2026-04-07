@@ -243,6 +243,12 @@
     return `${thisExecution.steps.length} / ${existingPipeline.blocks.length} blocks completed`;
   });
 
+  const isPipelineActive = $derived(
+    !!existingPipeline &&
+      !!activePipelineProgress &&
+      activePipelineProgress.pipelineId === existingPipeline.pipelineId
+  );
+
   function toggleSelectedBlock(blockId: string): void {
     if (selectedBlockIds.includes(blockId)) {
       selectedBlockIds = selectedBlockIds.filter((id) => id !== blockId);
@@ -339,7 +345,12 @@
                 onclick={() => { void handleContinue(); }}
                 disabled={loading || deleteLoading || editing || isBatchRunning || resumeSubsetConflict}
               >
-                Continue Pipeline
+                <span class="button-content">
+                  {#if isPipelineActive}
+                    <span class="button-spinner" aria-hidden="true"></span>
+                  {/if}
+                  <span>{isPipelineActive ? 'Continuing…' : 'Continue Pipeline'}</span>
+                </span>
               </button>
             {/if}
             <button
@@ -348,7 +359,18 @@
               onclick={() => { void handleRun(); }}
               disabled={loading || deleteLoading || editing || isBatchRunning || subsetRunDisabled}
             >
-              {runMode === 'selected' ? 'Run Selected' : 'Run Pipeline'}
+              <span class="button-content">
+                {#if isPipelineActive}
+                  <span class="button-spinner" aria-hidden="true"></span>
+                {/if}
+                <span>
+                  {#if isPipelineActive}
+                    {runMode === 'selected' ? 'Running Selection…' : 'Running Pipeline…'}
+                  {:else}
+                    {runMode === 'selected' ? 'Run Selected' : 'Run Pipeline'}
+                  {/if}
+                </span>
+              </span>
             </button>
           {/if}
         </div>
@@ -521,7 +543,12 @@
             class="action-btn run batch-run-btn"
             disabled={isBatchRunning || pipelineLoading || subsetRunDisabled}
           >
-            {isBatchRunning ? 'Running Batch…' : 'Start Batch Run'}
+            <span class="button-content">
+              {#if isBatchRunning}
+                <span class="button-spinner" aria-hidden="true"></span>
+              {/if}
+              <span>{isBatchRunning ? 'Running Batch…' : 'Start Batch Run'}</span>
+            </span>
           </button>
         </form>
       </div>
@@ -693,6 +720,22 @@
     align-self: flex-start;
   }
 
+  .button-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .button-spinner {
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.22);
+    border-top-color: currentColor;
+    animation: button-spin 0.75s linear infinite;
+    flex-shrink: 0;
+  }
+
   .step-list {
     display: grid;
     gap: 0.35rem;
@@ -803,5 +846,9 @@
     0% { opacity: 0.5; }
     50% { opacity: 1; }
     100% { opacity: 0.5; }
+  }
+
+  @keyframes button-spin {
+    to { transform: rotate(360deg); }
   }
 </style>
