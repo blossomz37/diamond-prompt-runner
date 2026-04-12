@@ -81,6 +81,7 @@
   import '$lib/stores/theme.svelte'; // side-effect: applies saved theme on load
   import { check } from '@tauri-apps/plugin-updater';
   import { relaunch } from '@tauri-apps/plugin-process';
+  import { ask } from '@tauri-apps/plugin-dialog';
 
   let mode = $state<'browser' | 'workspace'>('browser');
   let recentProjects = $state<RecentProjectEntry[]>([]);
@@ -167,20 +168,32 @@
 
   async function handleInstallUpdate(): Promise<void> {
     if (updateInstalling) return;
-    updateInstalling = true;
-    updateNotice = { tone: 'info', text: 'Downloading update…' };
     try {
       const update = await check();
-      if (update) {
-        await update.downloadAndInstall();
-        updateNotice = { tone: 'info', text: 'Update installed. Relaunching…' };
-        await relaunch();
-      } else {
+      if (!update) {
         updateAvailable = false;
         updateVersion = null;
         updateNotice = { tone: 'info', text: 'You are on the latest version.' };
-        updateInstalling = false;
+        return;
       }
+      const confirmed = await ask(
+        `Diamond Prompt Runner v${update.version} is ready to install. The app will restart after the update finishes. Install now?`,
+        {
+          title: 'Update available',
+          kind: 'info',
+          okLabel: 'Update now',
+          cancelLabel: 'Later'
+        }
+      );
+      if (!confirmed) {
+        updateNotice = { tone: 'info', text: `Update v${update.version} deferred. Click the arrow when you're ready.` };
+        return;
+      }
+      updateInstalling = true;
+      updateNotice = { tone: 'info', text: 'Downloading update…' };
+      await update.downloadAndInstall();
+      updateNotice = { tone: 'info', text: 'Update installed. Relaunching…' };
+      await relaunch();
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       updateNotice = { tone: 'error', text: `Update failed: ${detail}` };
