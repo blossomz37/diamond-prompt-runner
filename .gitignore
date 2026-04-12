@@ -46,3 +46,5 @@ test-output/
 image.png
 release-procedure.md
 notebooks/
+.continue/
+00-diamond-user-obsidian

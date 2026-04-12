@@ -28,6 +28,7 @@
     updateVersion: string | null;
     updateInstalling: boolean;
     updateChecking: boolean;
+    updateNotice: { tone: 'info' | 'error'; text: string } | null;
     onInstallUpdate: () => void | Promise<void>;
     onCheckForUpdate: () => void | Promise<void>;
   }
@@ -56,6 +57,7 @@
     updateVersion,
     updateInstalling,
     updateChecking,
+    updateNotice,
     onInstallUpdate,
     onCheckForUpdate
   }: Props = $props();
@@ -134,6 +136,9 @@
         </button>
       </div>
     </div>
+    {#if updateNotice}
+      <p class="update-notice" class:error={updateNotice.tone === 'error'}>{updateNotice.text}</p>
+    {/if}
     <div class="global-credentials">
       <div class="heading">
         <p class="meta">Global Credentials</p>
@@ -346,6 +351,22 @@
 
   .hero-util-btn.update-available {
     color: var(--accent);
+  }
+
+  .update-notice {
+    margin: 0.55rem 0 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    background: var(--panel-inset, rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 0.82rem;
+  }
+
+  .update-notice.error {
+    color: var(--danger, #d86a6a);
+    border-color: var(--danger, #d86a6a);
+    background: rgba(216, 106, 106, 0.08);
   }
 
   .hero h1,

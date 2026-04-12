@@ -99,6 +99,18 @@ build. Go make coffee. The second run will be fast.
 
 **Gatekeeper warning on macOS** — only applies to the installed app,
 not the dev build. You won't see it when running via `npm run tauri:dev`.
+If you install the DMG and macOS Sequoia (15+) blocks it with
+"Apple could not verify…", the right-click → Open trick no longer works.
+Use one of these instead, once per install:
+
+```bash
+sudo xattr -rd com.apple.quarantine "/Applications/Diamond Prompt Runner.app"
+```
+
+Or open **System Settings → Privacy & Security**, scroll to the
+security section, and click **Open Anyway** next to the Diamond Prompt
+Runner entry. The app runs normally after that — the warning is
+because macOS notarization isn't wired up yet.
 
 ## Updating to newer code
 

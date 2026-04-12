@@ -140,17 +140,26 @@
   let updateVersion = $state<string | null>(null);
   let updateInstalling = $state(false);
   let updateChecking = $state(false);
+  let updateNotice = $state<{ tone: 'info' | 'error'; text: string } | null>(null);
 
   async function checkForUpdate(): Promise<void> {
     updateChecking = true;
+    updateNotice = null;
     try {
       const update = await check();
       if (update) {
         updateAvailable = true;
         updateVersion = update.version;
+        updateNotice = { tone: 'info', text: `Update available: v${update.version}. Click the download arrow to install.` };
+      } else {
+        updateAvailable = false;
+        updateVersion = null;
+        updateNotice = { tone: 'info', text: 'You are on the latest version.' };
       }
-    } catch {
-      // Silently ignore update check failures (offline, private repo, etc.)
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      updateNotice = { tone: 'error', text: `Update check failed: ${detail}` };
+      console.error('[updater] check failed', err);
     } finally {
       updateChecking = false;
     }
@@ -159,14 +168,23 @@
   async function handleInstallUpdate(): Promise<void> {
     if (updateInstalling) return;
     updateInstalling = true;
+    updateNotice = { tone: 'info', text: 'Downloading update…' };
     try {
       const update = await check();
       if (update) {
         await update.downloadAndInstall();
+        updateNotice = { tone: 'info', text: 'Update installed. Relaunching…' };
         await relaunch();
+      } else {
+        updateAvailable = false;
+        updateVersion = null;
+        updateNotice = { tone: 'info', text: 'You are on the latest version.' };
+        updateInstalling = false;
       }
     } catch (err) {
-      errorMessage = `Update failed: ${err instanceof Error ? err.message : String(err)}`;
+      const detail = err instanceof Error ? err.message : String(err);
+      updateNotice = { tone: 'error', text: `Update failed: ${detail}` };
+      console.error('[updater] install failed', err);
       updateInstalling = false;
     }
   }
@@ -1292,6 +1310,7 @@
     {updateVersion}
     {updateInstalling}
     {updateChecking}
+    {updateNotice}
     onInstallUpdate={handleInstallUpdate}
     onCheckForUpdate={checkForUpdate}
   />

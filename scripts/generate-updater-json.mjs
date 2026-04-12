@@ -23,9 +23,11 @@ const tauriConf = JSON.parse(
 const version = tauriConf.version;
 const productName = tauriConf.productName; // "Diamond Prompt Runner"
 
-// GitHub asset filenames use dots instead of spaces
+// GitHub asset filenames use dots instead of spaces; the GitHub Actions
+// release workflow builds a universal binary, which tauri-action names
+// `<ProductName>_universal.app.tar.gz`.
 const dotName = productName.replace(/ /g, ".");
-const tarball = `${dotName}.app.tar.gz`;
+const tarball = `${dotName}_universal.app.tar.gz`;
 const sigFile = `${productName}.app.tar.gz.sig`;
 
 const sigPath = join(MACOS_DIR, sigFile);
