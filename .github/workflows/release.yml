@@ -1,29 +1,26 @@
 name: Release
 
-# Trigger on version tags (e.g. v0.2.0).
-# The repo stays private; the release is a draft until you manually publish it.
-# To cut a release:
-#   1. Ensure bundle prerequisites are met (see ## Release Prerequisites below).
-#   2. Bump version in package.json and src-tauri/Cargo.toml and src-tauri/tauri.conf.json.
-#   3. Commit, then: git tag v0.x.0 && git push origin v0.x.0
-#   4. This workflow runs and creates a draft release with platform installers.
-#   5. Review artifacts, then manually publish the release on GitHub.
+# Automated release pipeline.
+# Trigger by pushing a version tag (e.g. v0.1.0). The workflow:
+#   1. Builds a signed universal-macOS .app.tar.gz + .sig
+#   2. Generates latest.json (handled by tauri-action when
+#      bundle.createUpdaterArtifacts is true in tauri.conf.json)
+#   3. Creates a DRAFT GitHub Release with all three assets attached
 #
-# ## Release Prerequisites (one-time setup)
+# After the run finishes, review the draft release in the GitHub UI and
+# click Publish. The updater endpoint resolves to the latest *published*
+# release, so a draft will not be picked up by installed clients until
+# you publish it. See release-procedure.md for the full flow.
 #
-# Icons:
-#   Run `npm run tauri icon path/to/source-icon.png` to generate the icon set,
-#   then commit the generated files under src-tauri/icons/ and update
-#   the "icon" array in tauri.conf.json. Builds will warn but proceed without icons.
+# Required repository secrets:
+#   TAURI_SIGNING_PRIVATE_KEY            contents of ~/.tauri/diamond-runner.key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD   the key's password (currently: diamond)
 #
-# Code signing (optional for dev-only releases):
-#   Set these repository secrets to sign installers:
-#   - TAURI_SIGNING_PRIVATE_KEY     (base64-encoded private key)
-#   - TAURI_SIGNING_PRIVATE_KEY_PASSWORD
-#   Generate with: npm run tauri signer generate -- -w ~/.tauri/myapp.key
-#   macOS notarization and Windows Authenticode signing are separate; skip for dev.
+# GITHUB_TOKEN is provided automatically by Actions.
 #
-# GITHUB_TOKEN is automatically provided by Actions — no setup needed.
+# Linux and Windows are intentionally excluded — the manual procedure
+# only validates macOS, and adding other targets requires platform-specific
+# signing/notarization setup that does not exist yet.
 
 on:
   push:
@@ -32,20 +29,9 @@ on:
 
 jobs:
   release:
+    runs-on: macos-latest
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos-latest
-            args: '--target universal-apple-darwin'
-          - platform: ubuntu-22.04
-            args: ''
-          - platform: windows-latest
-            args: ''
-
-    runs-on: ${{ matrix.platform }}
 
     steps:
       - uses: actions/checkout@v4
@@ -56,34 +42,20 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install Rust stable
+      - name: Install Rust stable (universal targets)
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Cache Rust build
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
 
-      - name: Install Linux system dependencies
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
-
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build and release
+      - name: Build, sign, and create draft release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -94,6 +66,10 @@ jobs:
           releaseName: 'Diamond Prompt Runner ${{ github.ref_name }}'
           releaseBody: |
             Developer release — see commit history for changes.
+
+            After verifying the attached `.app.tar.gz`, `.sig`, and
+            `latest.json` assets, click **Publish release** to make this
+            visible to in-app update checks.
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}
+          args: '--target universal-apple-darwin'
