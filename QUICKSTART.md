@@ -7,8 +7,10 @@ evaluating it before installing.
 
 **Not trying to contribute code?** Most users should just download the
 installer from the
-[latest release](https://github.com/blossomz37/diamond-prompt-runner/releases/latest)
-instead — it's faster and you don't need any toolchain setup.
+[latest release](https://github.com/blossomz37/diamond-prompt-runner/releases/latest).It's faster and you don't need any toolchain setup. On the
+release page, download the `.dmg` file from the **Assets** section.
+The two "Source code" entries are repository snapshots that GitHub
+attaches automatically to every release and are not what you want.
 
 **Planning to contribute?** Read [CONTRIBUTING.md](CONTRIBUTING.md)
 instead. It covers platform-specific build dependencies and
