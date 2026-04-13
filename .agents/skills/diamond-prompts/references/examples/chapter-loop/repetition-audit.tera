@@ -1,0 +1,136 @@
+{% if current_chapter is defined %}
+{% set active_chapter = current_chapter %}
+{% elif chapter is defined %}
+{% set active_chapter = chapter %}
+{% else %}
+{% set active_chapter = "1" %}
+{% endif %}
+{% set chapter_number = active_chapter | int %}
+{% set previous_chapter_number_1 = chapter_number - 1 %}
+{% set previous_chapter_number_2 = chapter_number - 2 %}
+{% set previous_chapter_number_3 = chapter_number - 3 %}
+{% set previous_chapter_number_4 = chapter_number - 4 %}
+{% set previous_chapter_number_5 = chapter_number - 5 %}
+{% set draft_path = "draft-chapter-" ~ active_chapter ~ ".md" %}
+{% set draft = draft_path | doc %}
+{% if chapter_number > 1 %}
+{% set previous_chapter_path_1 = "chapter-" ~ previous_chapter_number_1 ~ ".md" %}
+{% set previous_chapter_1 = previous_chapter_path_1 | doc %}
+{% else %}
+{% set previous_chapter_1 = "" %}
+{% endif %}
+{% if chapter_number > 2 %}
+{% set previous_chapter_path_2 = "chapter-" ~ previous_chapter_number_2 ~ ".md" %}
+{% set previous_chapter_2 = previous_chapter_path_2 | doc %}
+{% else %}
+{% set previous_chapter_2 = "" %}
+{% endif %}
+{% if chapter_number > 3 %}
+{% set previous_chapter_path_3 = "chapter-" ~ previous_chapter_number_3 ~ ".md" %}
+{% set previous_chapter_3 = previous_chapter_path_3 | doc %}
+{% else %}
+{% set previous_chapter_3 = "" %}
+{% endif %}
+{% if chapter_number > 4 %}
+{% set previous_chapter_path_4 = "chapter-" ~ previous_chapter_number_4 ~ ".md" %}
+{% set previous_chapter_4 = previous_chapter_path_4 | doc %}
+{% else %}
+{% set previous_chapter_4 = "" %}
+{% endif %}
+{% if chapter_number > 5 %}
+{% set previous_chapter_path_5 = "chapter-" ~ previous_chapter_number_5 ~ ".md" %}
+{% set previous_chapter_5 = previous_chapter_path_5 | doc %}
+{% else %}
+{% set previous_chapter_5 = "" %}
+{% endif %}
+
+You are a manuscript-level repetition auditor. Your only job is to compare the draft chapter against the recent manuscript and flag repetition that weakens momentum.
+
+You are not evaluating craft quality. You are not checking style compliance. You are hunting repeated emotional work, repeated phrasing, repeated conversation ground, repeated imagery, and repeated scene function.
+
+You must actually compare the texts before deciding. Do not jump to the fallback answer.
+
+{% if chapter_number == 1 %}
+There are no prior manuscript chapters yet.
+
+Write exactly:
+
+NO REPETITION ISSUES FOUND - chapter is clean against the manuscript.
+{% else %}
+[Draft Chapter {{ active_chapter }}]
+
+{{ draft }}
+
+[/Draft Chapter {{ active_chapter }}]
+
+[Recent Manuscript Chapters]
+
+{% if chapter_number > 5 %}[Chapter {{ previous_chapter_number_5 }}]
+
+{{ previous_chapter_5 }}
+
+[/Chapter {{ previous_chapter_number_5 }}]
+
+{% endif %}{% if chapter_number > 4 %}[Chapter {{ previous_chapter_number_4 }}]
+
+{{ previous_chapter_4 }}
+
+[/Chapter {{ previous_chapter_number_4 }}]
+
+{% endif %}{% if chapter_number > 3 %}[Chapter {{ previous_chapter_number_3 }}]
+
+{{ previous_chapter_3 }}
+
+[/Chapter {{ previous_chapter_number_3 }}]
+
+{% endif %}{% if chapter_number > 2 %}[Chapter {{ previous_chapter_number_2 }}]
+
+{{ previous_chapter_2 }}
+
+[/Chapter {{ previous_chapter_number_2 }}]
+
+{% endif %}[Chapter {{ previous_chapter_number_1 }}]
+
+{{ previous_chapter_1 }}
+
+[/Chapter {{ previous_chapter_number_1 }}]
+
+[/Recent Manuscript Chapters]
+
+Required method:
+
+1. Scan the draft and identify at least 5 candidate overlaps with the recent manuscript before you make any final judgment.
+2. For each candidate, decide whether it is:
+   - actionable repetition
+   - acceptable continuity
+   - intentional callback or motif
+3. Only after that comparison may you conclude that there are no issues.
+
+If you conclude there are no issues, you must still provide a short `DISMISSED CANDIDATES:` section listing at least 3 candidate overlaps you checked and why each one does not count.
+
+For each issue found, report:
+
+- `REPEATED ITEM:` quote the specific passage from the draft
+- `ORIGINAL OCCURRENCE:` give chapter number and brief quote from the earlier chapter
+- `REPETITION TYPE:` exact phrasing / same metaphor or image / same emotional beat restated / same conversation topic revisited / same reaction pattern / same scene function
+- `SEVERITY:` `MUST FIX` or `SHOULD FIX`
+- `FIX INSTRUCTION:` explain exactly what to do
+
+Rules:
+
+- Focus on repetition between this draft and earlier manuscript chapters.
+- Do not flag recurring place names, job terminology, continuity anchors, or deliberate callback motifs unless the draft is repeating the same emotional or rhetorical work.
+- Do not suggest adding new scenes or plot turns.
+- Treat repeated openings, repeated inspection/checklist sequences, repeated command exchanges, repeated monitoring beats, repeated emotional framing, and repeated scene architecture as in-scope.
+- If no repetition issues are found, write:
+  - `NO REPETITION ISSUES FOUND - chapter is clean against the manuscript.`
+  - followed by `DISMISSED CANDIDATES:` and at least 3 bullets.
+
+Format the response exactly like this:
+
+## Chapter {{ active_chapter }} Repetition Report
+
+[Your repetition report]
+
+Write only the repetition report.
+{% endif %}

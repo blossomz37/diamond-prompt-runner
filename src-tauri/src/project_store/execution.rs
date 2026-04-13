@@ -1038,10 +1038,10 @@ mod tests {
     #[test]
     fn last_numbered_marker_returns_last_matching_suffix() {
         let mut args = HashMap::new();
-        args.insert("prefix".to_string(), json!("### chapter_"));
+        args.insert("prefix".to_string(), json!("### count_"));
 
         let result = last_numbered_marker_filter(
-            &json!("### chapter_1\nbody\n### chapter_12\nmore\n### chapter_28\nend"),
+            &json!("### count_1\nbody\n### count_12\nmore\n### count_28\nend"),
             &args,
         )
         .expect("last_numbered_marker should succeed");
@@ -1052,15 +1052,15 @@ mod tests {
     #[test]
     fn last_numbered_marker_warns_when_prefix_missing() {
         let mut args = HashMap::new();
-        args.insert("prefix".to_string(), json!("### chapter_"));
+        args.insert("prefix".to_string(), json!("### count_"));
 
-        let result = last_numbered_marker_filter(&json!("no chapter markers here"), &args)
+        let result = last_numbered_marker_filter(&json!("no count markers here"), &args)
             .expect("last_numbered_marker should succeed");
 
         assert_eq!(
             result,
             Value::String(
-                "[last_numbered_marker warning: prefix '### chapter_' not found]".to_string()
+                "[last_numbered_marker warning: prefix '### count_' not found]".to_string()
             )
         );
     }

@@ -1,7 +1,12 @@
 /**
- * Script: test-headless.mjs
- * Purpose: Executes a single headless pipeline run via the compiled Diamond Runner CLI binary.
- * Last modified: 2026-04-12
+ * Illustrative helper template for Diamond Prompt Runner workflows.
+ *
+ * Do not assume this should be run unchanged on another machine or repo.
+ * Map the binary path, project path, pipeline id, payload, and credential
+ * loading behavior to the user's actual setup first.
+ *
+ * Purpose:
+ * Execute a single headless pipeline run via the Diamond Runner CLI binary.
  */
 import { spawn } from 'child_process';
 import fs from 'fs';
@@ -26,22 +31,20 @@ function loadDotEnv() {
     const key = trimmed.slice(0, separatorIndex).trim();
     const value = trimmed.slice(separatorIndex + 1).trim();
     if (!key || process.env[key]) continue;
-
     process.env[key] = value;
   }
 }
 
 loadDotEnv();
 
-const projectPath = process.argv[2] || "Sample Projects/Neon & Nightmares";
-const pipelineId = process.argv[3] || "batch-production";
-const payload = process.argv[4] || JSON.stringify({ chapter: "3" });
+const binaryPath = process.argv[2] || './src-tauri/target/debug/diamond-runner';
+const projectPath = process.argv[3] || 'path/to/project';
+const pipelineId = process.argv[4] || 'pipeline-id';
+const payload = process.argv[5] || JSON.stringify({ count: '01' });
 
-console.log(`Starting headless test for pipeline '${pipelineId}' in '${projectPath}'...`);
+console.log(`Starting illustrative headless test for pipeline '${pipelineId}' in '${projectPath}'...`);
 
-const child = spawn('./src-tauri/target/debug/diamond-runner', [
-  'cli', 'run-pipeline', projectPath, pipelineId, payload
-], {
+const child = spawn(binaryPath, ['cli', 'run-pipeline', projectPath, pipelineId, payload], {
   stdio: 'pipe'
 });
 
@@ -55,7 +58,7 @@ child.stderr.on('data', (data) => {
 
 child.on('close', (code) => {
   if (code === 0) {
-    console.log(`\n\x1b[32mSuccess: Headless pipeline execution completed.\x1b[0m`);
+    console.log('\n\x1b[32mSuccess: Headless pipeline execution completed.\x1b[0m');
   } else {
     console.log(`\n\x1b[31mFailed: Headless pipeline execution exited with code ${code}.\x1b[0m`);
   }

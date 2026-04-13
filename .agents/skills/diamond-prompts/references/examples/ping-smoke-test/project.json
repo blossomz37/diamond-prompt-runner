@@ -1,0 +1,25 @@
+{
+  "projectId": "234f6bb4-b39b-4962-a7be-f3ee5e706adc",
+  "projectName": "sample-project-1",
+  "createdAt": "2026-04-13T02:18:03Z",
+  "updatedAt": "2026-04-13T02:33:59Z",
+  "defaultModelPreset": "models/default.yaml",
+  "variables": {
+    "ping_start": "1"
+  },
+  "promptBlocks": [
+    {
+      "blockId": "ping",
+      "name": "Ping",
+      "templateSource": "prompts/ping.tera",
+      "inputBindings": [],
+      "modelPreset": "models/gpt-5.4-nano.yaml",
+      "outputTarget": "append_document",
+      "outputFilename": "pingtest.md"
+    }
+  ],
+  "uiPreferences": {
+    "density": "dense",
+    "theme": "ide-pass"
+  }
+}

@@ -1,0 +1,93 @@
+{# Narrow drafting context built on the planning step and the boundary dossier. #}
+{% if current_chapter is defined %}
+{% set active_chapter = current_chapter %}
+{% elif chapter is defined %}
+{% set active_chapter = chapter %}
+{% else %}
+{% set active_chapter = "1" %}
+{% endif %}
+{% set chapter_number = active_chapter | int %}
+{% set is_first_chapter = chapter_number == 1 %}
+{% set dossier_path = "Story_Dossier_Worksheet.boundaries.md" %}
+{% set dossier = dossier_path | doc %}
+{% set chapter_start = "[chapter_" ~ active_chapter ~ "]" %}
+{% set chapter_end = "[/chapter_" ~ active_chapter ~ "]" %}
+{% set voice_rules = dossier | extract_section(start="[authorial_style_and_voice]", end="[/authorial_style_and_voice]") | trim %}
+{% set project_overview = dossier | extract_section(start="[project_overview]", end="[/project_overview]") | trim %}
+{% set chapter_outline = dossier | extract_section(start=chapter_start, end=chapter_end) | trim %}
+{% set plan_path = "plan-chapter-" ~ active_chapter ~ ".md" %}
+{% set plan = plan_path | doc %}
+{% if chapter_number <= 3 %}
+{% set rolling_chapter_start = 1 %}
+{% else %}
+{% set rolling_chapter_start = chapter_number - 2 %}
+{% endif %}
+
+You are writing Chapter {{ active_chapter }} of a commercial firefighter second-chance romance.
+
+You are writing final-feeling prose for a human author to refine, not an outline and not commentary.
+
+Rules:
+
+- Follow the chapter plan exactly.
+- Write only chapter prose. No notes, labels, commentary, or scene headers unless the plan explicitly requires them.
+- Stay in third-person limited, past tense, and the assigned POV.
+- Let emotion appear through action, sensation, dialogue choice, and environmental interaction.
+- Use firefighter terminology and the physical world of the station, calls, and gear as part of the prose texture.
+- Do not restate emotional beats already proven in prior chapters.
+- Every scene must shift leverage, trust, danger, intimacy, or information.
+- Do not add scenes, reorder scenes, or introduce off-plan twists.
+
+[Authorial Style and Voice]
+
+{{ voice_rules }}
+
+[/Authorial Style and Voice]
+
+[Project Overview]
+
+{{ project_overview }}
+
+[/Project Overview]
+
+[Current Chapter Outline]
+
+{{ chapter_outline }}
+
+[/Current Chapter Outline]
+
+{% if chapter_number > 3 %}[Earlier Chapter Summaries]
+
+{% for i in range(start=1, end=chapter_number - 2) %}
+{% set summary_path = "summary-chapter-" ~ i ~ ".md" %}
+[Summary Chapter {{ i }}]
+
+{{ summary_path | doc }}
+
+[/Summary Chapter {{ i }}]
+
+{% endfor %}[/Earlier Chapter Summaries]
+
+{% endif %}{% if not is_first_chapter %}[Recent Manuscript Chapters]
+
+{% for i in range(start=rolling_chapter_start, end=chapter_number) %}
+{% set chapter_path = "chapter-" ~ i ~ ".md" %}
+[Chapter {{ i }}]
+
+{{ chapter_path | doc }}
+
+[/Chapter {{ i }}]
+
+{% endfor %}[/Recent Manuscript Chapters]
+
+{% endif %}[Plan for Chapter {{ active_chapter }}]
+
+{{ plan }}
+
+[/Plan for Chapter {{ active_chapter }}]
+
+Format the response exactly like this:
+
+## Chapter {{ active_chapter }} Draft
+
+Write Chapter {{ active_chapter }} now. Only prose.

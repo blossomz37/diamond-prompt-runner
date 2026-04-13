@@ -1,0 +1,8 @@
+{
+  "pipelineId": "build-dossier-section",
+  "name": "Build Dossier Section",
+  "orderedBlocks": [
+    "build-dossier-section"
+  ],
+  "executionMode": "sequential"
+}

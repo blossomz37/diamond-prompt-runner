@@ -1,0 +1,25 @@
+{% set active_count = count | default(value="01") %}
+{% set active_count_number = active_count | int %}
+{% if active_count_number <= 1 %}
+{% set current_prompt_option = prompt_options[0] %}
+{% elif active_count_number == 2 %}
+{% set current_prompt_option = prompt_options[1] %}
+{% elif active_count_number == 3 %}
+{% set current_prompt_option = prompt_options[2] %}
+{% elif active_count_number == 4 %}
+{% set current_prompt_option = prompt_options[3] %}
+{% elif active_count_number == 5 %}
+{% set current_prompt_option = prompt_options[4] %}
+{% else %}
+{% set current_prompt_option = prompt_options[0] %}
+{% endif %}
+
+You are writing a flash-fiction piece based on the prompt below in third person POV. Ensure that the flash fiction is 200 words or less that provides a moment for the readers to fall in love with the story and crave more.
+
+Selected prompt:
+{{ current_prompt_option }}
+
+Respond in the following format:
+
+Prompt: {{ current_prompt_option }}
+Flash Fiction: (Write the flash fiction here).

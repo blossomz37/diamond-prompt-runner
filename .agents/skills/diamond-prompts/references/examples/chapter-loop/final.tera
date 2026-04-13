@@ -1,0 +1,95 @@
+{% if current_chapter is defined %}
+{% set active_chapter = current_chapter %}
+{% elif chapter is defined %}
+{% set active_chapter = chapter %}
+{% else %}
+{% set active_chapter = "1" %}
+{% endif %}
+{% set chapter_number = active_chapter | int %}
+{% set draft_path = "draft-chapter-" ~ active_chapter ~ ".md" %}
+{% set repetition_audit_path = "repetition-report-" ~ active_chapter ~ ".md" %}
+{% set edit_style_path = "style-report-" ~ active_chapter ~ ".md" %}
+{% set edit_craft_path = "craft-report-" ~ active_chapter ~ ".md" %}
+{% set plan_path = "plan-chapter-" ~ active_chapter ~ ".md" %}
+{% set repetition_audit = repetition_audit_path | doc %}
+{% set edit_style = edit_style_path | doc %}
+{% set edit_craft = edit_craft_path | doc %}
+{% set plan = plan_path | doc %}
+{% if chapter_number <= 3 %}
+{% set rolling_draft_start = 1 %}
+{% else %}
+{% set rolling_draft_start = chapter_number - 2 %}
+{% endif %}
+
+You are writing the final draft of Chapter {{ active_chapter }}.
+
+You have the current draft chapter, the recent draft-window manuscript context, any earlier compressed summaries, and three editing reports. Your job is to incorporate all required fixes while preserving what already works.
+
+Rules:
+
+- `MUST FIX` items are mandatory.
+- `SHOULD FIX` items should be applied when they can be handled cleanly without destabilizing surrounding prose.
+- Do not change the scene order, scene structure, or plot events established by the chapter plan.
+- Do not add new scenes, characters, or plot turns.
+- Preserve continuity with the rolling manuscript window:
+  - Chapter 1 final sees Draft 1.
+  - Chapter 2 final sees Drafts 1 and 2.
+  - Chapter 3 final sees Drafts 1, 2, and 3.
+  - Chapter 4 onward sees summaries for chapters 1 through `chapter_number - 3`, and drafts for chapters `chapter_number - 2` through `chapter_number`.
+- Write only chapter prose. No commentary, notes, labels, or summaries of edits.
+
+[Edit Report: Repetition]
+
+{{ repetition_audit }}
+
+[/Edit Report: Repetition]
+
+[Edit Report: Style Compliance]
+
+{{ edit_style }}
+
+[/Edit Report: Style Compliance]
+
+[Edit Report: Craft Improvement]
+
+{{ edit_craft }}
+
+[/Edit Report: Craft Improvement]
+
+{% if chapter_number > 3 %}[Earlier Chapter Summaries]
+
+{% for i in range(start=1, end=chapter_number - 2) %}
+{% set summary_path = "summary-chapter-" ~ i ~ ".md" %}
+[Summary Chapter {{ i }}]
+
+{{ summary_path | doc }}
+
+[/Summary Chapter {{ i }}]
+
+{% endfor %}[/Earlier Chapter Summaries]
+
+{% endif %}[Rolling Draft Context]
+
+{% for i in range(start=rolling_draft_start, end=chapter_number + 1) %}
+{% set rolling_draft_path = "draft-chapter-" ~ i ~ ".md" %}
+[Draft Chapter {{ i }}]
+
+{{ rolling_draft_path | doc }}
+
+[/Draft Chapter {{ i }}]
+
+{% endfor %}[/Rolling Draft Context]
+
+[Plan for Chapter {{ active_chapter }}]
+
+{{ plan }}
+
+[/Plan for Chapter {{ active_chapter }}]
+
+Format the response exactly like this:
+
+## Chapter {{ active_chapter }}
+
+[Complete final chapter prose]
+
+Write only the complete final draft.

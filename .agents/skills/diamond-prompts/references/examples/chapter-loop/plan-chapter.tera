@@ -1,0 +1,216 @@
+{# Boundary-driven chapter planning context. #}
+{% if current_chapter is defined %}
+{% set active_chapter = current_chapter %}
+{% elif chapter is defined %}
+{% set active_chapter = chapter %}
+{% else %}
+{% set active_chapter = "1" %}
+{% endif %}
+{% set chapter_number = active_chapter | int %}
+{% set dossier_path = "Story_Dossier_Worksheet.boundaries.md" %}
+{% set dossier = dossier_path | doc %}
+{% set active_total_chapters = "40" %}
+{% set is_first_chapter = chapter_number == 1 %}
+{% set previous_chapter_number_1 = chapter_number - 1 %}
+{% set previous_chapter_number_2 = chapter_number - 2 %}
+{% set previous_chapter_number_3 = chapter_number - 3 %}
+{% set chapter_start = "[chapter_" ~ active_chapter ~ "]" %}
+{% set chapter_end = "[/chapter_" ~ active_chapter ~ "]" %}
+{% set voice_rules = dossier | extract_section(start="[authorial_style_and_voice]", end="[/authorial_style_and_voice]") | trim %}
+{% set project_overview = dossier | extract_section(start="[project_overview]", end="[/project_overview]") | trim %}
+{% set world_building = dossier | extract_section(start="[world_building]", end="[/world_building]") | trim %}
+{% set character_dossier = dossier | extract_section(start="[character_dossier]", end="[/character_dossier]") | trim %}
+{% set plot_structure = dossier | extract_section(start="[plot_and_structure_elements]", end="[/plot_and_structure_elements]") | trim %}
+{% set outline_overview = dossier | extract_section(start="[outline_overview]", end="[/outline_overview]") | trim %}
+{% set chapter_outline = dossier | extract_section(start=chapter_start, end=chapter_end) | trim %}
+{% if chapter_number <= 10 %}
+{% set active_act = "1" %}
+{% elif chapter_number <= 18 %}
+{% set active_act = "2" %}
+{% elif chapter_number <= 26 %}
+{% set active_act = "3" %}
+{% elif chapter_number <= 36 %}
+{% set active_act = "4" %}
+{% else %}
+{% set active_act = "5" %}
+{% endif %}
+{% set act_start = "[act_" ~ active_act ~ "]" %}
+{% set act_context = dossier | extract_section(start=act_start, end="[chapter_breakdown]") | trim %}
+{% if chapter_number > 1 %}
+{% set previous_summary_path_1 = "summary-chapter-" ~ previous_chapter_number_1 ~ ".md" %}
+{% set previous_summary_1 = previous_summary_path_1 | doc %}
+{% else %}
+{% set previous_summary_1 = "" %}
+{% endif %}
+{% if chapter_number > 2 %}
+{% set previous_summary_path_2 = "summary-chapter-" ~ previous_chapter_number_2 ~ ".md" %}
+{% set previous_summary_2 = previous_summary_path_2 | doc %}
+{% else %}
+{% set previous_summary_2 = "" %}
+{% endif %}
+{% if chapter_number > 3 %}
+{% set previous_summary_path_3 = "summary-chapter-" ~ previous_chapter_number_3 ~ ".md" %}
+{% set previous_summary_3 = previous_summary_path_3 | doc %}
+{% else %}
+{% set previous_summary_3 = "" %}
+{% endif %}
+
+You are the chapter architect for a commercially publishable romance novel. You are planning Chapter {{ active_chapter }} of {{ active_total_chapters }}.
+
+You are NOT drafting scenes in prose. You are building the chapter blueprint that the drafting step must follow.
+
+Rules:
+
+- The chapter outline is the authority for Chapter {{ active_chapter }}.
+- Make one decision per field and commit to it.
+- Preserve continuity with the existing manuscript.
+- Do not recap the novel. Pull forward only what this chapter actively needs.
+- Every scene must change what is possible afterward.
+- Do not suggest optional branches, alternate versions, or author notes.
+
+[Authorial Style and Voice]
+
+{{ voice_rules }}
+
+[/Authorial Style and Voice]
+
+[Project Overview]
+
+{{ project_overview }}
+
+[/Project Overview]
+
+[World Building]
+
+{{ world_building }}
+
+[/World Building]
+
+[Character Dossier]
+
+{{ character_dossier }}
+
+[/Character Dossier]
+
+[Plot and Structure Elements]
+
+{{ plot_structure }}
+
+[/Plot and Structure Elements]
+
+[Outline Overview]
+
+{{ outline_overview }}
+
+[/Outline Overview]
+
+[Current Act Context]
+
+{{ act_context }}
+
+[/Current Act Context]
+
+[Current Chapter Outline]
+
+{{ chapter_outline }}
+
+[/Current Chapter Outline]
+
+{% if not is_first_chapter %}[Recent Chapter Summaries]
+
+{% if chapter_number > 3 %}[Summary Chapter {{ previous_chapter_number_3 }}]
+
+{{ previous_summary_3 }}
+
+[/Summary Chapter {{ previous_chapter_number_3 }}]
+
+{% endif %}{% if chapter_number > 2 %}[Summary Chapter {{ previous_chapter_number_2 }}]
+
+{{ previous_summary_2 }}
+
+[/Summary Chapter {{ previous_chapter_number_2 }}]
+
+{% endif %}[Summary Chapter {{ previous_chapter_number_1 }}]
+
+{{ previous_summary_1 }}
+
+[/Summary Chapter {{ previous_chapter_number_1 }}]
+
+[/Recent Chapter Summaries]
+
+{% endif %}Before you write the plan, verify all of the following:
+
+- This chapter closes at least one emotional or tactical door.
+- This chapter raises cost, risk, exposure, or intimacy.
+- This chapter forces at least one changed behavior in the next chapter.
+- This chapter does not restate an emotional beat that earlier chapters have already proven.
+
+Produce all sections below.
+
+A) LOCKED TRUTHS
+
+- Canon state entering this chapter
+- Emotional state per major on-page character
+- Relationship state shifts that are still unstable
+- Known facts, secrets, and missing information
+- Logistics anchors: time, place, injuries, resources, who is present or absent
+
+B) OPEN LOOPS AND PROMISES
+
+- Unanswered questions driving reader momentum
+- Active threats, pressures, and obligations
+- Romance and mystery promises that still need payment
+
+C) ILLEGAL MOVES
+
+- Conversations that must not be repeated
+- Emotional questions already answered
+- Character behavior that would feel regressive or false
+- World, plot, or timeline violations
+- Empty scenes that could be cut without consequence
+
+D) CHAPTER PLAN
+
+- `chapter_number: {{ active_chapter }}`
+- `chapter_word_count_target`
+- `pov_character`
+- `primary_external_objective`
+- `primary_internal_objective`
+- `door_closed_this_chapter`
+- `risk_increased_this_chapter`
+
+For each scene, provide:
+
+- `scene_N_setting`
+- `scene_N_characters_present`
+- `scene_N_goal`
+- `scene_N_conflict_type`
+- `scene_N_opening_hook`
+- `scene_N_ordered_beats`
+- `scene_N_knowledge_delta`
+- `scene_N_emotional_delta`
+- `scene_N_closing_hook`
+
+E) CHAPTER MANDATE
+
+- 2 to 4 end-of-chapter truths written as `Before -> After`
+- Each line must make the next chapter necessary
+
+F) FORBIDDEN ACTIONS FOR DRAFTING
+
+- Specific scene moves, phrasings, emotional shortcuts, and continuity mistakes the drafting step must avoid
+- AI writing habits that would weaken this specific chapter
+
+G) CHAPTER GHOST DRAFT
+
+- The invisible pressure system for this chapter only
+- What each major character is hiding, misreading, wanting, refusing, or silently protecting
+- Charged objects, memories, promises, injuries, or power shifts that should shape the prose without being bluntly explained
+
+Format the response exactly like this:
+
+## Chapter {{ active_chapter }} Plan
+
+[Your finished chapter plan]
+
+Write only the chapter plan.

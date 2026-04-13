@@ -1,0 +1,2 @@
+{# ping.tera #}
+This is ping test {{ ping_start }}. Say "Ping {{ ping_start }}!"

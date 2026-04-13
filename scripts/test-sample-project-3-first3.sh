@@ -1,11 +1,10 @@
 #!/bin/bash
-# Script: test-batch-pipeline.sh
-# Purpose: Runs a pipeline in headless mode across a chapter range and stops on first failure.
+# Script: test-sample-project-3-first3.sh
+# Purpose: Runs sample-project-3 chapter loop for chapters 1 through 3.
 # Last modified: 2026-04-12
-# test-batch-pipeline.sh
 
 echo "============================================================"
-echo "DIAMOND RUNNER: Headless Batch Testing"
+echo "DIAMOND RUNNER: sample-project-3 first-three chapter test"
 echo "============================================================"
 
 cd "$(dirname "$0")/../src-tauri" || exit 1
@@ -20,14 +19,19 @@ if [ -f "../.env" ]; then
   set +a
 fi
 
-START_CH=${1:-1}
-END_CH=${2:-1}
+START_CHAPTER=${1:-1}
+END_CHAPTER=${2:-3}
+BIN=./target/debug/diamond-runner
 
-for (( i=START_CH; i<=END_CH; i++ ))
+if [ ! -x "$BIN" ]; then
+  cargo build >/dev/null || exit 1
+fi
+
+for (( i=START_CHAPTER; i<=END_CHAPTER; i++ ))
 do
   echo ">>> PRODUCING CHAPTER $i <<<"
-  cargo run -- cli run-pipeline "../Sample Projects/Neon & Nightmares" "batch-production" '{"chapter": "'$i'"}'
-  
+  "$BIN" cli run-pipeline "../docs/sample-projects/sample-project-3" "chapter-loop" "{\"chapter\": \"$i\"}"
+
   if [ $? -ne 0 ]; then
     echo "FAILED ON CHAPTER $i. Halting batch loop."
     exit 1
@@ -35,4 +39,4 @@ do
 done
 
 echo ""
-echo "[*] Headless Batch Run Complete!"
+echo "[*] Chapter loop run complete!"

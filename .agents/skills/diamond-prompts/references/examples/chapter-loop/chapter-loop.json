@@ -1,0 +1,14 @@
+{
+  "pipelineId": "chapter-loop",
+  "name": "Chapter Loop",
+  "orderedBlocks": [
+    "plan-chapter",
+    "draft-chapter",
+    "repetition-audit",
+    "edit-style",
+    "edit-craft",
+    "final",
+    "summary"
+  ],
+  "executionMode": "sequential"
+}

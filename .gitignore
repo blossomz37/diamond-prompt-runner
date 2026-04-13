@@ -50,3 +50,6 @@ image.png
 release-procedure.md
 notebooks/
 .continue/
+docs/sample-projects/sample-project-1/runs/
+docs/sample-projects/sample-project-2/runs/
+docs/sample-projects/sample-project-3/runs/

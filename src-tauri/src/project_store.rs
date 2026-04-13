@@ -2796,13 +2796,13 @@ mod tests {
         let root = PathBuf::from(&summary.root_path);
 
         let mut vars = BTreeMap::new();
-        vars.insert("chapter".to_string(), "12".to_string());
+        vars.insert("count".to_string(), "12".to_string());
         vars.insert("word_target".to_string(), "5000".to_string());
 
         set_project_variables(&root, vars).unwrap();
 
         let manifest = read_manifest(&root.join("project.json")).unwrap();
-        assert_eq!(manifest.variables["chapter"], Value::String("12".to_string()));
+        assert_eq!(manifest.variables["count"], Value::String("12".to_string()));
         assert_eq!(manifest.variables["word_target"], Value::String("5000".to_string()));
     }
     #[test]
@@ -2826,7 +2826,7 @@ mod tests {
         };
 
         let mut payload = BTreeMap::new();
-        payload.insert("chapter".to_string(), "2".to_string());
+        payload.insert("count".to_string(), "2".to_string());
 
         // Prove the batch-production pipeline successfully extracts logic and outputs the files
         let result = crate::project_store::execution::execute_pipeline_with_transport(
@@ -2853,5 +2853,56 @@ mod tests {
         // We can safely clean up the test generated files from the sample directory
         let _ = std::fs::remove_file(output_path);
         let _ = std::fs::remove_file(root.join("documents").join("forensic-trope-audit-output.md"));
+    }
+
+    #[test]
+    fn executes_sample_project_2_flash_fiction_batch() {
+        let root = std::path::PathBuf::from("../docs/sample-projects/sample-project-2");
+
+        let manifest = read_manifest(&root.join("project.json")).unwrap();
+
+        let temp_app_data = tempdir().unwrap();
+        let app_data = temp_app_data.path().join("app-data");
+        std::fs::create_dir_all(&app_data).unwrap();
+
+        let mut call_count = 0;
+        let mut transport = |_api_key: &str, _payload: Value| {
+            call_count += 1;
+            Ok(json!({
+                "choices": [{ "message": { "content": format!("Prompt: Test Prompt {}\nFlash Fiction: Simulated flash fiction output {}", call_count, call_count) } }],
+                "usage": { "prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15 }
+            }))
+        };
+
+        let mut payload = BTreeMap::new();
+        payload.insert("count".to_string(), "02".to_string());
+
+        let result = crate::project_store::execution::execute_pipeline_with_transport(
+            &root,
+            &manifest,
+            "flash-fiction-batch",
+            Some(payload),
+            "dummy_key",
+            &mut transport,
+            &app_data,
+            None,
+            None,
+            None,
+            None,
+        ).expect("flash-fiction-batch should execute cleanly in sample-project-2");
+
+        assert_eq!(result.steps.len(), 1);
+        assert_eq!(call_count, 1);
+
+        let output_path = root.join("documents").join("flash-fiction-02.md");
+        assert!(output_path.exists(), "The flash-fiction output file was not created.");
+
+        let output = std::fs::read_to_string(&output_path).unwrap();
+        assert!(output.contains("Flash Fiction: Simulated flash fiction output 1"));
+
+        let _ = std::fs::remove_file(output_path);
+        if let Some(run_path) = result.steps.first().map(|step| root.join(&step.run_path)) {
+            let _ = std::fs::remove_file(run_path);
+        }
     }
 }

@@ -1,0 +1,69 @@
+{% set active_section_key = section_key | default(value="section_1_required_data_layer") %}
+{% set active_total_chapters = total_chapters | default(value="20") %}
+{% set template_path = "story-dossier-worksheet-template.sections.md" %}
+{% set worksheet_template = template_path | doc %}
+{% set section_start = "[" ~ active_section_key ~ "]" %}
+{% set section_end = "[/" ~ active_section_key ~ "]" %}
+{% set target_section_shell = worksheet_template | extract_section(start=section_start, end=section_end) | trim %}
+
+You are completing exactly one section of a cascading story dossier for Diamond Prompt Runner.
+
+Your job is to fill only the target section and return it in parseable wrapped form so it can be appended to `story-dossier.md`.
+
+Rules:
+
+- Complete only the target section shown below.
+- Keep the heading `## {{ active_section_key }}` exactly.
+- Preserve the internal markdown structure of the section shell.
+- Preserve any existing bracket wrappers inside the section shell exactly as given.
+- Return the target section with all existing nested bracket wrappers preserved exactly.
+- Do not remove, rename, reorder, or flatten any inner wrappers such as subsection containers, chapter containers, or structure containers.
+- Fill bracketed fields and follow bracketed directions inside the target section, then remove those bracketed instructions from the final text.
+- Do not rewrite or recap prior sections.
+- Be decisive. Do not provide multiple options in the final output.
+- Respect the target chapter count.
+- Treat all named entities and explicit facts in the author seed and completed dossier as canon.
+- Do not rename characters, change surnames, change roles, change family relationships, or change the core setup unless the upstream canon explicitly says to do so.
+- If the target section text refers to `brain_dump` and this is not section 1, interpret that as the author seed information preserved below and in the completed dossier so far.
+- If the author seed and your inference conflict, the author seed wins.
+- If the completed dossier so far and your inference conflict, the completed dossier so far wins.
+- Preserve these anchor facts exactly unless upstream canon explicitly changes them:
+  - Klaus Schumann is the driver.
+  - Marianna "Anna" Pisano is Vittorio Pisano's niece.
+  - She first appears anonymously, then reappears as his assigned intern.
+  - The romance unfolds across three back-to-back race weekends.
+- Return only one wrapped section. No prefacing, no commentary, no code fences.
+
+[Author Seed: Braindump]
+
+{{ "braindump.md" | doc }}
+
+[/Author Seed: Braindump]
+
+{% if active_section_key != "section_1_required_data_layer" %}[Completed Story Dossier So Far]
+
+{{ "story-dossier.md" | doc }}
+
+[/Completed Story Dossier So Far]
+
+{% endif %}[Target Chapter Count]
+
+{{ active_total_chapters }}
+
+[/Target Chapter Count]
+
+[Target Section Shell]
+
+{{ target_section_shell }}
+
+[/Target Section Shell]
+
+Format the response exactly like this:
+
+[{{ active_section_key }}]
+## {{ active_section_key }}
+
+[Completed content for this section only, with every nested bracket wrapper from the section shell preserved exactly]
+[/{{ active_section_key }}]
+
+Write only the completed wrapped section.

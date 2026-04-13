@@ -1,0 +1,8 @@
+{
+  "pipelineId": "simple-ping-test",
+  "name": "Simple Ping Test",
+  "orderedBlocks": [
+    "ping"
+  ],
+  "executionMode": "sequential"
+}

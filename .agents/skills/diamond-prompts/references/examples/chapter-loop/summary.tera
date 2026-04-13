@@ -1,0 +1,117 @@
+{% if current_chapter is defined %}
+{% set active_chapter = current_chapter %}
+{% elif chapter is defined %}
+{% set active_chapter = chapter %}
+{% else %}
+{% set active_chapter = "1" %}
+{% endif %}
+{% set chapter_number = active_chapter | int %}
+{% set previous_chapter_number_1 = chapter_number - 1 %}
+{% set previous_chapter_number_2 = chapter_number - 2 %}
+{% set previous_chapter_number_3 = chapter_number - 3 %}
+{% set chapter_content_path = "chapter-" ~ active_chapter ~ ".md" %}
+{% set chapter_content = chapter_content_path | doc %}
+{% if chapter_number > 1 %}
+{% set previous_summary_path_1 = "summary-chapter-" ~ previous_chapter_number_1 ~ ".md" %}
+{% set previous_summary_1 = previous_summary_path_1 | doc %}
+{% else %}
+{% set previous_summary_1 = "" %}
+{% endif %}
+{% if chapter_number > 2 %}
+{% set previous_summary_path_2 = "summary-chapter-" ~ previous_chapter_number_2 ~ ".md" %}
+{% set previous_summary_2 = previous_summary_path_2 | doc %}
+{% else %}
+{% set previous_summary_2 = "" %}
+{% endif %}
+{% if chapter_number > 3 %}
+{% set previous_summary_path_3 = "summary-chapter-" ~ previous_chapter_number_3 ~ ".md" %}
+{% set previous_summary_3 = previous_summary_path_3 | doc %}
+{% else %}
+{% set previous_summary_3 = "" %}
+{% endif %}
+
+You are writing the continuity summary for Chapter {{ active_chapter }}.
+
+This summary is stored as a standalone project document and used by future prompts to understand what changed without rereading every full chapter.
+
+[Final Chapter {{ active_chapter }}]
+
+{{ chapter_content }}
+
+[/Final Chapter {{ active_chapter }}]
+
+{% if chapter_number > 1 %}[Existing Chapter Summaries]
+
+{% if chapter_number > 3 %}[Summary Chapter {{ previous_chapter_number_3 }}]
+
+{{ previous_summary_3 }}
+
+[/Summary Chapter {{ previous_chapter_number_3 }}]
+
+{% endif %}{% if chapter_number > 2 %}[Summary Chapter {{ previous_chapter_number_2 }}]
+
+{{ previous_summary_2 }}
+
+[/Summary Chapter {{ previous_chapter_number_2 }}]
+
+{% endif %}[Summary Chapter {{ previous_chapter_number_1 }}]
+
+{{ previous_summary_1 }}
+
+[/Summary Chapter {{ previous_chapter_number_1 }}]
+
+[/Existing Chapter Summaries]
+
+{% endif %}Rules:
+
+- Write in present tense, third person.
+- Target 300 to 500 words.
+- State what happens without editorializing.
+- Focus on deltas that future prompts actually need.
+
+Cover all of the following:
+
+A) PLOT EVENTS
+
+- What happens in order
+- Key decisions and why they matter
+- Key information revealed or discovered
+
+B) CHARACTER STATE CHANGES
+
+- Emotional changes for each major character
+- Relationship shifts, trust changes, alliances, fractures
+
+C) DOORS CLOSED
+
+- What is now permanently true
+- What options or reversals are no longer available
+- What characters now know that they cannot unknow
+
+D) OPEN THREADS ENTERING NEXT CHAPTER
+
+- Unresolved questions and tensions
+- Promises still hanging in the air
+- The single most important reason the next chapter is necessary
+
+E) CONTINUITY ANCHORS
+
+- Time
+- location
+- resources
+- injuries
+- who is together and who is separated
+
+F) GHOST DRAFT CHANGES
+
+- Quiet shifts that should alter future subtext, behavior, trust, leverage, desire, resentment, fear, or self-protection
+- Newly charged objects, places, injuries, phrases, or memories
+- Status changes that should affect future scene behavior and dialogue
+
+Format the response exactly like this:
+
+## Chapter {{ active_chapter }} Summary
+
+[Your summary]
+
+Write only the summary.

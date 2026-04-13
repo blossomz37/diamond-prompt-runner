@@ -1,0 +1,8 @@
+{
+  "pipelineId": "flash-fiction-batch",
+  "name": "Flash Fiction Batch",
+  "orderedBlocks": [
+    "flash-fiction"
+  ],
+  "executionMode": "sequential"
+}

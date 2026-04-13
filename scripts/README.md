@@ -172,6 +172,43 @@ npm run tauri:dev
 
 ---
 
+### `test-sample-project-2-batch.sh`
+
+**Purpose:** Execute `docs/sample-projects/sample-project-2` five times and write `flash-fiction-NN.md` outputs into that sample project's `documents/` folder.
+
+**Usage:**
+```bash
+# Default: runs counts 01-05
+./scripts/test-sample-project-2-batch.sh
+
+# Custom range
+./scripts/test-sample-project-2-batch.sh 2 4
+```
+
+**What it does:**
+- Invokes the headless CLI against `docs/sample-projects/sample-project-2`
+- Runs the `flash-fiction-batch` pipeline once per loop
+- Passes a padded `count` payload (`01`, `02`, `03`, `04`, `05`)
+- Causes the prompt block to write:
+  - `documents/flash-fiction-01.md`
+  - `documents/flash-fiction-02.md`
+  - `documents/flash-fiction-03.md`
+  - `documents/flash-fiction-04.md`
+  - `documents/flash-fiction-05.md`
+
+**Parameters:**
+1. `START_COUNT` (default: `1`)
+2. `END_COUNT` (default: `5`)
+
+**Prerequisites:**
+- Rust binary must be compilable locally
+- OpenRouter API key must be available in the app keychain or via `OPENROUTER_API_KEY`
+- The batch script auto-loads `../.env` if present
+
+**Related:** Headless execution, payload-driven output filenames, sample project validation
+
+---
+
 ### `test-headless.mjs`
 
 **Purpose:** Execute a pipeline in headless (CLI) mode without the desktop UI, useful for testing and automation.
@@ -218,6 +255,32 @@ Success: Headless pipeline execution completed.
 **Prerequisites:**
 - Rust binary must be compiled: `npm run tauri:dev` or `cargo build --debug`
 - Project must exist at the specified path
+- `test-headless.mjs` auto-loads `../.env` if present before reading `OPENROUTER_API_KEY`
+
+---
+
+### `normalize-markdown-boundaries.mjs`
+
+**Purpose:** Convert a heading-based markdown document into nested bracket-boundary sections that are easier to target with `doc | extract_section`.
+
+**Usage:**
+```bash
+node scripts/normalize-markdown-boundaries.mjs input.md
+node scripts/normalize-markdown-boundaries.mjs input.md output.md
+```
+
+**What it does:**
+- Reads markdown headings (`#` through `######`)
+- Normalizes each heading into a tag like `[act_1]`
+- Wraps each heading block in matching closing tags like `[/act_1]`
+- Preserves the original body content under each heading
+
+**Example:**
+```bash
+node scripts/normalize-markdown-boundaries.mjs \
+  docs/sample-projects/sample-project-3/documents/Story_Dossier_Worksheet.md \
+  docs/sample-projects/sample-project-3/documents/Story_Dossier_Worksheet.boundaries.md
+```
 
 **Related:** CLI interface, pipeline execution, batch processing, test-batch-pipeline.sh
 
@@ -324,4 +387,3 @@ The `scripts/dev/` folder contains one-off or exploratory helper scripts that ar
 - `scripts/dev/test-marked.js` — tiny smoke test for local markdown parsing behavior with `marked`.
 
 These are intentionally kept out of the repository root to reduce confusion for new contributors.
-
