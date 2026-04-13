@@ -14,7 +14,7 @@ name: Release
 #
 # Required repository secrets:
 #   TAURI_SIGNING_PRIVATE_KEY            contents of ~/.tauri/diamond-runner.key
-#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD   the key's password (currently: diamond)
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD   password for the signing key (stored in GitHub Secrets)
 #
 # GITHUB_TOKEN is provided automatically by Actions.
 #
