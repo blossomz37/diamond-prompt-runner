@@ -35,6 +35,9 @@ CLAUDE.md
 .antigravity/tasks.json
 dev-mockups/variables-panel.html
 .claude/settings.json
+.claude/settings.local.json
+# Local scratch prompts created by editor tooling
+.github/prompts/
 GEMINI.md
 Test - New Project/
 workshop-parts/
@@ -47,4 +50,3 @@ image.png
 release-procedure.md
 notebooks/
 .continue/
-00-diamond-user-obsidian

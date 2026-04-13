@@ -314,3 +314,14 @@ export TAURI_DEV_URL="http://localhost:1420"
 - **Rust CLI:** Ensure the binary is compiled in debug or release mode before running headless tests
 - **Color audit:** Update `wcag-audit.mjs` when adding new CSS custom properties
 
+---
+
+## Dev Utilities
+
+The `scripts/dev/` folder contains one-off or exploratory helper scripts that are not part of normal day-to-day workflows.
+
+- `scripts/dev/migrate.rs` — ad hoc Rust migration helper for extracting inline pipeline entries into per-file pipeline JSON files.
+- `scripts/dev/test-marked.js` — tiny smoke test for local markdown parsing behavior with `marked`.
+
+These are intentionally kept out of the repository root to reduce confusion for new contributors.
+
