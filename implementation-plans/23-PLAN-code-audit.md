@@ -1,5 +1,5 @@
 ---
-source: "/Users/carlo/.claude/plans/merry-snacking-stallman.md"
+source: "~/.claude/plans/merry-snacking-stallman.md"
 created: 2026/04/05
 ---
 

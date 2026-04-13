@@ -118,7 +118,7 @@ This reads better and scales better than repeating `chapter | int` checks all ov
 
 Target prompt:
 
-- `/Users/carlo/diamond-runner/Sample Projects/Neon & Nightmares 2/prompts/03-repetition-audit.tera`
+- `Sample Projects/Neon & Nightmares 2/prompts/03-repetition-audit.tera`
 
 Current shape:
 

@@ -56,19 +56,19 @@ sequenceDiagram
 ## Proposed Changes
 
 ### Configuration Layer
-#### [MODIFY] [ValidationPanel.svelte](file:///Users/carlo/diamond-runner/src/lib/components/ValidationPanel.svelte)
+#### [MODIFY] [ValidationPanel.svelte](../src/lib/components/ValidationPanel.svelte)
 - Strip out the `saveKey` logic, the keychain check warnings, and the entire `div.credential-form` node tree.
 - The button to execute will simply remain disabled if `!credentialState.hasStoredKey`, but the form to fix it lives permanently outside the workspace!
 
-#### [MODIFY] [ProjectBrowser.svelte](file:///Users/carlo/diamond-runner/src/lib/components/ProjectBrowser.svelte)
+#### [MODIFY] [ProjectBrowser.svelte](../src/lib/components/ProjectBrowser.svelte)
 - Introduce a third section underneath "New Project" and "Recent Projects" called **"Global Credentials"**.
 - This section will display the user's current keychain status and provide a clear UI to Save/Clear the OpenRouter configuration so they securely authenticate before opening a workspace.
 
-#### [MODIFY] [App.svelte](file:///Users/carlo/diamond-runner/src/App.svelte)
+#### [MODIFY] [App.svelte](../src/App.svelte)
 - Pass down the `credentialState` bindings, `saveKey`, and `clearKey` handles into `ProjectBrowser` instead of restricting them exclusively down into the `WorkspaceShell`.
 
 ### Workspace Layer
-#### [MODIFY] [InspectorPanel.svelte](file:///Users/carlo/diamond-runner/src/lib/components/InspectorPanel.svelte)
+#### [MODIFY] [InspectorPanel.svelte](../src/lib/components/InspectorPanel.svelte)
 - In the `.preset-section` (Block Settings), append the requested Output Label readout.
 - This will deterministically display `documents/{slugified-name}.md` if configured to extract to document, otherwise display None.
 

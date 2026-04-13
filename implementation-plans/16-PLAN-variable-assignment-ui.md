@@ -21,7 +21,7 @@ The user also wants Figma MCP set up first to design the Variables panel UI befo
 ## Phase 0: Figma MCP Setup (prerequisite — do this before coding)
 
 1. Get a Figma personal access token: figma.com → Settings → Personal access tokens → Generate new token
-2. Add to `/Users/carlo/.claude/.mcp.json` inside `"mcpServers"`:
+2. Add to `~/.claude/.mcp.json` inside `"mcpServers"`:
    ```json
    "figma": {
      "command": "npx",
@@ -221,7 +221,7 @@ After Figma MCP is configured, use it to:
 | `src/lib/components/WorkspaceShell.svelte` | Thread 3 new props |
 | `src/lib/components/InspectorPanel.svelte` | New Variables section |
 | `src/App.test.ts` | Mock getGlobalVariables, add fixture, mock setGlobalVariables/setProjectVariables |
-| `/Users/carlo/.claude/.mcp.json` | Add Figma MCP entry (prerequisite) |
+| `~/.claude/.mcp.json` | Add Figma MCP entry (prerequisite) |
 
 ---
 

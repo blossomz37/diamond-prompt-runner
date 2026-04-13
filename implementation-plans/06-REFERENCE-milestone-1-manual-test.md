@@ -9,7 +9,7 @@ This is a runtime check for the desktop app. It complements, but does not replac
 From the repo root:
 
 ```bash
-cd /Users/carlo/diamond-runner
+cd <repo-root>
 ```
 
 If dependencies are not installed yet:
@@ -55,7 +55,7 @@ Expected result:
 Use `Open Existing Project` and select:
 
 ```text
-/Users/carlo/diamond-runner/fixtures/sample-project
+fixtures/sample-project
 ```
 
 Verify:
