@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diamond Runner — Variables Panel Mockup</title>
+<script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+<style>
+  :root {
+    --bg: rgba(6, 10, 18, 0.88);
+    --bg-strong: rgba(13, 19, 34, 0.96);
+    --panel: rgba(18, 26, 44, 0.82);
+    --panel-soft: rgba(15, 21, 36, 0.78);
+    --panel-border: rgba(157, 180, 255, 0.14);
+    --panel-border-strong: rgba(177, 197, 255, 0.28);
+    --text: #f3f5ff;
+    --text-dim: #a4b0d0;
+    --text-soft: #8693b8;
+    --accent: #8bb1ff;
+    --accent-strong: #b8cbff;
+    --danger: #ff8da1;
+    --success: #99e3be;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #060a12;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 48px;
+    padding: 48px;
+    min-height: 100vh;
+  }
+
+  /* ── Inspector panel shell ── */
+  .inspector {
+    width: 280px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .inspector-header {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--panel-border);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+  }
+
+  /* ── Variables section ── */
+  .section {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--panel-border);
+    display: grid;
+    gap: 12px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+  }
+
+  /* scope block: Global / Project */
+  .scope-block {
+    display: grid;
+    gap: 8px;
+  }
+
+  .scope-heading {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  .scope-heading span {
+    font-weight: 400;
+    color: var(--text-soft);
+    font-size: 10px;
+    float: right;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* variable rows */
+  .var-list {
+    display: grid;
+    gap: 4px;
+  }
+
+  .var-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 6px;
+    align-items: center;
+    padding: 5px 7px;
+    border-radius: 8px;
+    background: rgba(7, 11, 20, 0.6);
+    border: 1px solid var(--panel-border);
+  }
+
+  .var-row.project-override {
+    border-color: rgba(139, 177, 255, 0.22);
+  }
+
+  .var-name {
+    font-size: 11.5px;
+    color: var(--accent);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .var-value {
+    font-size: 11.5px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .var-overridden .var-name,
+  .var-overridden .var-value {
+    opacity: 0.35;
+    text-decoration: line-through;
+  }
+
+  .override-badge {
+    font-size: 9px;
+    color: var(--text-soft);
+    background: rgba(139, 177, 255, 0.1);
+    border: 1px solid rgba(139, 177, 255, 0.18);
+    border-radius: 4px;
+    padding: 1px 4px;
+    white-space: nowrap;
+  }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    color: var(--text-soft);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 4px;
+    opacity: 0.6;
+  }
+  .remove-btn:hover { color: var(--danger); opacity: 1; }
+
+  /* add form */
+  .add-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 6px;
+    align-items: center;
+    margin-top: 2px;
+  }
+
+  .add-form input {
+    min-height: 2rem;
+    border-radius: 8px;
+    border: 1px solid rgba(157, 180, 255, 0.16);
+    background: rgba(7, 11, 20, 0.82);
+    color: var(--text);
+    padding: 0.3rem 0.5rem;
+    font-size: 11.5px;
+    outline: none;
+    width: 100%;
+  }
+  .add-form input::placeholder { color: var(--text-soft); }
+  .add-form input:focus { border-color: rgba(139, 177, 255, 0.35); }
+
+  .add-btn {
+    min-height: 2rem;
+    padding: 0.3rem 0.55rem;
+    border-radius: 8px;
+    border: 1px solid rgba(157, 180, 255, 0.16);
+    background: rgba(7, 11, 20, 0.82);
+    color: var(--text);
+    font-size: 11.5px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .add-btn:hover {
+    border-color: rgba(153, 227, 190, 0.28);
+    background: rgba(153, 227, 190, 0.1);
+    color: var(--success);
+  }
+
+  .empty-note {
+    font-size: 11px;
+    color: var(--text-soft);
+    font-style: italic;
+  }
+
+  /* pipeline-fed variable rows */
+  .var-row.pipeline-fed {
+    background: rgba(139, 177, 255, 0.04);
+    border-color: rgba(139, 177, 255, 0.18);
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .var-row.pipeline-fed.no-value {
+    opacity: 0.55;
+  }
+
+  .pipeline-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    color: var(--accent);
+    background: rgba(139, 177, 255, 0.1);
+    border: 1px solid rgba(139, 177, 255, 0.2);
+    border-radius: 5px;
+    padding: 2px 6px;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pipeline-badge .pipe-icon {
+    font-size: 9px;
+    opacity: 0.7;
+  }
+
+  .pipeline-badge.empty {
+    color: var(--text-soft);
+    background: rgba(130, 147, 184, 0.08);
+    border-color: rgba(130, 147, 184, 0.15);
+  }
+
+  .scope-divider {
+    height: 1px;
+    background: var(--panel-border);
+    margin: 4px 0;
+  }
+
+  .scope-type-label {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-soft);
+    margin-bottom: 2px;
+  }
+
+  /* downstream inspector section (collapsed) */
+  .section.collapsed {
+    opacity: 0.5;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  /* ── State variants ── */
+  .label-variants {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .variant-label {
+    font-size: 10px;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── State A: Empty (no variables set) ── -->
+<div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+  <div class="variant-label">State A — Empty</div>
+  <div class="inspector">
+    <div class="inspector-header">Inspector</div>
+
+    <div class="section">
+      <div class="section-label">Variables</div>
+
+      <div class="scope-block">
+        <div class="scope-heading">Global <span>all projects</span></div>
+        <div class="var-list">
+          <div class="empty-note">No global variables yet.</div>
+        </div>
+        <div class="add-form">
+          <input type="text" placeholder="name" />
+          <input type="text" placeholder="value" />
+          <button class="add-btn">+ Add</button>
+        </div>
+      </div>
+
+      <div class="scope-block">
+        <div class="scope-heading">Project <span>Story Lab</span></div>
+        <div class="var-list">
+          <div class="empty-note">No project variables yet.</div>
+        </div>
+        <div class="add-form">
+          <input type="text" placeholder="name" />
+          <input type="text" placeholder="value" />
+          <button class="add-btn">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section collapsed">
+      <div class="section-label">Inspector</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── State B: Variables populated, no override ── -->
+<div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+  <div class="variant-label">State B — Globals + Project vars</div>
+  <div class="inspector">
+    <div class="inspector-header">Inspector</div>
+
+    <div class="section">
+      <div class="section-label">Variables</div>
+
+      <div class="scope-block">
+        <div class="scope-heading">Global <span>all projects</span></div>
+        <div class="var-list">
+          <div class="var-row">
+            <div class="var-name">tone</div>
+            <div class="var-value">precise</div>
+            <button class="remove-btn">✕</button>
+          </div>
+          <div class="var-row">
+            <div class="var-name">pov</div>
+            <div class="var-value">third-limited</div>
+            <button class="remove-btn">✕</button>
+          </div>
+        </div>
+        <div class="add-form">
+          <input type="text" placeholder="name" />
+          <input type="text" placeholder="value" />
+          <button class="add-btn">+ Add</button>
+        </div>
+      </div>
+
+      <div class="scope-block">
+        <div class="scope-heading">Project <span>Story Lab</span></div>
+        <div class="var-list">
+          <div class="var-row">
+            <div class="var-name">chapter</div>
+            <div class="var-value">12</div>
+            <button class="remove-btn">✕</button>
+          </div>
+          <div class="var-row">
+            <div class="var-name">word_target</div>
+            <div class="var-value">5000</div>
+            <button class="remove-btn">✕</button>
+          </div>
+        </div>
+        <div class="add-form">
+          <input type="text" placeholder="name" />
+          <input type="text" placeholder="value" />
+          <button class="add-btn">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section collapsed">
+      <div class="section-label">Inspector</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── State C: Project variable overrides a global ── -->
+<div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+  <div class="variant-label">State C — Project overrides Global</div>
+  <div class="inspector">
+    <div class="inspector-header">Inspector</div>
+
+    <div class="section">
+      <div class="section-label">Variables</div>
+
+      <div class="scope-block">
+        <div class="scope-heading">Global <span>all projects</span></div>
+        <div class="var-list">
+          <div class="var-row var-overridden">
+            <div class="var-name">tone</div>
+            <div class="var-value">precise</div>
+            <div class="override-badge">overridden</div>
+          </div>
+          <div class="var-row">
+            <div class="var-name">pov</div>
+            <div class="var-value">third-limited</div>
+            <button class="remove-btn">✕</button>
+          </div>
+        </div>
+        <div class="add-form">
+          <input type="text" placeholder="name" />
+          <input type="text" placeholder="value" />
+          <button class="add-btn">+ Add</button>
+        </div>
+      </div>
+
+      <div class="scope-block">
+        <div class="scope-heading">Project <span>Story Lab</span></div>
+        <div class="var-list">
+          <div class="var-row project-override">
+            <div class="var-name">tone</div>
+            <div class="var-value">literary fiction</div>
+            <button class="remove-btn">✕</button>
+          </div>
+          <div class="var-row">
+            <div class="var-name">word_target</div>
+            <div class="var-value">5000</div>
+            <button class="remove-btn">✕</button>
+          </div>
+        </div>
+        <div class="add-form">
+          <input type="text" placeholder="name" />
+          <input type="text" placeholder="value" />
+          <button class="add-btn">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section collapsed">
+      <div class="section-label">Inspector</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── State D: Mixed — scalars + pipeline-fed (real-world pipeline view) ── -->
+<div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+  <div class="variant-label">State D — Scalar + Pipeline-fed (mixed)</div>
+  <div class="inspector">
+    <div class="inspector-header">Inspector</div>
+
+    <div class="section">
+      <div class="section-label">Variables</div>
+
+      <div class="scope-block">
+        <div class="scope-heading">Global <span>all projects</span></div>
+        <div class="var-list">
+          <div class="scope-type-label">Hand-set</div>
+          <div class="var-row">
+            <div class="var-name">genre</div>
+            <div class="var-value">literary thriller</div>
+            <button class="remove-btn">✕</button>
+          </div>
+          <div class="var-row">
+            <div class="var-name">pov</div>
+            <div class="var-value">third-limited</div>
+            <button class="remove-btn">✕</button>
+          </div>
+        </div>
+        <div class="add-form">
+          <input type="text" placeholder="name" />
+          <input type="text" placeholder="value" />
+          <button class="add-btn">+ Add</button>
+        </div>
+      </div>
+
+      <div class="scope-block">
+        <div class="scope-heading">Project <span>Story Lab</span></div>
+        <div class="var-list">
+
+          <div class="scope-type-label">Hand-set</div>
+          <div class="var-row">
+            <div class="var-name">current_chapter</div>
+            <div class="var-value">12</div>
+            <button class="remove-btn">✕</button>
+          </div>
+          <div class="var-row">
+            <div class="var-name">total_chapters</div>
+            <div class="var-value">28</div>
+            <button class="remove-btn">✕</button>
+          </div>
+          <div class="var-row">
+            <div class="var-name">first_chapter</div>
+            <div class="var-value">false</div>
+            <button class="remove-btn">✕</button>
+          </div>
+
+          <div class="scope-divider"></div>
+          <div class="scope-type-label">Pipeline-fed (output bindings)</div>
+
+          <!-- pipeline-fed: has value from last run -->
+          <div class="var-row pipeline-fed">
+            <div class="var-name">plan</div>
+            <div class="pipeline-badge"><span class="pipe-icon">⟵</span> plan-chapter</div>
+          </div>
+          <div class="var-row pipeline-fed">
+            <div class="var-name">draft</div>
+            <div class="pipeline-badge"><span class="pipe-icon">⟵</span> draft-chapter</div>
+          </div>
+          <div class="var-row pipeline-fed">
+            <div class="var-name">edit_style</div>
+            <div class="pipeline-badge"><span class="pipe-icon">⟵</span> edit-style</div>
+          </div>
+          <div class="var-row pipeline-fed">
+            <div class="var-name">edit_craft</div>
+            <div class="pipeline-badge"><span class="pipe-icon">⟵</span> edit-craft</div>
+          </div>
+          <div class="var-row pipeline-fed">
+            <div class="var-name">worksheet</div>
+            <div class="pipeline-badge"><span class="pipe-icon">⟵</span> cascade-worksheet</div>
+          </div>
+
+          <!-- pipeline-fed: no value yet (block hasn't run) -->
+          <div class="var-row pipeline-fed no-value">
+            <div class="var-name">repetition_audit</div>
+            <div class="pipeline-badge empty"><span class="pipe-icon">⟵</span> repetition-audit · not yet run</div>
+          </div>
+          <div class="var-row pipeline-fed no-value">
+            <div class="var-name">chapter_summaries</div>
+            <div class="pipeline-badge empty"><span class="pipe-icon">⟵</span> summary · not yet run</div>
+          </div>
+
+        </div>
+        <div class="add-form">
+          <input type="text" placeholder="name" />
+          <input type="text" placeholder="value" />
+          <button class="add-btn">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section collapsed">
+      <div class="section-label">Inspector</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
