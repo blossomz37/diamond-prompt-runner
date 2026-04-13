@@ -1,3 +1,8 @@
+/**
+ * Script: probe-openrouter-online.mjs
+ * Purpose: Probes OpenRouter online mode with web plugin settings and validates citation/search evidence.
+ * Last modified: 2026-04-12
+ */
 import OpenAI from 'openai';
 
 const apiKey = process.env.OPENROUTER_API_KEY;

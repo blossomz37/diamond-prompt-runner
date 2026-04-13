@@ -1,3 +1,8 @@
+/**
+ * Script: wcag-audit.mjs
+ * Purpose: Audits predefined theme color pairs against WCAG 2.1 contrast thresholds.
+ * Last modified: 2026-04-12
+ */
 // WCAG 2.1 contrast ratio calculator
 function srgbToLinear(c) {
   return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);

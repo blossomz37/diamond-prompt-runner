@@ -1,3 +1,8 @@
+/**
+ * Script: test-headless.mjs
+ * Purpose: Executes a single headless pipeline run via the compiled Diamond Runner CLI binary.
+ * Last modified: 2026-04-12
+ */
 import { spawn } from 'child_process';
 import path from 'path';
 

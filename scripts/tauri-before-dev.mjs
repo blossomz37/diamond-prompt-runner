@@ -1,3 +1,8 @@
+/**
+ * Script: tauri-before-dev.mjs
+ * Purpose: Ensures the Vite dev server is reachable before Tauri dev startup; starts it if needed.
+ * Last modified: 2026-04-12
+ */
 import net from 'node:net';
 import { spawn } from 'node:child_process';
 

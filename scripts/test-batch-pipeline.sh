@@ -1,4 +1,7 @@
 #!/bin/bash
+# Script: test-batch-pipeline.sh
+# Purpose: Runs a pipeline in headless mode across a chapter range and stops on first failure.
+# Last modified: 2026-04-12
 # test-batch-pipeline.sh
 
 echo "============================================================"

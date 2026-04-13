@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 /**
+ * Script: generate-updater-json.mjs
+ * Purpose: Builds Tauri updater latest.json metadata from local release artifacts.
+ * Last modified: 2026-04-12
+ */
+/**
  * Generate latest.json updater metadata for Diamond Prompt Runner.
  *
  * Reads the .app.tar.gz signature produced by `tauri build --bundles app`
